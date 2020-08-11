@@ -1,0 +1,17 @@
+[package]
+name = "wavewindow"
+version = "0.1.0"
+authors = ["James Connolly <jimmy@1024bees.com>"]
+edition = "2018"
+publish = false
+
+[dependencies]
+wave2 = { path = "../.."}
+tokio = "0.2.18"
+iced = { git = "https://github.com/hecrj/iced", rev="b5d842f877145c78f5d595a87cc1927bb6f5b86a", features = ["glow", "glow_canvas","tokio"] }
+iced_glutin = {version = "*"}
+iced_native = {git = "https://github.com/hecrj/iced", rev="b5d842f877145c78f5d595a87cc1927bb6f5b86a"}
+iced_wgpu = {git = "https://github.com/hecrj/iced", rev="b5d842f877145c78f5d595a87cc1927bb6f5b86a"}
+iced_graphics = {git = "https://github.com/hecrj/iced", rev="b5d842f877145c78f5d595a87cc1927bb6f5b86a"}
+
+
