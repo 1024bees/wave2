@@ -14,9 +14,10 @@ pub fn main() {
 struct Example {
     Signals: Vec<Wave>,
     GlobalCursorState: CursorState,
-    wavewindow: wavewindow::State,
+    wavewindow: wavewindow::WaveWindowState,
     scroll: scrollable::State,
     button: button::State,
+    vec_button: button::State,
     clear_button: button::State,
 }
 
@@ -24,6 +25,7 @@ struct Example {
 enum Message {
     ClearWaves,
     AddDummy,
+    AddDummyVec,
     UpdateCursor(CursorState),
 }
 impl Sandbox for Example {
@@ -43,9 +45,13 @@ impl Sandbox for Example {
                 self.Signals.push(Wave::default());
                 self.wavewindow.request_redraw();
             }
+            Message::AddDummyVec => {
+                self.Signals.push(Wave::default_vec());
+                self.wavewindow.request_redraw();
+            }
             Message::ClearWaves => {
                 self.Signals.clear();
-                self.wavewindow = wavewindow::State::default();
+                self.wavewindow = wavewindow::WaveWindowState::default();
             }
             Message::UpdateCursor(state) => self.GlobalCursorState = state,
         }
@@ -61,11 +67,7 @@ impl Sandbox for Example {
             .spacing(20)
             .align_items(Align::Center)
             .max_height(1000)
-            .push(
-                Text::new("Wavewindow example")
-                    .width(Length::Shrink)
-                    .size(50),
-            )
+            .push(Text::new("Wavewindow example").width(Length::Shrink).size(50))
             .push(
                 self.wavewindow
                     .view(&self.Signals, self.GlobalCursorState)
@@ -78,12 +80,14 @@ impl Sandbox for Example {
                     .on_press(Message::ClearWaves),
             )
             .push(
-                Text::new(format!(
-                    "Cursor pos: {}",
-                    self.GlobalCursorState.cursor_location
-                ))
-                .width(Length::Shrink)
-                .size(50),
+                Button::new(&mut self.vec_button, Text::new("AddVecWave"))
+                    .padding(10)
+                    .on_press(Message::AddDummyVec),
+            )
+            .push(
+                Text::new(format!("Cursor pos: {}", self.GlobalCursorState.cursor_location))
+                    .width(Length::Shrink)
+                    .size(50),
             )
             .into()
     }

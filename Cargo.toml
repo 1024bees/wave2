@@ -12,6 +12,11 @@ iced_glutin = {version = "*"}
 iced_native = {git = "https://github.com/hecrj/iced", rev="b5d842f877145c78f5d595a87cc1927bb6f5b86a"}
 iced_wgpu = {git = "https://github.com/hecrj/iced", rev="b5d842f877145c78f5d595a87cc1927bb6f5b86a"}
 iced_graphics = {git = "https://github.com/hecrj/iced", rev="b5d842f877145c78f5d595a87cc1927bb6f5b86a"}
+env = "*"
+vcd = "*"
+sled = "*"
+serde = "*"
+bit-vec = { version = "0.6", features = ["serde"] }
 
 [workspace]
 members = [ "widget_test/wavewindow"]
