@@ -1,6 +1,6 @@
 use iced::{
     canvas::{self, Canvas, Cursor, Event, Frame, Geometry, Path, Stroke},
-    mouse, Element, Length, Point, Rectangle,Color
+    mouse, Element, Length, Point, Rectangle,Color,HorizontalAlignment
 
 
 };
@@ -8,6 +8,15 @@ use iced::{
 const BUFFER_PX: f32 = 4.0;
 const WAVEHEIGHT: f32 = 19.0;
 const VEC_SHIFT_WIDTH: f32 = 4.0;
+const MAX_NUM_TEXT_HEADERS : u32 = 30;
+const TEXT_OFFSET : f32 = WAVEHEIGHT / 2.0;
+const TS_FONT_SIZE : f32 = 8.0;
+
+
+const BLUE : Color = Color::from_rgba(0x1b as f32 /255.0,0x0a as f32 / 255.0 ,0x73 as f32 / 255.0,0.25);
+const GREEN : Color = Color::from_rgb(0.0,1.0,0.0);
+const ORANGE: Color = Color::from_rgba(0xf5 as f32 /255.0,0xc1 as f32 / 255.0 ,0x87 as f32 / 255.0,0.4);
+
 
 pub struct WaveWindow<'a> {
     signals: &'a [Wave],
@@ -18,6 +27,7 @@ pub struct WaveWindow<'a> {
 
 pub struct WaveWindowState {
     cache: canvas::Cache,
+    cursor_cache : canvas::Cache,
     end_sim_time : u32,
 }
 
@@ -61,6 +71,10 @@ impl WaveWindowState {
     pub fn request_redraw(&mut self) {
         self.cache.clear()
     }
+
+    pub fn redraw_cursor(&mut self) {
+        self.cursor_cache.clear()
+    }
 }
 
 impl<'a> WaveWindow<'a> {
@@ -78,6 +92,16 @@ impl<'a> WaveWindow<'a> {
         self.state.end_sim_time
     }
 
+
+    fn x_abs(&self, ts : u32, bounds : &Rectangle) -> f32 {
+        let ts_width = (self.cur_state.view_range.1 - self.cur_state.view_range.0) as f32;
+        ((ts) as f32 / ts_width) * bounds.width
+    }
+
+    fn x_abs_cursor(&self,bounds : &Rectangle) -> f32 {
+        self.x_abs(self.cur_state.cursor_location, bounds)
+    }
+
     /// Util for finding the x offset in the wave window where a wave should change values 
     /// Used in the context of streaming through a container of "changed value" instances 
     fn xdelt_from_prev(&self, ts: u32, prev_ts: u32, bounds: &Rectangle) -> f32 {
@@ -85,14 +109,70 @@ impl<'a> WaveWindow<'a> {
         ((ts - prev_ts) as f32 / ts_width) * bounds.width
     }
 
+
+
+    fn draw_header(&self, frame: &mut Frame, bounds : &Rectangle){
+        let mut window_width = self.cur_state.view_range.1 - self.cur_state.view_range.0;
+        let mut ts_width : u32= 1;
+        while window_width >= MAX_NUM_TEXT_HEADERS {
+            window_width /= 10;
+            ts_width *= 10;
+        }
+        let starting_ts : u32 = self.cur_state.view_range.0 + self.cur_state.view_range.0 % ts_width;
+        let mut prev_ts = self.cur_state.view_range.0;
+        let mut xpos : f32= 0.0;
+        let hdr_line = Point { x : bounds.x, y : bounds.y + TS_FONT_SIZE};
+        let boundary_line = Path::new(|p| {
+            p.move_to(hdr_line);
+            p.line_to([hdr_line.x + bounds.width, hdr_line.y].into());
+        });
+        //TODO: make this const or global in some capacity?
+        let bg_stroke = Stroke::default().with_width(1.0).with_color(BLUE);
+        frame.stroke(&boundary_line, bg_stroke);
+
+        for ts in (starting_ts..self.cur_state.view_range.1).step_by(ts_width as usize) {
+            xpos += self.xdelt_from_prev(ts,prev_ts,bounds);
+            frame.fill_text(canvas::Text {
+                content : format!("{}ns",ts),
+                position : Point {
+                    x : xpos,
+                    y : bounds.y,
+                },
+                color : Color::WHITE,
+                size : TS_FONT_SIZE,
+                horizontal_alignment : HorizontalAlignment::Center,
+                ..canvas::Text::default()
+            });
+            let vert_path = Path::new(|p| {
+                p.move_to([xpos, bounds.y + TS_FONT_SIZE].into());
+                p.line_to([xpos, bounds.y + bounds.height].into());
+            });
+            frame.stroke(&vert_path, bg_stroke);
+            prev_ts = ts;
+        }
+    }
+
+
+    fn draw_cursor(&self, frame : &mut Frame, bounds : Rectangle) {
+        let cur_pos : Point = [self.x_abs_cursor(&bounds), bounds.y + TS_FONT_SIZE].into();
+        let cursor_line = Path::new(|p| {
+            p.move_to(cur_pos);
+            p.line_to(Point { y : bounds.y + bounds.height, ..cur_pos});
+        });
+        frame.stroke(&cursor_line, Stroke::default().with_width(1.0).with_color(ORANGE));
+    }
+
+
     //TODO: only redraw "dirty" signals
     fn draw_all(&self, frame: &mut Frame, bounds: Rectangle) {
         let mut leftmost_pt = bounds.position();
-        leftmost_pt.y += WAVEHEIGHT + BUFFER_PX;
+        leftmost_pt.y += 1.5 * WAVEHEIGHT + BUFFER_PX;
         //TODO: file issue on iced? maybe its a line width issue
         let mut bgpt = bounds.position();
         bgpt.x -= 2.0;
         let background = Path::rectangle(bgpt,bounds.size());
+        frame.fill(&background, Color::BLACK);
+        self.draw_header(frame,&bounds);
         let wave_list: Vec<Path> = self
             .signals
             .iter()
@@ -167,9 +247,10 @@ impl<'a> WaveWindow<'a> {
 
 
         //TODO: cache wavelist in the case of append only?
-        frame.fill(&background, Color::BLACK);
+        
+        frame.fill_text("hello");
         for waves in wave_list {
-            frame.stroke(&waves, Stroke::default().with_width(1.0).with_color(Color::from_rgb(0.0,1.0,0.0)));
+            frame.stroke(&waves, Stroke::default().with_width(1.0).with_color(GREEN));
         }
     }
 
@@ -182,6 +263,7 @@ impl Default for WaveWindowState {
     fn default() -> Self {
         WaveWindowState {
             cache: canvas::Cache::default(),
+            cursor_cache : canvas::Cache::default(),
             end_sim_time : 600
         }
     }
@@ -212,7 +294,6 @@ impl<'a> canvas::Program<CursorState> for WaveWindow<'a> {
             Event::Mouse(mouse_event) => match mouse_event {
                 mouse::Event::ButtonReleased(mouse::Button::Left) => {
                     self.cur_state.cursor_location = self.get_timestamp(bounds, cursor_position.x);
-                    println!("Click!, timestamp is {}",self.get_timestamp(bounds, cursor_position.x));
                     Some(self.cur_state.clone())
                 }
                 _ => None,
@@ -223,10 +304,13 @@ impl<'a> canvas::Program<CursorState> for WaveWindow<'a> {
     fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
         let content = self.state.cache.draw(bounds.size(), |frame: &mut Frame| {
             self.draw_all(frame, bounds);
-
-            frame.stroke(&Path::rectangle(Point::ORIGIN, frame.size()), Stroke::default());
         });
 
-        vec![content]
+        let cursors = self.state.cursor_cache.draw(bounds.size(), |frame: &mut Frame| {
+            self.draw_cursor(frame, bounds);
+        });
+
+
+        vec![content,cursors]
     }
 }

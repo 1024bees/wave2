@@ -53,7 +53,11 @@ impl Sandbox for Example {
                 self.Signals.clear();
                 self.wavewindow = wavewindow::WaveWindowState::default();
             }
-            Message::UpdateCursor(state) => self.GlobalCursorState = state,
+            Message::UpdateCursor(state) => { 
+                self.GlobalCursorState = state;
+                self.wavewindow.redraw_cursor(); 
+            },
+
         }
     }
 
