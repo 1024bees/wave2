@@ -1,26 +1,17 @@
 [package]
-name = "wave2"
+name = "wave2_custom_widgets"
 version = "0.1.0"
 authors = ["James Connolly <jimmy@1024bees.com>"]
+description = "custom widgets to be used inside wave2"
 edition = "2018"
 
 
 [dependencies]
-tokio = "0.2.18"
 iced = { git = "https://github.com/hecrj/iced", rev="ff15ebc54778dee2a7262469c8a2bcd5abecd4d1", features = ["glow", "glow_canvas","tokio"] }
 iced_glutin = {version = "*"}
 iced_native = {git = "https://github.com/hecrj/iced", rev="ff15ebc54778dee2a7262469c8a2bcd5abecd4d1"}
+iced_core = {git = "https://github.com/hecrj/iced", rev="ff15ebc54778dee2a7262469c8a2bcd5abecd4d1"}
 iced_wgpu = {git = "https://github.com/hecrj/iced", rev="ff15ebc54778dee2a7262469c8a2bcd5abecd4d1"}
 iced_graphics = {git = "https://github.com/hecrj/iced", rev="ff15ebc54778dee2a7262469c8a2bcd5abecd4d1"}
-env = "*"
-vcd = "*"
-sled = "*"
-serde = "*"
-bit-vec = { version = "0.6", features = ["serde"] }
-
-[workspace]
-members = [ "widget_test/wavewindow",
-            "widget_test/cell_list",
-            "custom_widgets",
-]
+iced_style = {git = "https://github.com/hecrj/iced", rev="ff15ebc54778dee2a7262469c8a2bcd5abecd4d1"}
 

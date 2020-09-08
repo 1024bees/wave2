@@ -1,10 +1,9 @@
 use iced::{
     canvas::{self, Canvas, Cursor, Event, Frame, Geometry, Path, Stroke},
     mouse, Element, Length, Point, Rectangle,Color,HorizontalAlignment
-
-
 };
 
+use crate::backend::{Wave, SigType};
 const BUFFER_PX: f32 = 4.0;
 const WAVEHEIGHT: f32 = 19.0;
 const VEC_SHIFT_WIDTH: f32 = 4.0;
@@ -43,18 +42,6 @@ impl Default for CursorState {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum SigType {
-    Bit,
-    Vector(u32),
-}
-
-#[derive(Debug, Clone)]
-pub struct Wave {
-    name: String,
-    signal_content: Vec<(u32, u32)>,
-    sig_type: SigType,
-}
 
 impl WaveWindowState {
     pub fn view<'a>(
@@ -269,23 +256,6 @@ impl Default for WaveWindowState {
     }
 }
 
-//TODO: move to backend, make inmemory wave
-impl Default for Wave {
-    fn default() -> Self {
-        Wave {
-            name: String::from("PlaceholderWave"),
-            signal_content: vec![(0, 1), (10, 0), (20, 1), (30, 0), (50, 1), (500, 0)],
-            sig_type: SigType::Bit,
-        }
-    }
-}
-
-//TODO: move from Wave -> InMemoryWave... should there be a transform there even?
-impl Wave {
-    pub fn default_vec() -> Self {
-        Wave { sig_type: SigType::Vector(4), ..Wave::default() }
-    }
-}
 
 impl<'a> canvas::Program<CursorState> for WaveWindow<'a> {
     fn update(&mut self, event: Event, bounds: Rectangle, cursor: Cursor) -> Option<CursorState> {
@@ -298,6 +268,7 @@ impl<'a> canvas::Program<CursorState> for WaveWindow<'a> {
                 }
                 _ => None,
             },
+            _ => None,
         }
     }
 
