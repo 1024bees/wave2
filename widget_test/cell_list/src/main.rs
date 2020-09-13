@@ -1,14 +1,11 @@
 use iced::{
-    scrollable, Align, Container, Element, Length, 
-    Sandbox, Scrollable, Settings, Space, Text,
+    scrollable, Align, Container, Element, Length, Sandbox, Scrollable, Settings, Space, Text,
 };
 
 use iced::{pick_list, PickList};
 
 use wave2_custom_widgets::cell_list;
-use wave2_custom_widgets::cell_list::{CellList};
-
-
+use wave2_custom_widgets::cell_list::CellList;
 
 pub fn main() {
     Example::run(Settings::default())
@@ -34,7 +31,7 @@ impl Sandbox for Example {
     }
 
     fn title(&self) -> String {
-        String::from("Pick list - Iced")
+        String::from("Cell list primitive")
     }
 
     fn update(&mut self, message: Message) {
@@ -46,11 +43,8 @@ impl Sandbox for Example {
     }
 
     fn view(&mut self) -> Element<Message> {
-        let pick_list = CellList::new(
-            &mut self.pick_list,
-            &Language::ALL[..],
-            Message::LanguageSelected,
-        );
+        let pick_list =
+            CellList::new(&mut self.pick_list, &Language::ALL[..], Message::LanguageSelected);
 
         let mut content = Scrollable::new(&mut self.scroll)
             .width(Length::Fill)

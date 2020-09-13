@@ -1,26 +1,27 @@
 //! Display a list of selectable values, optionally mutable .
 use iced_native::{
-    layout, mouse, keyboard, overlay,
+    keyboard, layout, mouse, overlay,
     overlay::menu::{self, Menu},
-    scrollable, text, Clipboard, Element, Event, Hasher, Layout, Length, Point,
-    Rectangle, Size, Widget,
+    scrollable, text, Clipboard, Element, Event, Hasher, Layout, Length, Point, Rectangle, Size,
+    Widget,
 };
 
 /// A widget for selecting a single value from a list of options.
-    #[allow(missing_debug_implementations)]
+#[allow(missing_debug_implementations)]
 pub struct CellList<'a, T, Message, Renderer: self::Renderer>
 where
     [T]: ToOwned<Owned = Vec<T>>,
-    T : ToString,
+    T: ToString,
 {
     menu: &'a mut menu::State,
     bulk_select: &'a mut bool,
     ctrl_select: &'a mut bool,
+    cursor_held: &'a mut bool,
     can_select_multiple: &'a mut bool,
     hovered_option: &'a mut Option<usize>,
     last_selection: &'a mut Vec<usize>,
     //on_right_click: Box<dyn Fn(&'a [T]) -> Message>,
-    on_selected : Box<dyn Fn(T) -> Message>,
+    on_selected: Box<dyn Fn(T) -> Message>,
     items: &'a [T],
     width: Length,
     padding: u16,
@@ -36,8 +37,9 @@ where
 pub struct State {
     menu: menu::State,
     can_select_multiple: bool,
-    bulk_select : bool,
-    ctrl_select : bool,
+    bulk_select: bool,
+    ctrl_select: bool,
+    cursor_held: bool,
     hovered_option: Option<usize>,
     last_selection: Vec<usize>,
 }
@@ -49,14 +51,14 @@ impl Default for State {
             can_select_multiple: bool::default(),
             bulk_select: bool::default(),
             ctrl_select: bool::default(),
+            cursor_held: bool::default(),
             hovered_option: Option::default(),
             last_selection: Vec::new(),
         }
     }
 }
 
-impl<'a, T: 'a, Message, Renderer: self::Renderer>
-    CellList<'a, T, Message, Renderer>
+impl<'a, T: 'a, Message, Renderer: self::Renderer> CellList<'a, T, Message, Renderer>
 where
     T: ToString,
     [T]: ToOwned<Owned = Vec<T>>,
@@ -69,7 +71,7 @@ where
     /// [`State`]: struct.State.html
     pub fn new(
         state: &'a mut State,
-        items : &'a [T],
+        items: &'a [T],
         on_selected: impl Fn(T) -> Message + 'static,
     ) -> Self {
         let State {
@@ -77,14 +79,16 @@ where
             can_select_multiple,
             bulk_select,
             ctrl_select,
+            cursor_held,
             hovered_option,
             last_selection,
         } = state;
 
         Self {
-            menu, 
+            menu,
             bulk_select,
             ctrl_select,
+            cursor_held,
             can_select_multiple,
             hovered_option,
             last_selection,
@@ -133,17 +137,13 @@ where
     /// Sets the style of the [`CellList`].
     ///
     /// [`CellList`]: struct.CellList.html
-    pub fn style(
-        mut self,
-        style: impl Into<<Renderer as self::Renderer>::Style>,
-    ) -> Self {
+    pub fn style(mut self, style: impl Into<<Renderer as self::Renderer>::Style>) -> Self {
         self.style = style.into();
         self
     }
 }
 
-impl<'a, T: 'a, Message, Renderer> Widget<Message, Renderer>
-    for CellList<'a, T, Message, Renderer>
+impl<'a, T: 'a, Message, Renderer> Widget<Message, Renderer> for CellList<'a, T, Message, Renderer>
 where
     T: Clone + ToString + Eq,
     [T]: ToOwned<Owned = Vec<T>>,
@@ -158,30 +158,20 @@ where
         Length::Shrink
     }
 
-    fn layout(
-        &self,
-        renderer: &Renderer,
-        limits: &layout::Limits,
-    ) -> layout::Node {
+    fn layout(&self, renderer: &Renderer, limits: &layout::Limits) -> layout::Node {
         use std::f32;
 
         let limits = limits.width(Length::Fill).height(Length::Shrink);
         let text_size = self.text_size.unwrap_or(renderer.default_size());
 
         let size = {
-            let intrinsic = Size::new(
-                0.0,
-                f32::from(text_size + self.padding * 2)
-                    * self.items.len() as f32,
-            );
+            let intrinsic =
+                Size::new(0.0, f32::from(text_size + self.padding * 2) * self.items.len() as f32);
 
             limits.resolve(intrinsic)
         };
 
         layout::Node::new(size)
-
-
-
     }
 
     fn hash_layout(&self, state: &mut Hasher) {
@@ -189,10 +179,7 @@ where
 
         match self.width {
             Length::Shrink => {
-                self.items
-                    .iter()
-                    .map(ToString::to_string)
-                    .for_each(|label| label.hash(state));
+                self.items.iter().map(ToString::to_string).for_each(|label| label.hash(state));
             }
             _ => {
                 self.width.hash(state);
@@ -211,10 +198,9 @@ where
     ) {
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
-
                 let bounds = layout.bounds();
-                                                                         
                 if bounds.contains(cursor_position) {
+                    *self.cursor_held = true;
                     if let Some(index) = *self.hovered_option {
                         if let Some(option) = self.items.get(index) {
                             match (*self.ctrl_select, *self.bulk_select) {
@@ -222,9 +208,9 @@ where
                                     if self.last_selection.contains(&index) {
                                         self.last_selection.retain(|x| *x != index);
                                     } else {
-                                    self.last_selection.push(index);
+                                        self.last_selection.push(index);
                                     }
-                                },
+                                }
                                 (false, true) => {
                                     let starting_val = *self.last_selection.first().unwrap_or(&0);
                                     self.last_selection.clear();
@@ -233,33 +219,34 @@ where
                                     } else {
                                         self.last_selection.extend(starting_val..index);
                                     }
-                                },
+                                }
                                 (false, false) => {
                                     self.last_selection.clear();
                                     self.last_selection.push(index);
-                                },
+                                }
                             }
                         }
                     }
                 }
-            },
+            }
+            Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
+                *self.cursor_held = false;
+            }
             Event::Keyboard(keyboard::Event::ModifiersChanged(mod_state)) => {
                 *self.ctrl_select = mod_state.control;
                 *self.bulk_select = mod_state.shift;
-            },
+            }
             Event::Mouse(mouse::Event::CursorMoved { .. }) => {
                 let bounds = layout.bounds();
-                let text_size =
-                    self.text_size.unwrap_or(renderer.default_size());
+                let text_size = self.text_size.unwrap_or(renderer.default_size());
 
                 if bounds.contains(cursor_position) {
                     *self.hovered_option = Some(
-                        ((cursor_position.y - bounds.y)
-                            / f32::from(text_size + self.padding * 2))
+                        ((cursor_position.y - bounds.y) / f32::from(text_size + self.padding * 2))
                             as usize,
                     );
                 }
-            },
+            }
 
             _ => {}
         }
@@ -277,6 +264,7 @@ where
             renderer,
             layout.bounds(),
             cursor_position,
+            *self.cursor_held,
             self.items,
             Some(&self.last_selection[..]),
             self.padding,
@@ -286,13 +274,9 @@ where
         )
     }
 
-    fn overlay(
-        &mut self,
-        layout: Layout<'_>,
-    ) -> Option<overlay::Element<'_, Message, Renderer>> {
-            None
+    fn overlay(&mut self, layout: Layout<'_>) -> Option<overlay::Element<'_, Message, Renderer>> {
+        None
     }
-    
 }
 
 /// The renderer of a [`CellList`].
@@ -317,19 +301,18 @@ pub trait Renderer: text::Renderer + menu::Renderer {
     ///
     /// [`Menu`]: ../../overlay/menu/struct.Menu.html
     /// [`CellList`]: struct.CellList.html
-    fn menu_style(
-        style: &<Self as Renderer>::Style,
-    ) -> <Self as menu::Renderer>::Style;
+    fn menu_style(style: &<Self as Renderer>::Style) -> <Self as menu::Renderer>::Style;
 
     /// Draws a [`CellList`].
     ///
     /// [`CellList`]: struct.CellList.html
-    fn draw<T:ToString>(
+    fn draw<T: ToString>(
         &mut self,
         bounds: Rectangle,
         cursor_position: Point,
+        cursor_held: bool,
         items: &[T],
-        selected: Option<& [usize]>,
+        selected: Option<&[usize]>,
         padding: u16,
         text_size: u16,
         font: Self::Font,
@@ -349,7 +332,3 @@ where
         Element::new(self)
     }
 }
-
-
-
-
