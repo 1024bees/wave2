@@ -17,7 +17,12 @@ bincode = "*"
 vcd = {git = "https://github.com/1024bees/rust-vcd", rev="48186f52f5cc5d6b012240e6c97f2cc7b9ddfb9f"}
 sled = "*"
 serde = "*"
+cached = "*"
 bit-vec = { version = "0.6", features = ["serde"] }
+
+
+[dev-dependencies]
+tempfile = "3"
 
 [workspace]
 members = [ "widget_test/wavewindow",

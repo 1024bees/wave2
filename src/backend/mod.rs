@@ -5,6 +5,8 @@ use std::io;
 use vcd::{ReferenceIndex, Value, Var, Command};
 use bincode;
 
+use cached::proc_macro::cached;
+
 use std::path::Path;
 
 
@@ -14,12 +16,6 @@ mod vcd_parser;
 use vcd_parser::WaveParser;
 
 const DEFAULT_SLIZE_SIZE : u64= 10000;
-
-#[derive(Serialize, Deserialize)]
-enum SigIndices {
-    BitSelect(u64),
-    Range(u64, u64),
-}
 
 
 #[derive(Debug, Clone, Copy)]
@@ -83,8 +79,8 @@ impl WaveDB {
 
 
     //TODO: parallelize this
-    fn from_file(vcd_file_path : String) -> Result<WaveDB, errors::Waverr> { 
-        let parser = WaveParser::new(vcd_file_path.clone()).unwrap();
+    fn from_vcd(vcd_file_path : String) -> Result<WaveDB, errors::Waverr> { 
+        let parser = WaveParser::new(vcd_file_path.clone())?;
         let wdb_name = {
             if let Some(vcd_file) = Path::new(&vcd_file_path).file_stem() {
                 vcd_file.to_str()
@@ -94,44 +90,43 @@ impl WaveDB {
                 vcd_file_path
             }
         };
-        let mut wdb = WaveDB::new(wdb_name);
+        let wdb = WaveDB::new(wdb_name);
         let mut global_time = 0;
         let mut current_range = (global_time, global_time + DEFAULT_SLIZE_SIZE);
-        let mut BucketMappers : HashMap<vcd::IdCode,Bucket> = HashMap::new();
+        let mut bucket_mapper : HashMap<vcd::IdCode,Bucket> = HashMap::new();
 
         for item in parser {
             match item {
                 Ok(Command::Timestamp(time)) => {
                     if time % DEFAULT_SLIZE_SIZE < global_time % DEFAULT_SLIZE_SIZE {
-                        for (_ , bucket) in BucketMappers.iter() {
-                            wdb.insert_bucket(bucket);
+                        for (_ , bucket) in bucket_mapper.iter() {
+                            wdb.insert_bucket(bucket)?;
                         }
+                        bucket_mapper.clear();
                     }
                     global_time = time;
                 },
                 Ok(Command::ChangeVector(code, vvalue)) => {
-                    if !BucketMappers.contains_key(&code) {
-                        BucketMappers.insert(code, Bucket::new(code.0,current_range));
+                    if !bucket_mapper.contains_key(&code) {
+                        bucket_mapper.insert(code, Bucket::new(code.0,current_range));
                     }
-                    let bucket = BucketMappers.get_mut(&code).unwrap();
+                    let bucket = bucket_mapper.get_mut(&code).unwrap();
                     bucket.add_new_signal(global_time, vvalue);
                 },
                 Ok(Command::ChangeScalar(code, value)) => {
-                    if !BucketMappers.contains_key(&code) {
-                        BucketMappers.insert(code, Bucket::new(code.0,current_range));
+                    if !bucket_mapper.contains_key(&code) {
+                        bucket_mapper.insert(code, Bucket::new(code.0,current_range));
                     }
-                    let bucket = BucketMappers.get_mut(&code).unwrap();
+                    let bucket = bucket_mapper.get_mut(&code).unwrap();
                     bucket.add_new_signal(global_time, vec![value]);
                 },
                 Ok(_) => {},
                 Err(_) => {
-                    return Err(errors::Waverr::GenericErr("NOTHING".into()));
+                    return Err(errors::Waverr::GenericErr("Malformed vcd".into()));
                 }
             }
         }
-
-        Err(errors::Waverr::GenericErr("NOTHING".into()))
-
+        Ok(wdb)
     }
 
 
@@ -254,10 +249,26 @@ impl Bucket {
 mod tests {
     use bit_vec::BitVec;
     use crate::backend::*;
+    use std::path::*;
     #[test]
     fn hello_test() {
         let mut bv = BitVec::from_elem(9, true);
         assert_eq!(true, true)
+    }
+
+
+    #[test]
+    fn wdb_from_wikivcd() {
+        let mut path_to_wikivcd = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        path_to_wikivcd.push("test_vcds/wikipedia.vcd");
+        let pathstr = path_to_wikivcd.into_os_string().into_string().unwrap();
+        println!("{}", pathstr);
+        let wdb = WaveDB::from_vcd(pathstr);
+        let actualdb = match wdb {
+            Ok(wdb) => {wdb},
+            Err(errors::Waverr::GenericErr(message)) => panic!("{} is the error message",message),
+            Err(errors::Waverr::VCDErr(vcdmess)) => panic!("{} is the vcd error message", vcdmess),
+        };
     }
 
     #[test]
@@ -275,7 +286,6 @@ mod tests {
             }
 
         }
-
     }
 
 }

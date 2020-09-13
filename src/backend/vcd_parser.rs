@@ -62,7 +62,7 @@ impl From<&vcd::Header> for FlatMap{
 
 impl WaveParser<io::BufReader<File>>{
 //TODO: move from option to waverr
-    pub fn new(file_path : String) -> Option<WaveParser<io::BufReader<File>>> { 
+    pub fn new(file_path : String) -> Result<WaveParser<io::BufReader<File>>,errors::Waverr> { 
         if let Ok(f) = File::open(&file_path) {
             let mut rv = WaveParser {
                 VCDParser : Parser::new(io::BufReader::new(f)),
@@ -70,10 +70,10 @@ impl WaveParser<io::BufReader<File>>{
                 header: None
             };
             rv.populate_header();
-            return Some(rv);
-
+            Ok(rv)
+        } else {
+            Err(errors::Waverr::VCDErr("Could not open VCD!"))
         }
-        None
     }
 
 }

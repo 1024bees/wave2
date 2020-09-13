@@ -3,6 +3,7 @@ use sled;
 
 pub enum Waverr {
 //    SledErr(sled::Error),
+    VCDErr(&'static str),
     GenericErr(String),
 }
 
