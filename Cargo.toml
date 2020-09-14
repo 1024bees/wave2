@@ -18,6 +18,7 @@ vcd = {git = "https://github.com/1024bees/rust-vcd", rev="48186f52f5cc5d6b012240
 sled = "*"
 serde = "*"
 cached = "*"
+toml = "*"
 bit-vec = { version = "0.6", features = ["serde"] }
 
 

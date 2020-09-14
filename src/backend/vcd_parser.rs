@@ -1,27 +1,83 @@
-use vcd::{ReferenceIndex, Value, Var,Parser,ScopeItem, IdCode};
-use std::io;
-use std::fs::File;
-use std::collections::HashMap;
 use crate::backend::errors;
-
-
+use serde::ser::SerializeMap;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::collections::HashMap;
+use std::fs::File;
+use std::io;
+use vcd::{IdCode, Parser, ReferenceIndex, ScopeItem, Value, Var};
 
 pub struct WaveParser<R: io::Read> {
-    VCDParser : Parser<R>,
-    filepath : String,
-    header : Option<vcd::Header>
+    VCDParser: Parser<R>,
+    filepath: String,
+    header: Option<vcd::Header>,
 }
 
-
-
-
 #[derive(Default)]
-struct FlatMap(HashMap<String,IdCode>);
+pub struct IDMap(HashMap<String, IdCode>);
 
-impl From<&vcd::Header> for FlatMap{
-    fn from(header: &vcd::Header) -> FlatMap{
+impl Serialize for IDMap {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut map = serializer.serialize_map(Some(self.0.len()))?;
+        for (k, v) in &self.0 {
+            let id: u32 = v.0 as u32;
+            map.serialize_entry(k.as_str(), &id)?;
+        }
+        map.end()
+    }
+}
 
-        fn recurse_parse(map :&mut HashMap<String,IdCode>, scope : &vcd::Scope, active_scope:  &mut String) {
+pub struct IDMVisitor {}
+
+impl<'de> serde::de::Visitor<'de> for IDMVisitor {
+    type Value = IDMap;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(formatter, "a map from strings to uint32s")
+    }
+
+    fn visit_map<M>(self, mut access: M) -> Result<Self::Value, M::Error>
+    where
+        M: serde::de::MapAccess<'de>,
+    {
+        let mut map: HashMap<String, IdCode> =
+            HashMap::with_capacity(access.size_hint().unwrap_or(0));
+        while let Some((key, value)) = access.next_entry()? {
+            let annotater: &str = key;
+            let val_cpy : u32 = value;
+            map.insert(annotater.to_string(), IdCode(value as u64));
+        }
+        Ok(IDMap(map))
+    }
+}
+
+impl<'de> Deserialize<'de> for IDMap {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_map(IDMVisitor {})
+    }
+}
+
+impl IDMap {
+    pub fn signal_to_id(&self, signal: &str) -> Result<u32, errors::Waverr> {
+        match self.0.get(signal) {
+            Some(id_code) => Ok(id_code.0 as u32),
+            None => Err(errors::Waverr::GenericErr("No signal exists".into())),
+        }
+    }
+}
+
+impl From<&vcd::Header> for IDMap {
+    fn from(header: &vcd::Header) -> IDMap {
+        fn recurse_parse(
+            map: &mut HashMap<String, IdCode>,
+            scope: &vcd::Scope,
+            active_scope: &mut String,
+        ) {
             let bl = active_scope.len();
             active_scope.push_str(scope.identifier.as_ref());
             active_scope.push('.');
@@ -34,9 +90,8 @@ impl From<&vcd::Header> for FlatMap{
                         active_scope.truncate(ol);
                     }
                     ScopeItem::Scope(scope) => {
-                        recurse_parse(map,scope,active_scope);
+                        recurse_parse(map, scope, active_scope);
                     }
-
                 }
             }
             active_scope.truncate(bl);
@@ -47,27 +102,25 @@ impl From<&vcd::Header> for FlatMap{
         for item in header.items.iter() {
             match item {
                 ScopeItem::Var(variable) => {
-                    map.insert("".into(),variable.code);
-                },
-                ScopeItem::Scope(scope) => {
-                    recurse_parse(&mut map,scope,&mut scope_str);
+                    map.insert("".into(), variable.code);
                 }
-
+                ScopeItem::Scope(scope) => {
+                    recurse_parse(&mut map, scope, &mut scope_str);
+                }
             }
         }
-        FlatMap(map)
+        IDMap(map)
     }
 }
 
-
-impl WaveParser<io::BufReader<File>>{
-//TODO: move from option to waverr
-    pub fn new(file_path : String) -> Result<WaveParser<io::BufReader<File>>,errors::Waverr> { 
+impl WaveParser<io::BufReader<File>> {
+    //TODO: move from option to waverr
+    pub fn new(file_path: String) -> Result<WaveParser<io::BufReader<File>>, errors::Waverr> {
         if let Ok(f) = File::open(&file_path) {
             let mut rv = WaveParser {
-                VCDParser : Parser::new(io::BufReader::new(f)),
-                filepath : file_path,
-                header: None
+                VCDParser: Parser::new(io::BufReader::new(f)),
+                filepath: file_path,
+                header: None,
             };
             rv.populate_header();
             Ok(rv)
@@ -75,21 +128,17 @@ impl WaveParser<io::BufReader<File>>{
             Err(errors::Waverr::VCDErr("Could not open VCD!"))
         }
     }
-
 }
 
-
 impl<R: io::Read> WaveParser<R> {
-    
-    fn new_test(raw_file : R) -> WaveParser<R> {
+    fn new_test(raw_file: R) -> WaveParser<R> {
         let mut rv = WaveParser {
-            VCDParser : Parser::new(raw_file),
-            filepath : String::default(),
+            VCDParser: Parser::new(raw_file),
+            filepath: String::default(),
             header: None,
         };
         rv.populate_header();
         rv
-
     }
 
     fn populate_header(&mut self) {
@@ -98,32 +147,28 @@ impl<R: io::Read> WaveParser<R> {
         }
     }
 
-    pub fn create_flatmap(&self) -> FlatMap{
+    pub fn create_idmap(&self) -> IDMap {
         if let Some(ref header) = self.header {
-            FlatMap::from(header)
+            IDMap::from(header)
         } else {
-            FlatMap::default()
+            IDMap::default()
         }
     }
-
 }
-
-
-
 
 impl<P: io::Read> Iterator for WaveParser<P> {
     type Item = Result<vcd::Command, io::Error>;
-    fn next(&mut self) -> Option<Result<vcd::Command,io::Error>> {
+    fn next(&mut self) -> Option<Result<vcd::Command, io::Error>> {
         self.VCDParser.next()
     }
 }
 
-
 mod tests {
     use crate::backend::vcd_parser::*;
+    use bincode;
 
     #[test]
-    fn wikipedia_sample() {
+    fn wikipedia_sample_idmap() {
         let sample = b"
         $date
         Date text.
@@ -169,16 +214,24 @@ mod tests {
             ";
 
         let mut parser = WaveParser::new_test(&sample[..]);
-        let fm_map = parser.create_flatmap().0;
-        let key_vec = vec![ "logic.data", "logic.data_valid", "logic.en", "logic.rx_en", "logic.tx_en", "logic.empty", "logic.underrun"];
-        assert_eq!(fm_map.len(),7);
+        let idmap = parser.create_idmap();
+        let fm_map = &idmap.0;
+        let key_vec = vec![
+            "logic.data",
+            "logic.data_valid",
+            "logic.en",
+            "logic.rx_en",
+            "logic.tx_en",
+            "logic.empty",
+            "logic.underrun",
+        ];
+        assert_eq!(fm_map.len(), 7);
         for key in key_vec {
             assert!(fm_map.contains_key(key));
         }
+        let idmap_clone : IDMap = bincode::deserialize(&bincode::serialize(&idmap).unwrap()[..]).unwrap(); 
 
-
-
+        
 
     }
 }
-
