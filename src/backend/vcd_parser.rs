@@ -34,7 +34,10 @@ pub struct IDMVisitor {}
 impl<'de> serde::de::Visitor<'de> for IDMVisitor {
     type Value = IDMap;
 
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn expecting(
+        &self,
+        formatter: &mut std::fmt::Formatter,
+    ) -> std::fmt::Result {
         write!(formatter, "a map from strings to uint32s")
     }
 
@@ -46,7 +49,7 @@ impl<'de> serde::de::Visitor<'de> for IDMVisitor {
             HashMap::with_capacity(access.size_hint().unwrap_or(0));
         while let Some((key, value)) = access.next_entry()? {
             let annotater: &str = key;
-            let val_cpy : u32 = value;
+            let val_cpy: u32 = value;
             map.insert(annotater.to_string(), IdCode(value as u64));
         }
         Ok(IDMap(map))
@@ -115,7 +118,9 @@ impl From<&vcd::Header> for IDMap {
 
 impl WaveParser<io::BufReader<File>> {
     //TODO: move from option to waverr
-    pub fn new(file_path: String) -> Result<WaveParser<io::BufReader<File>>, errors::Waverr> {
+    pub fn new(
+        file_path: String,
+    ) -> Result<WaveParser<io::BufReader<File>>, errors::Waverr> {
         if let Ok(f) = File::open(&file_path) {
             let mut rv = WaveParser {
                 VCDParser: Parser::new(io::BufReader::new(f)),
@@ -229,9 +234,8 @@ mod tests {
         for key in key_vec {
             assert!(fm_map.contains_key(key));
         }
-        let idmap_clone : IDMap = bincode::deserialize(&bincode::serialize(&idmap).unwrap()[..]).unwrap(); 
-
-        
-
+        let idmap_clone: IDMap =
+            bincode::deserialize(&bincode::serialize(&idmap).unwrap()[..])
+                .unwrap();
     }
 }

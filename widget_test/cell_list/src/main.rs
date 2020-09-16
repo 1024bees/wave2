@@ -1,5 +1,6 @@
 use iced::{
-    scrollable, Align, Container, Element, Length, Sandbox, Scrollable, Settings, Space, Text,
+    scrollable, Align, Container, Element, Length, Sandbox, Scrollable,
+    Settings, Space, Text,
 };
 
 use iced::{pick_list, PickList};
@@ -43,8 +44,11 @@ impl Sandbox for Example {
     }
 
     fn view(&mut self) -> Element<Message> {
-        let pick_list =
-            CellList::new(&mut self.pick_list, &Language::ALL[..], Message::LanguageSelected);
+        let pick_list = CellList::new(
+            &mut self.pick_list,
+            &Language::ALL[..],
+            Message::LanguageSelected,
+        );
 
         let mut content = Scrollable::new(&mut self.scroll)
             .width(Length::Fill)

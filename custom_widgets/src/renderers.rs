@@ -4,7 +4,8 @@ mod cell_list {
     use iced_graphics::backend::{self, Backend};
     use iced_graphics::{Primitive, Renderer};
     use iced_native::{
-        mouse, Color, Font, HorizontalAlignment, Point, Rectangle, VerticalAlignment,
+        mouse, Color, Font, HorizontalAlignment, Point, Rectangle,
+        VerticalAlignment,
     };
     use iced_style::menu::Style;
 
@@ -42,14 +43,20 @@ mod cell_list {
             let is_mouse_over = bounds.contains(cursor_position);
 
             let mut primitives = Vec::new();
-            let style = if is_mouse_over { style.hovered() } else { style.active() };
+            let style = if is_mouse_over {
+                style.hovered()
+            } else {
+                style.active()
+            };
 
             let selected = selected.unwrap_or_default();
             for (i, item) in items.iter().enumerate() {
                 let is_selected = selected.contains(&i);
                 let bounds = Rectangle {
                     x: bounds.x,
-                    y: bounds.y + ((text_size as usize + padding as usize * 2) * i) as f32,
+                    y: bounds.y
+                        + ((text_size as usize + padding as usize * 2) * i)
+                            as f32,
                     width: bounds.width,
                     height: f32::from(text_size + padding * 2),
                 };

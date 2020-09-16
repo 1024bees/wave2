@@ -1,11 +1,10 @@
-
 use bit_vec::BitVec;
 use cached::proc_macro::cached;
 use serde::{Deserialize, Serialize};
 use vcd::{Command, ReferenceIndex, Value, Var};
-pub mod wavedb;
 mod errors;
 mod vcd_parser;
+pub mod wavedb;
 use errors::Waverr;
 use wavedb::WaveDB;
 const DEFAULT_SLIZE_SIZE: u32 = 10000;
@@ -37,7 +36,14 @@ impl Default for Wave {
     fn default() -> Self {
         Wave {
             name: String::from("PlaceholderWave"),
-            signal_content: vec![(0, 1), (10, 0), (20, 1), (30, 0), (50, 1), (500, 0)],
+            signal_content: vec![
+                (0, 1),
+                (10, 0),
+                (20, 1),
+                (30, 0),
+                (50, 1),
+                (500, 0),
+            ],
             sig_type: SigType::Bit,
         }
     }
@@ -46,7 +52,10 @@ impl Default for Wave {
 //TODO: move from Wave -> InMemoryWave... should there be a transform there even?
 impl Wave {
     pub fn default_vec() -> Self {
-        Wave { sig_type: SigType::Vector(4), ..Wave::default() }
+        Wave {
+            sig_type: SigType::Vector(4),
+            ..Wave::default()
+        }
     }
 }
 
@@ -57,7 +66,10 @@ pub struct InMemWave {
 }
 
 impl InMemWave {
-    fn new(name_str: &str, buckets: Vec<Result<Bucket, Waverr>>) -> Result<InMemWave, Waverr> {
+    fn new(
+        name_str: &str,
+        buckets: Vec<Result<Bucket, Waverr>>,
+    ) -> Result<InMemWave, Waverr> {
         let mut signal_content = Vec::new();
         for bucket in buckets {
             match bucket {
@@ -68,11 +80,13 @@ impl InMemWave {
         }
 
         let st = SigType::from_width(signal_content.first().unwrap().1.len());
-        Ok(InMemWave { name: name_str.into(), signal_content: signal_content, sig_type: st })
+        Ok(InMemWave {
+            name: name_str.into(),
+            signal_content: signal_content,
+            sig_type: st,
+        })
     }
 }
-
-
 
 ///Chunk of a signal that is stored in wave2 db.
 ///
@@ -86,7 +100,11 @@ struct Bucket {
 
 impl Default for Bucket {
     fn default() -> Self {
-        Bucket { timestamp_range: (0, 10000), id: 0, sig_dumps: Vec::new() }
+        Bucket {
+            timestamp_range: (0, 10000),
+            id: 0,
+            sig_dumps: Vec::new(),
+        }
     }
 }
 
@@ -115,7 +133,8 @@ impl ParsedVec {
 
 impl From<Vec<Value>> for ParsedVec {
     fn from(vec_val: Vec<Value>) -> ParsedVec {
-        let mut parsed_vec = ParsedVec(BitVec::from_elem(vec_val.len(), false), Option::None);
+        let mut parsed_vec =
+            ParsedVec(BitVec::from_elem(vec_val.len(), false), Option::None);
         let ref mut option_vec = parsed_vec.1;
         for (bidx, bit) in vec_val.iter().enumerate() {
             match bit {
@@ -123,13 +142,15 @@ impl From<Vec<Value>> for ParsedVec {
                 Value::X => {
                     parsed_vec.0.set(bidx, true);
                     if *option_vec == Option::None {
-                        *option_vec = Some(BitVec::from_elem(vec_val.len(), false));
+                        *option_vec =
+                            Some(BitVec::from_elem(vec_val.len(), false));
                     }
                     option_vec.as_mut().unwrap().set(bidx, true);
                 }
                 Value::Z => {
                     if *option_vec == Option::None {
-                        *option_vec = Some(BitVec::from_elem(vec_val.len(), false));
+                        *option_vec =
+                            Some(BitVec::from_elem(vec_val.len(), false));
                     }
                     option_vec.as_mut().unwrap().set(bidx, true);
                 }
@@ -146,7 +167,11 @@ impl Bucket {
     }
 
     fn new(id_: u32, stamps: (u32, u32)) -> Bucket {
-        Bucket { timestamp_range: stamps, id: id_, sig_dumps: Vec::new() }
+        Bucket {
+            timestamp_range: stamps,
+            id: id_,
+            sig_dumps: Vec::new(),
+        }
     }
 
     fn add_new_signal(&mut self, timestamp: u32, val_vec: Vec<Value>) {
@@ -178,12 +203,15 @@ mod tests {
         let wdb = WaveDB::from_vcd(pathstr, "/tmp/rng");
         let actualdb = match wdb {
             Ok(wdb) => wdb,
-            Err(errors::Waverr::VCDErr(vcdmess)) => panic!("{} is the vcd error message", vcdmess),
-            Err(Waverr::GenericErr(message)) => panic!("Unhandled error case: {} ", message),
+            Err(errors::Waverr::VCDErr(vcdmess)) => {
+                panic!("{} is the vcd error message", vcdmess)
+            }
+            Err(Waverr::GenericErr(message)) => {
+                panic!("Unhandled error case: {} ", message)
+            }
             Err(_) => panic!("Unhandled error case"),
         };
         let var = actualdb.get_imw("logic.data").unwrap();
         assert_eq!(var.sig_type, SigType::Vector(8));
     }
-
 }

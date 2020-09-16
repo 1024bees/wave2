@@ -1,13 +1,13 @@
-use crate::backend::vcd_parser::{IDMap, WaveParser};
-use crate::backend::{Bucket,DEFAULT_SLIZE_SIZE,InMemWave};
 use crate::backend::errors::Waverr;
-use toml;
+use crate::backend::vcd_parser::{IDMap, WaveParser};
+use crate::backend::{Bucket, InMemWave, DEFAULT_SLIZE_SIZE};
 use bincode;
-use vcd::{Command, ReferenceIndex, Value, Var};
-use sled::Db;
 use serde::{Deserialize, Serialize};
+use sled::Db;
 use std::collections::HashMap;
 use std::path::*;
+use toml;
+use vcd::{Command, ReferenceIndex, Value, Var};
 
 #[derive(Serialize, Deserialize, Default)]
 struct WDBConfig {
@@ -15,7 +15,6 @@ struct WDBConfig {
     populated: bool,
     time_range: (u32, u32),
 }
-
 
 ///DB for holding buckets
 ///
@@ -32,7 +31,10 @@ impl WaveDB {
         WaveDB {
             db: sled::open(db_path.unwrap_or(db_name.as_ref())).unwrap(),
             id_map: IDMap::default(),
-            config: WDBConfig { db_name: db_name.clone(), ..WDBConfig::default() },
+            config: WDBConfig {
+                db_name: db_name.clone(),
+                ..WDBConfig::default()
+            },
         }
     }
 
@@ -42,7 +44,8 @@ impl WaveDB {
 
     fn get_time_slices(&self) -> std::iter::StepBy<std::ops::Range<u32>> {
         ((self.config.time_range.0 / DEFAULT_SLIZE_SIZE) * DEFAULT_SLIZE_SIZE
-            ..(self.config.time_range.1 / DEFAULT_SLIZE_SIZE + 2) * DEFAULT_SLIZE_SIZE)
+            ..(self.config.time_range.1 / DEFAULT_SLIZE_SIZE + 2)
+                * DEFAULT_SLIZE_SIZE)
             .step_by(DEFAULT_SLIZE_SIZE as usize)
     }
 
@@ -62,7 +65,8 @@ impl WaveDB {
     }
 
     fn dump_config(&self) -> Result<(), Waverr> {
-        self.db.insert("config", toml::to_string(&self.config)?.as_str())?;
+        self.db
+            .insert("config", toml::to_string(&self.config)?.as_str())?;
         Ok(())
     }
 
@@ -88,13 +92,19 @@ impl WaveDB {
     }
 
     //TODO: parallelize this
-    pub fn from_vcd(vcd_file_path: String, wdb_path: &str) -> Result<WaveDB, Waverr> {
+    pub fn from_vcd(
+        vcd_file_path: String,
+        wdb_path: &str,
+    ) -> Result<WaveDB, Waverr> {
         if Path::new(wdb_path).exists() {}
 
         let parser = WaveParser::new(vcd_file_path.clone())?;
         let wdb_name = {
             if let Some(vcd_file) = Path::new(&vcd_file_path).file_stem() {
-                vcd_file.to_str().unwrap_or(vcd_file_path.as_ref()).to_string()
+                vcd_file
+                    .to_str()
+                    .unwrap_or(vcd_file_path.as_ref())
+                    .to_string()
             } else {
                 vcd_file_path
             }
@@ -108,27 +118,36 @@ impl WaveDB {
             match item {
                 Ok(Command::Timestamp(time)) => {
                     let time = time as u32;
-                    if time % DEFAULT_SLIZE_SIZE < global_time % DEFAULT_SLIZE_SIZE {
+                    if time % DEFAULT_SLIZE_SIZE
+                        < global_time % DEFAULT_SLIZE_SIZE
+                    {
                         for (_, bucket) in bucket_mapper.iter() {
                             wdb.insert_bucket(bucket)?;
                         }
                         bucket_mapper.clear();
                         let rounded_time = time - (time % DEFAULT_SLIZE_SIZE);
-                        current_range = (rounded_time, rounded_time + DEFAULT_SLIZE_SIZE)
+                        current_range =
+                            (rounded_time, rounded_time + DEFAULT_SLIZE_SIZE)
                     }
                     global_time = time;
                 }
                 //TODO: collapse these arms if possible? good way to share this code?
                 Ok(Command::ChangeVector(code, vvalue)) => {
                     if !bucket_mapper.contains_key(&code) {
-                        bucket_mapper.insert(code, Bucket::new(code.0 as u32, current_range));
+                        bucket_mapper.insert(
+                            code,
+                            Bucket::new(code.0 as u32, current_range),
+                        );
                     }
                     let bucket = bucket_mapper.get_mut(&code).unwrap();
                     bucket.add_new_signal(global_time, vvalue);
                 }
                 Ok(Command::ChangeScalar(code, value)) => {
                     if !bucket_mapper.contains_key(&code) {
-                        bucket_mapper.insert(code, Bucket::new(code.0 as u32, current_range));
+                        bucket_mapper.insert(
+                            code,
+                            Bucket::new(code.0 as u32, current_range),
+                        );
                     }
                     let bucket = bucket_mapper.get_mut(&code).unwrap();
                     bucket.add_new_signal(global_time, vec![value]);
@@ -151,19 +170,29 @@ impl WaveDB {
     fn insert_bucket(&self, bucket: &Bucket) -> Result<(), Waverr> {
         let tree: sled::Tree = self.db.open_tree(bucket.get_db_idx())?;
         let serialized = bincode::serialize(&bucket)?;
-        if let Ok(Some(value)) = tree.insert(bucket.id.to_be_bytes(), serialized) {
-            return Err(Waverr::GenericErr("Value exists in tree already".into()));
+        if let Ok(Some(value)) =
+            tree.insert(bucket.id.to_be_bytes(), serialized)
+        {
+            return Err(Waverr::GenericErr(
+                "Value exists in tree already".into(),
+            ));
         }
         Ok(())
     }
 
-    fn retrieve_bucket(&self, id: u32, ts_start: u32) -> Result<Bucket, Waverr> {
+    fn retrieve_bucket(
+        &self,
+        id: u32,
+        ts_start: u32,
+    ) -> Result<Bucket, Waverr> {
         let tree = self.db.open_tree(WaveDB::ts2key(ts_start))?;
         if let Some(bucket) = tree.get(id.to_be_bytes())? {
             let bucket: Bucket = bincode::deserialize(bucket.as_ref())?;
             return Ok(bucket);
         }
-        Err(Waverr::MissingID("No bucket with that ID exists for this ts range!"))
+        Err(Waverr::MissingID(
+            "No bucket with that ID exists for this ts range!",
+        ))
     }
 
     pub fn get_imw(&self, sig: &str) -> Result<InMemWave, Waverr> {
@@ -182,7 +211,6 @@ impl WaveDB {
         format!("{}-{}", rounded_ts, rounded_ts + DEFAULT_SLIZE_SIZE)
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -204,4 +232,3 @@ mod tests {
         }
     }
 }
-
