@@ -6,13 +6,13 @@ use iced::{
 
 use iced::{button, scrollable, text_input, Align, Column, TextInput};
 
-use crate::backend::{SigType, Wave};
-const BUFFER_PX: f32 = 4.0;
-const WAVEHEIGHT: f32 = 19.0;
-const VEC_SHIFT_WIDTH: f32 = 4.0;
-const MAX_NUM_TEXT_HEADERS: u32 = 30;
-const TEXT_OFFSET: f32 = WAVEHEIGHT / 2.0;
-const TS_FONT_SIZE: f32 = 8.0;
+use crate::backend::{SigType, Wave,InMemWave};
+pub const BUFFER_PX: f32 = 4.0;
+pub const WAVEHEIGHT: f32 = 19.0;
+pub const VEC_SHIFT_WIDTH: f32 = 4.0;
+pub const MAX_NUM_TEXT_HEADERS: u32 = 30;
+pub const TEXT_OFFSET: f32 = WAVEHEIGHT / 2.0;
+pub const TS_FONT_SIZE: f32 = 8.0;
 
 const BLUE: Color = Color::from_rgba(
     0x1b as f32 / 255.0,
@@ -38,7 +38,7 @@ pub enum Message {
 
 #[derive(Default)]
 pub struct Holder {
-    signals: Vec<Wave>,
+    signals: Vec<InMemWave>,
     ww_state: WaveWindowState,
     GlobalCursorState: CursorState,
     scroll: scrollable::State,
@@ -51,11 +51,11 @@ impl Holder {
     pub fn update(&mut self, message: Message) {
         match message {
             Message::AddDummy => {
-                self.signals.push(Wave::default());
+                self.signals.push(InMemWave::default());
                 self.ww_state.request_redraw();
             }
             Message::AddDummyVec => {
-                self.signals.push(Wave::default_vec());
+                self.signals.push(InMemWave::default_vec());
                 self.ww_state.request_redraw();
             }
             Message::ClearWaves => {
@@ -121,7 +121,7 @@ impl Holder {
 }
 
 pub struct WaveWindow<'a> {
-    signals: &'a [Wave],
+    signals: &'a [InMemWave],
     state: &'a WaveWindowState,
     cur_state: CursorState,
 }
@@ -150,7 +150,7 @@ impl Default for CursorState {
 impl WaveWindowState {
     pub fn view<'a>(
         &'a mut self,
-        signals: &'a [Wave],
+        signals: &'a [InMemWave],
         cur_state: CursorState,
     ) -> Element<'a, Message> {
         Canvas::new(WaveWindow {
@@ -295,22 +295,21 @@ impl<'a> WaveWindow<'a> {
                     let mut prev_xcoord = self.cur_state.view_range.0;
                     match wave.sig_type {
                         SigType::Bit => {
-                            println!("rendering bitwave!");
-                            for signal_change in wave.signal_content.iter() {
-                                //println!("xdelt is {}",self.xdelt_from_prev(signal_change.0, prev_xcoord, &bounds);)
+                            for (time,sig_payload) in wave.changes() {
 
                                 working_pt.x += self.xdelt_from_prev(
-                                    signal_change.0,
+                                    *time,
                                     prev_xcoord,
                                     &bounds,
                                 );
                                 p.line_to(working_pt);
                                 p.move_to(working_pt);
-                                match signal_change.1 {
-                                    0 => working_pt.y += WAVEHEIGHT,
+                                //TODO: handle z/x case
+                                match sig_payload.get_bv() {
+                                    false => working_pt.y += WAVEHEIGHT,
                                     _ => working_pt.y -= WAVEHEIGHT,
                                 }
-                                prev_xcoord = signal_change.0;
+                                prev_xcoord = *time;
                                 p.line_to(working_pt);
                                 p.move_to(working_pt);
                             }
@@ -328,20 +327,13 @@ impl<'a> WaveWindow<'a> {
                                 ..working_pt
                             };
                             let mut working_pts = [working_pt_top, working_pt];
-                            for signal_change in wave.signal_content.iter() {
+                            for (time, sig_payload) in wave.changes() {
                                 let x_delt = self.xdelt_from_prev(
-                                    signal_change.0,
+                                    *time,
                                     prev_xcoord,
                                     &bounds,
                                 ) - VEC_SHIFT_WIDTH / 2.0;
-                                println!(
-                                    "working pt top x : {}, y : {}",
-                                    working_pt.x, working_pt.y
-                                );
-                                println!(
-                                    "working pt top x : {}, y : {}",
-                                    working_pt_top.x, working_pt_top.y
-                                );
+
 
                                 for (point, direction) in working_pts
                                     .iter_mut()
@@ -358,7 +350,7 @@ impl<'a> WaveWindow<'a> {
                                     p.line_to(*point);
                                     point.y -= WAVEHEIGHT * direction;
                                 }
-                                prev_xcoord = signal_change.0;
+                                prev_xcoord = *time
                             }
                             let fin_x_delt = self.xdelt_from_prev(
                                 self.end_window_time(),
@@ -372,10 +364,6 @@ impl<'a> WaveWindow<'a> {
                             }
                         }
                     }
-                    println!(
-                        "leftmost pt x : {}, y : {}",
-                        leftmost_pt.x, leftmost_pt.y
-                    );
                     leftmost_pt.y += WAVEHEIGHT + BUFFER_PX;
                 })
             })
@@ -383,7 +371,6 @@ impl<'a> WaveWindow<'a> {
 
         //TODO: cache wavelist in the case of append only?
 
-        frame.fill_text("hello");
         for waves in wave_list {
             frame.stroke(
                 &waves,

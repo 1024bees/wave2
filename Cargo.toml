@@ -19,8 +19,11 @@ sled = "*"
 serde = "*"
 cached = "*"
 toml = "*"
-bit-vec = { version = "0.6", features = ["serde"] }
+
 clap = "3.0.0-beta.1"
+bit-vec = { version = "0.6", features = ["serde"] }
+
+wave2_custom_widgets = { version= "0.1", path = "custom_widgets"}
 
 [dev-dependencies]
 tempfile = "3"

@@ -17,6 +17,7 @@ where
     bulk_select: &'a mut bool,
     ctrl_select: &'a mut bool,
     cursor_held: &'a mut bool,
+    setting_options : &'a mut bool,
     can_select_multiple: &'a mut bool,
     hovered_option: &'a mut Option<usize>,
     last_selection: &'a mut Vec<usize>,
@@ -36,10 +37,12 @@ where
 #[derive(Debug, Clone)]
 pub struct State {
     menu: menu::State,
+    //TODO: put control flags into struct 
     can_select_multiple: bool,
     bulk_select: bool,
     ctrl_select: bool,
     cursor_held: bool,
+    setting_options: bool,
     hovered_option: Option<usize>,
     last_selection: Vec<usize>,
 }
@@ -52,6 +55,7 @@ impl Default for State {
             bulk_select: bool::default(),
             ctrl_select: bool::default(),
             cursor_held: bool::default(),
+            setting_options : bool::default(),
             hovered_option: Option::default(),
             last_selection: Vec::new(),
         }
@@ -81,6 +85,7 @@ where
             bulk_select,
             ctrl_select,
             cursor_held,
+            setting_options,
             hovered_option,
             last_selection,
         } = state;
@@ -90,6 +95,7 @@ where
             bulk_select,
             ctrl_select,
             cursor_held,
+            setting_options,
             can_select_multiple,
             hovered_option,
             last_selection,
@@ -252,6 +258,11 @@ where
             }
             Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
                 *self.cursor_held = false;
+            },
+            Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right)) => {
+                if *self.cursor_held == false && !self.last_selection.is_empty() {
+                    *self.setting_options = true; 
+                }
             }
             Event::Keyboard(keyboard::Event::ModifiersChanged(mod_state)) => {
                 *self.ctrl_select = mod_state.control;
@@ -300,8 +311,10 @@ where
     fn overlay(
         &mut self,
         layout: Layout<'_>,
-    ) -> Option<overlay::Element<'_, Message, Renderer>> {
-        None
+    ) -> Option<overlay::Element<'_, Message, Renderer>> { 
+
+       None
+        
     }
 }
 

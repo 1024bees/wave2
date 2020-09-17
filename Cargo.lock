@@ -3421,6 +3421,7 @@ dependencies = [
  "tokio",
  "toml",
  "vcd",
+ "wave2_custom_widgets",
 ]
 
 [[package]]

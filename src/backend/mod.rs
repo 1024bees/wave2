@@ -1,4 +1,4 @@
-use bit_vec::BitVec;
+use bit_vec::{BitVec};
 use cached::proc_macro::cached;
 use serde::{Deserialize, Serialize};
 use vcd::{Command, ReferenceIndex, Value, Var};
@@ -62,10 +62,39 @@ impl Wave {
 pub struct InMemWave {
     name: String,
     signal_content: Vec<(u32, ParsedVec)>,
-    sig_type: SigType,
+    pub sig_type: SigType,
 }
 
+impl Default for InMemWave {
+    fn default() -> Self {
+        InMemWave {
+            name: String::from("PlaceholderWave"),
+            signal_content: vec![
+                (0, ParsedVec::from(0)),
+                (10, ParsedVec::from(1)),
+                (20, ParsedVec::from(0)),
+                (30, ParsedVec::from(1)),
+                (50, ParsedVec::from(0)),
+                (500, ParsedVec::from(1)),
+            ],
+            sig_type: SigType::Bit,
+        }
+    }
+}
+
+
+
 impl InMemWave {
+    pub fn default_vec() -> Self {
+        InMemWave {
+            sig_type: SigType::Vector(4),
+            ..InMemWave::default()
+        }
+    }
+    pub fn changes(&self) -> std::slice::Iter<'_,(u32,ParsedVec)> {
+        self.signal_content.iter()
+    }
+
     fn new(
         name_str: &str,
         buckets: Vec<Result<Bucket, Waverr>>,
@@ -124,12 +153,22 @@ impl Default for Bucket {
 /// 10 -> Z
 /// 11 -> X
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
-struct ParsedVec(BitVec, Option<BitVec>);
+pub struct ParsedVec(BitVec, Option<BitVec>);
 impl ParsedVec {
     fn len(&self) -> u32 {
         self.0.len() as u32
     }
+    pub fn get_bv(&self) -> bool {
+        self.0.get(7).unwrap()
+    }
 }
+
+impl From<u8> for ParsedVec {
+    fn from(vec_val : u8) -> ParsedVec {
+        ParsedVec(BitVec::from_bytes(&[vec_val]),None)
+    }
+}
+
 
 impl From<Vec<Value>> for ParsedVec {
     fn from(vec_val: Vec<Value>) -> ParsedVec {
