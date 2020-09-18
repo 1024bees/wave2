@@ -12,10 +12,35 @@ pub fn main() {
     Example::run(Settings::default())
 }
 
+#[derive(Clone)]
+enum Menu {
+    Test1,
+    Test2
+}
+
+impl Menu {
+    const ALL : [Menu; 2] = [
+        Menu::Test1,
+        Menu::Test2
+    ];
+
+}
+impl ToString for Menu {
+    fn to_string(&self) -> String {
+        match self {
+            Menu::Test1 => "Test1!".into(),
+            Menu::Test2 => "Test2!".into(),
+            _ => "Unlabeled".into(),
+        }
+    }
+
+}
+
+
 #[derive(Default)]
 struct Example {
     scroll: scrollable::State,
-    pick_list: cell_list::State,
+    pick_list: cell_list::State<Menu>,
     selected_language: Language,
 }
 
@@ -47,6 +72,7 @@ impl Sandbox for Example {
         let pick_list = CellList::new(
             &mut self.pick_list,
             &Language::ALL[..],
+            &Menu::ALL,
             Message::LanguageSelected,
         );
 

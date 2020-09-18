@@ -1,4 +1,5 @@
 //! Display a list of selectable values, optionally mutable .
+use crate::Nested;
 use iced_native::{
     keyboard, layout, mouse, overlay,
     overlay::menu::{self, Menu},
@@ -8,22 +9,26 @@ use iced_native::{
 
 /// A widget for selecting a single value from a list of options.
 #[allow(missing_debug_implementations)]
-pub struct CellList<'a, T, Message, Renderer: self::Renderer>
+pub struct CellList<'a, T, O, Message, Renderer: self::Renderer>
 where
     [T]: ToOwned<Owned = Vec<T>>,
     T: ToString,
+    O: ToString,
 {
     menu: &'a mut menu::State,
     bulk_select: &'a mut bool,
     ctrl_select: &'a mut bool,
     cursor_held: &'a mut bool,
-    setting_options : &'a mut bool,
+    menu_open : &'a mut bool,
     can_select_multiple: &'a mut bool,
     hovered_option: &'a mut Option<usize>,
     last_selection: &'a mut Vec<usize>,
+    menu_hovered_option: &'a mut Option<usize>,
+    menu_last_selection: &'a mut Option<O>,
     //on_right_click: Box<dyn Fn(&'a [T]) -> Message>,
     on_selected: Box<dyn Fn(T) -> Message>,
     items: &'a [T],
+    options : &'a [O],
     width: Length,
     padding: u16,
     text_size: Option<u16>,
@@ -35,19 +40,21 @@ where
 ///
 /// [`CellList`]: struct.CellList.html
 #[derive(Debug, Clone)]
-pub struct State {
+pub struct State<O> {
     menu: menu::State,
     //TODO: put control flags into struct 
     can_select_multiple: bool,
     bulk_select: bool,
     ctrl_select: bool,
     cursor_held: bool,
-    setting_options: bool,
+    menu_open: bool,
     hovered_option: Option<usize>,
     last_selection: Vec<usize>,
+    menu_hovered_option: Option<usize>,
+    menu_last_selection: Option<O>,
 }
 
-impl Default for State {
+impl<O> Default for State<O> {
     fn default() -> Self {
         Self {
             menu: menu::State::default(),
@@ -55,18 +62,25 @@ impl Default for State {
             bulk_select: bool::default(),
             ctrl_select: bool::default(),
             cursor_held: bool::default(),
-            setting_options : bool::default(),
+            menu_open : bool::default(),
             hovered_option: Option::default(),
             last_selection: Vec::new(),
+            menu_hovered_option: Option::default(),
+            menu_last_selection:  Option::default(),
         }
     }
 }
 
-impl<'a, T: 'a, Message, Renderer: self::Renderer>
-    CellList<'a, T, Message, Renderer>
+
+
+
+impl<'a, T: 'a, O, Message, Renderer: self::Renderer>
+    CellList<'a, T, O, Message, Renderer>
 where
     T: ToString,
     [T]: ToOwned<Owned = Vec<T>>,
+    O: ToString,
+
 {
     /// Creates a new [`CellList`] with the given [`State`], a list of options,
     /// the current selected value(s), and the message to produce when option(s) is / are
@@ -75,8 +89,9 @@ where
     /// [`CellList`]: struct.CellList.html
     /// [`State`]: struct.State.html
     pub fn new(
-        state: &'a mut State,
+        state: &'a mut State<O>,
         items: &'a [T],
+        menu_options: &'a [O],
         on_selected: impl Fn(T) -> Message + 'static,
     ) -> Self {
         let State {
@@ -85,9 +100,11 @@ where
             bulk_select,
             ctrl_select,
             cursor_held,
-            setting_options,
+            menu_open,
             hovered_option,
             last_selection,
+            menu_hovered_option,
+            menu_last_selection,
         } = state;
 
         Self {
@@ -95,11 +112,14 @@ where
             bulk_select,
             ctrl_select,
             cursor_held,
-            setting_options,
+            menu_open,
             can_select_multiple,
             hovered_option,
             last_selection,
             items: items,
+            options: menu_options,
+            menu_hovered_option,
+            menu_last_selection,
             on_selected: Box::new(on_selected),
             width: Length::Shrink,
             text_size: None,
@@ -153,11 +173,12 @@ where
     }
 }
 
-impl<'a, T: 'a, Message, Renderer> Widget<Message, Renderer>
-    for CellList<'a, T, Message, Renderer>
+impl<'a, T: 'a, O, Message, Renderer> Widget<Message, Renderer>
+    for CellList<'a, T, O, Message, Renderer>
 where
     T: Clone + ToString + Eq,
     [T]: ToOwned<Owned = Vec<T>>,
+    O: Clone + ToString,
     Message: 'static,
     Renderer: self::Renderer + scrollable::Renderer + 'a,
 {
@@ -221,35 +242,45 @@ where
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
                 let bounds = layout.bounds();
                 if bounds.contains(cursor_position) {
-                    *self.cursor_held = true;
-                    if let Some(index) = *self.hovered_option {
-                        if let Some(option) = self.items.get(index) {
-                            match (*self.ctrl_select, *self.bulk_select) {
-                                (true, _) => {
-                                    if self.last_selection.contains(&index) {
-                                        self.last_selection
-                                            .retain(|x| *x != index);
-                                    } else {
+                    if *self.menu_open {
+                        if let Some(index) = *self.menu_hovered_option {
+                            if let Some(option) = self.options.get(index) {
+                                println!("Selected {} from menu",option.to_string());
+                                *self.menu_open = false;
+                            }
+                        }
+
+                    } else {
+                        *self.cursor_held = true;
+                        if let Some(index) = *self.hovered_option {
+                            if let Some(option) = self.items.get(index) {
+                                match (*self.ctrl_select, *self.bulk_select) {
+                                    (true, _) => {
+                                        if self.last_selection.contains(&index) {
+                                            self.last_selection
+                                                .retain(|x| *x != index);
+                                        } else {
+                                            self.last_selection.push(index);
+                                        }
+                                    }
+                                    (false, true) => {
+                                        let starting_val = *self
+                                            .last_selection
+                                            .first()
+                                            .unwrap_or(&0);
+                                        self.last_selection.clear();
+                                        if starting_val > index {
+                                            self.last_selection
+                                                .extend(index..starting_val);
+                                        } else {
+                                            self.last_selection
+                                                .extend(starting_val..index);
+                                        }
+                                    }
+                                    (false, false) => {
+                                        self.last_selection.clear();
                                         self.last_selection.push(index);
                                     }
-                                }
-                                (false, true) => {
-                                    let starting_val = *self
-                                        .last_selection
-                                        .first()
-                                        .unwrap_or(&0);
-                                    self.last_selection.clear();
-                                    if starting_val > index {
-                                        self.last_selection
-                                            .extend(index..starting_val);
-                                    } else {
-                                        self.last_selection
-                                            .extend(starting_val..index);
-                                    }
-                                }
-                                (false, false) => {
-                                    self.last_selection.clear();
-                                    self.last_selection.push(index);
                                 }
                             }
                         }
@@ -261,7 +292,7 @@ where
             },
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right)) => {
                 if *self.cursor_held == false && !self.last_selection.is_empty() {
-                    *self.setting_options = true; 
+                    *self.menu_open = !*self.menu_open;
                 }
             }
             Event::Keyboard(keyboard::Event::ModifiersChanged(mod_state)) => {
@@ -311,10 +342,30 @@ where
     fn overlay(
         &mut self,
         layout: Layout<'_>,
-    ) -> Option<overlay::Element<'_, Message, Renderer>> { 
+    ) -> Option<overlay::Element<'_, Message, Renderer>> {
+        if *self.menu_open {
+            let bounds = layout.bounds();
 
-       None
-        
+            let mut menu = Menu::new(
+                &mut self.menu,
+                &self.options,
+                &mut self.menu_hovered_option,
+                &mut self.menu_last_selection,
+            )
+            .width(bounds.width.round() as u16)
+            .padding(self.padding)
+            .font(self.font)
+            .style(Renderer::menu_style(&self.style));
+
+            if let Some(text_size) = self.text_size {
+                menu = menu.text_size(text_size);
+            }
+
+            Some(menu.overlay(layout.position(), bounds.height))
+        } else {
+            None
+        }
+
     }
 }
 
@@ -361,11 +412,13 @@ pub trait Renderer: text::Renderer + menu::Renderer {
     ) -> Self::Output;
 }
 
-impl<'a, T: 'a, Message, Renderer> Into<Element<'a, Message, Renderer>>
-    for CellList<'a, T, Message, Renderer>
+impl<'a, T: 'a, O, Message, Renderer> Into<Element<'a, Message, Renderer>>
+    for CellList<'a, T, O, Message, Renderer>
 where
     T: Clone + ToString + Eq,
     [T]: ToOwned<Owned = Vec<T>>,
+    O:  ToString + Clone,
+
     Renderer: self::Renderer + 'a,
     Message: 'static,
 {

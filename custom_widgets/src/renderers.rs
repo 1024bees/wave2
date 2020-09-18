@@ -13,8 +13,8 @@ mod cell_list {
     pub use iced_style::pick_list::StyleSheet;
 
     /// A widget allowing the selection of a single value from a list of options.
-    pub type CellList<'a, T, Message, Backend> =
-        cell_list::CellList<'a, T, Message, Renderer<Backend>>;
+    pub type CellList<'a, T, O, Message, Backend> =
+        cell_list::CellList<'a, T, O, Message, Renderer<Backend>>;
 
     impl<B> cell_list::Renderer for Renderer<B>
     where
