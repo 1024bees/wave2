@@ -4,7 +4,7 @@ mod cell_list {
     use iced_graphics::backend::{self, Backend};
     use iced_graphics::{Primitive, Renderer};
     use iced_native::{
-        mouse, Color, Font, HorizontalAlignment, Point, Rectangle,
+        mouse, Color, HorizontalAlignment, Point, Rectangle,
         VerticalAlignment,
     };
     use iced_style::menu::Style;
@@ -13,8 +13,8 @@ mod cell_list {
     pub use iced_style::pick_list::StyleSheet;
 
     /// A widget allowing the selection of a single value from a list of options.
-    pub type CellList<'a, T, O, Message, Backend> =
-        cell_list::CellList<'a, T, O, Message, Renderer<Backend>>;
+    //pub type CellList<'a, T, O, Message, Backend> =
+    //    cell_list::CellList<'a, T, O, Message, Renderer<Backend>>;
 
     impl<B> cell_list::Renderer for Renderer<B>
     where

@@ -6,7 +6,7 @@ use iced::{
 
 use iced::{button, scrollable, text_input, Align, Column, TextInput};
 
-use crate::backend::{SigType, Wave,InMemWave};
+use wave2_wavedb::{SigType, Wave,InMemWave};
 pub const BUFFER_PX: f32 = 4.0;
 pub const WAVEHEIGHT: f32 = 19.0;
 pub const VEC_SHIFT_WIDTH: f32 = 4.0;

@@ -3422,6 +3422,7 @@ dependencies = [
  "toml",
  "vcd",
  "wave2_custom_widgets",
+ "wave2_wavedb",
 ]
 
 [[package]]
@@ -3435,6 +3436,23 @@ dependencies = [
  "iced_native 0.2.2 (git+https://github.com/hecrj/iced?rev=ff15ebc54778dee2a7262469c8a2bcd5abecd4d1)",
  "iced_style 0.1.0 (git+https://github.com/hecrj/iced?rev=ff15ebc54778dee2a7262469c8a2bcd5abecd4d1)",
  "iced_wgpu 0.2.2 (git+https://github.com/hecrj/iced?rev=ff15ebc54778dee2a7262469c8a2bcd5abecd4d1)",
+]
+
+[[package]]
+name = "wave2_wavedb"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "bit-vec",
+ "cached",
+ "clap",
+ "env",
+ "serde",
+ "sled",
+ "tempfile",
+ "tokio",
+ "toml",
+ "vcd",
 ]
 
 [[package]]

@@ -1,14 +1,14 @@
 use iced::{
-    window, Application, Column, Command, Container, Element,
-    HorizontalAlignment, Length, Row, Settings, Subscription, Text,
+    Application, Command, Container, Element,
+    HorizontalAlignment, Length, Settings, Text,
 };
 
 use clap::Clap;
 
-pub mod backend;
 pub mod frontend;
 use frontend::*;
 use std::path::PathBuf;
+
 
 #[derive(Clap, Default)]
 #[clap(version = "0.0", author = "Jimmy C <jimmy@1024bees.com>")]
@@ -31,7 +31,7 @@ impl Opts {
     }
 }
 
-use frontend::wavewindow::*;
+
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {

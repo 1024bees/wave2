@@ -1,5 +1,3 @@
-//! Display a list of selectable values, optionally mutable .
-use crate::Nested;
 use iced_native::{
     keyboard, layout, mouse, overlay,
     overlay::menu::{self, Menu},

@@ -1,4 +1,4 @@
-use crate::backend::{InMemWave};
+use wave2_wavedb::{InMemWave};
 use crate::frontend::display_wave::WaveDisplayOptions;
 use crate::frontend::wavewindow;
 use wave2_custom_widgets::cell_list;
@@ -10,9 +10,13 @@ struct DisplayedWave {
     display_conf : Option<WaveDisplayOptions>
 }
 
+enum WaveOptions {
+    Delete
+}
+
 
 pub struct SigViewer {
-    waves_state : cell_list::State,
+    waves_state : cell_list::State<WaveOptions>,
     wavewindow : wavewindow::WaveWindowState,
     live_waves : Vec<DisplayedWave>,
     scroll: scrollable::State,
