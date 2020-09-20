@@ -8,7 +8,7 @@ use iced::{pick_list, PickList};
 use wave2_custom_widgets::cell_list;
 use wave2_custom_widgets::cell_list::CellList;
 
-pub fn main() {
+pub fn main() -> Result<(), iced::Error>{
     Example::run(Settings::default())
 }
 

@@ -23,7 +23,9 @@ impl From<Arc<InMemWave>> for DisplayedWave {
     }
 }
 
-enum WaveOptions {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+//TODO: delete
+pub enum WaveOptions {
     Delete
 }
 
@@ -55,7 +57,7 @@ pub enum Message {
     SetOpts(u32,WaveDisplayOptions),
     UpdateCursor(wavewindow::Message),
     ClearWaves,
-    CellListPlaceholder(Arc<InMemWave>),
+    CellListPlaceholder(WaveOptions),
 
 }
 
@@ -119,18 +121,20 @@ impl SigViewer {
             .max_height(800)
             .push(ww);
 
-        //let pick_list = Column::new()
-        //    .push(
-        //        CellList::new(
-        //        waves_state,
-        //        &temp_vec[..],
-        //        &WaveOptions::ALL,
-        //        Message::CellListPlaceholder,
-        //        )
-        //    )
-        //    .max_height(800)
-        //    .padding(20)
-        //    .spacing(20);
+        let cl = CellList::new(
+                waves_state,
+                &WaveOptions::ALL[..],
+                &WaveOptions::ALL,
+                Message::CellListPlaceholder,
+                );
+
+
+
+        let pick_list = Column::new()
+            .push(cl)
+            .max_height(800)
+            .padding(20)
+            .spacing(20);
 
         Container::new(
             Row::new()
