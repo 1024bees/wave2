@@ -5,8 +5,8 @@ use iced::{
 
 use clap::Clap;
 
-pub mod frontend;
-use frontend::*;
+pub mod components;
+use components::*;
 use std::path::PathBuf;
 
 

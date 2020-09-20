@@ -57,6 +57,8 @@ impl Wave {
     }
 }
 
+
+#[derive (Debug)]
 pub struct InMemWave {
     name: String,
     signal_content: Vec<(u32, ParsedVec)>,
@@ -81,9 +83,15 @@ impl Default for InMemWave {
 }
 
 
-impl ToString for InMemWave {
-    fn to_string(&self) -> String {
-        self.name.clone()
+
+
+impl std::fmt::Display for InMemWave {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.name.as_str()
+        )
     }
 }
 
