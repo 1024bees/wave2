@@ -3,7 +3,7 @@ use crate::components::display_wave::WaveDisplayOptions;
 use crate::components::wavewindow;
 use wave2_custom_widgets::{cell_list};
 use wave2_custom_widgets::cell_list::CellList;
-use iced::{button, scrollable, text_input, Align, Column,Row, TextInput, Element, Container};
+use iced::{button, scrollable, text_input, Align, Column,Row, TextInput, Element, Container, Scrollable};
 use std::sync::Arc;
 
 
@@ -57,7 +57,7 @@ pub enum Message {
     SetOpts(u32,WaveDisplayOptions),
     UpdateCursor(wavewindow::Message),
     ClearWaves,
-    CellListPlaceholder(WaveOptions),
+    CellListPlaceholder(Arc<InMemWave>),
 
 }
 
@@ -121,9 +121,10 @@ impl SigViewer {
             .max_height(800)
             .push(ww);
 
+
         let cl = CellList::new(
                 waves_state,
-                &WaveOptions::ALL[..],
+                &temp_hack[..],
                 &WaveOptions::ALL,
                 Message::CellListPlaceholder,
                 );
@@ -136,18 +137,13 @@ impl SigViewer {
             .padding(20)
             .spacing(20);
 
-        Container::new(
-            Row::new()
-            //.push(pick_list)
-            .push(wave_view)
-            .height(iced::Length::Shrink)
-        ).into()
-
-            
-
-
-
-
+        Scrollable::new(scroll_x)
+            .push(Container::new(
+                Row::new()
+                .push(pick_list)
+                .push(wave_view)
+                .height(iced::Length::Shrink)
+                )).into()
         }
 
 

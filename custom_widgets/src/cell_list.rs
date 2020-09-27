@@ -9,9 +9,8 @@ use iced_native::{
 #[allow(missing_debug_implementations)]
 pub struct CellList<'a, T, O, Message, Renderer: self::Renderer>
 where
-    [T]: ToOwned<Owned = Vec<T>>,
-    T: ToString,
-    O: ToString,
+    T: ToString + Clone,
+    O: ToString + Clone,
 {
     menu: &'a mut menu::State,
     bulk_select: &'a mut bool,
@@ -72,12 +71,11 @@ impl<O> Default for State<O> {
 
 
 
-impl<'a, T: 'a, O, Message, Renderer: self::Renderer>
+impl<'a, T: 'a, O : 'a , Message, Renderer: self::Renderer>
     CellList<'a, T, O, Message, Renderer>
 where
-    T: ToString,
-    [T]: ToOwned<Owned = Vec<T>>,
-    O: ToString,
+    T: ToString + Clone,
+    O: ToString + Clone,
 
 {
     /// Creates a new [`CellList`] with the given [`State`], a list of options,
@@ -171,11 +169,10 @@ where
     }
 }
 
-impl<'a, T: 'a, O, Message, Renderer> Widget<Message, Renderer>
+impl<'a, T: 'a, O: 'a, Message, Renderer> Widget<Message, Renderer>
     for CellList<'a, T, O, Message, Renderer>
 where
-    T: Clone + ToString + Eq,
-    [T]: ToOwned<Owned = Vec<T>>,
+    T: Clone + ToString,
     O: Clone + ToString,
     Message: 'static,
     Renderer: self::Renderer + scrollable::Renderer + 'a,
@@ -410,12 +407,11 @@ pub trait Renderer: text::Renderer + menu::Renderer {
     ) -> Self::Output;
 }
 
-impl<'a, T: 'a, O, Message, Renderer> Into<Element<'a, Message, Renderer>>
+impl<'a, T: 'a, O: 'a, Message, Renderer> Into<Element<'a, Message, Renderer>>
     for CellList<'a, T, O, Message, Renderer>
 where
-    T: Clone + ToString + Eq,
-    [T]: ToOwned<Owned = Vec<T>>,
-    O:  ToString + Clone,
+    T: Clone + ToString,
+    O: ToString + Clone,
 
     Renderer: self::Renderer + 'a,
     Message: 'static,
