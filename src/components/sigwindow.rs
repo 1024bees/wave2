@@ -1,5 +1,5 @@
 use wave2_wavedb::{InMemWave};
-use crate::components::display_wave::WaveDisplayOptions;
+use crate::components::display_wave::{WaveDisplayOptions,DisplayedWave};
 use crate::components::wavewindow;
 use wave2_custom_widgets::{cell_list};
 use wave2_custom_widgets::cell_list::CellList;
@@ -7,21 +7,6 @@ use iced::{button, scrollable, text_input, Align, Column,Row, TextInput, Element
 use std::sync::Arc;
 
 
-struct DisplayedWave {
-    wave_content : Arc<InMemWave>,
-    display_conf : Option<WaveDisplayOptions>
-}
-
-
-
-impl From<Arc<InMemWave>> for DisplayedWave {
-    fn from(imw : Arc<InMemWave>) -> Self {
-        DisplayedWave {
-            wave_content : imw,
-            display_conf : Option::default(),
-        }
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 //TODO: delete
@@ -57,19 +42,31 @@ pub enum Message {
     SetOpts(u32,WaveDisplayOptions),
     UpdateCursor(wavewindow::Message),
     ClearWaves,
-    CellListPlaceholder(Arc<InMemWave>),
-
+    CellListPlaceholder(DisplayedWave),
 }
+
 
 pub struct SigViewer {
     waves_state : cell_list::State<WaveOptions>,
     wavewindow : wavewindow::WaveWindowState,
     live_waves : Vec<DisplayedWave>,
-    temp_hack : Vec<Arc<InMemWave>>, //don't want to touch wave window logic yet
     cursor : wavewindow::CursorState,
     scroll_x: scrollable::State,
-    scroll_y: scrollable::State,
 }
+
+impl Default for SigViewer {
+    fn default() -> Self {
+
+        SigViewer {
+            waves_state : cell_list::State::default(),
+            wavewindow : wavewindow::WaveWindowState::default(),
+            live_waves : vec![DisplayedWave::default()],
+            cursor : wavewindow::CursorState::default(),
+            scroll_x : scrollable::State::default(),
+        }
+    }
+}
+
 
 
 impl SigViewer {
@@ -100,56 +97,50 @@ impl SigViewer {
             waves_state,
             wavewindow,
             live_waves,
-            temp_hack,
             cursor,
             scroll_x,
-            scroll_y,
             } = self;
 
-        *temp_hack = live_waves.iter()
-            .map(|x| x.wave_content.clone())
-            .collect();
-        let ww = wavewindow.view(
-                    &temp_hack[..],
+            //TODO: move message logic out of wavewindow
+            let ww = wavewindow.view(
+                    &live_waves[..],
                     *cursor)
-            .map(move |message| Message::UpdateCursor(message)); //TODO: fix this
+            .map(move |message| Message::UpdateCursor(message)); 
 
 
         let wave_view = Column::new()
             .padding(20)
             .spacing(20)
+            .width(iced::Length::Fill)
+            .height(iced::Length::Fill)
             .max_height(800)
             .push(ww);
 
 
         let cl = CellList::new(
                 waves_state,
-                &temp_hack[..],
+                &live_waves[..],
                 &WaveOptions::ALL,
                 Message::CellListPlaceholder,
                 );
 
-
-
         let pick_list = Column::new()
             .push(cl)
+            .width(iced::Length::Shrink)
+            .height(iced::Length::Shrink)
             .max_height(800)
+            .max_width(400)
             .padding(20)
             .spacing(20);
 
-        Scrollable::new(scroll_x)
-            .push(Container::new(
+        
+            Container::new(
                 Row::new()
                 .push(pick_list)
                 .push(wave_view)
-                .height(iced::Length::Shrink)
-                )).into()
+                .height(iced::Length::Fill)
+                ).into()
         }
-
-
-
-    
-
 
 }
 

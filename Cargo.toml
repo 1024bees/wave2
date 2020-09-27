@@ -13,6 +13,8 @@ iced_native = {git = "https://github.com/hecrj/iced", rev="4f2962d73f3bdeeca8a11
 iced_wgpu = {git = "https://github.com/hecrj/iced", rev="4f2962d73f3bdeeca8a11817e404c45e91e2c2cc"}
 iced_graphics = {git = "https://github.com/hecrj/iced", rev="4f2962d73f3bdeeca8a11817e404c45e91e2c2cc"}
 env = "*"
+log = "0.4.0"
+env_logger = "0.7.1"
 bincode = "*"
 vcd = {git = "https://github.com/1024bees/rust-vcd", rev="48186f52f5cc5d6b012240e6c97f2cc7b9ddfb9f"}
 sled = "*"
@@ -25,6 +27,7 @@ bit-vec = { version = "0.6", features = ["serde"] }
 
 wave2_custom_widgets = { version= "0.1", path = "custom_widgets"}
 wave2_wavedb = { version= "0.1", path = "wavedb"}
+
 
 
 [dev-dependencies]

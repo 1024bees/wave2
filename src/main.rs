@@ -8,7 +8,7 @@ use clap::Clap;
 pub mod components;
 use components::*;
 use std::path::PathBuf;
-
+use env_logger;
 
 #[derive(Clap, Default)]
 #[clap(version = "0.0", author = "Jimmy C <jimmy@1024bees.com>")]
@@ -40,11 +40,12 @@ fn main() {
         flags: opts,
         ..Settings::default()
     };
+    env_logger::init();
     Wave2::run(settings);
 }
 
 struct State {
-    WaveHolder: wavewindow::Holder,
+    sig_viewer : sigwindow::SigViewer,
 }
 
 enum Wave2 {
@@ -55,7 +56,7 @@ enum Wave2 {
 #[derive(Debug)]
 enum Message {
     // Component messages
-    WWMessage(wavewindow::Message),
+    SVMessage(sigwindow::Message),
     //IoMessage
     Loaded(Result<(), std::io::Error>),
 }
@@ -82,7 +83,7 @@ impl Application for Wave2 {
                 match message {
                     Message::Loaded(Ok(void)) => {
                         *self = Wave2::Loaded(State {
-                            WaveHolder: wavewindow::Holder::default(),
+                            sig_viewer: sigwindow::SigViewer::default(),
                         });
                     }
                     _ => {}
@@ -91,8 +92,8 @@ impl Application for Wave2 {
             }
             Wave2::Loaded(state) => {
                 match message {
-                    Message::WWMessage(message) => {
-                        state.WaveHolder.update(message)
+                    Message::SVMessage(message) => {
+                        state.sig_viewer.update(message)
                     }
                     _ => {}
                 }
@@ -104,10 +105,10 @@ impl Application for Wave2 {
     fn view(&mut self) -> Element<Self::Message> {
         match self {
             Wave2::Loading => loading_message(),
-            Wave2::Loaded(State { WaveHolder }) => {
-                let ww = WaveHolder
+            Wave2::Loaded(State { sig_viewer }) => {
+                let ww = sig_viewer
                     .view()
-                    .map(move |message| Message::WWMessage(message));
+                    .map(move |message| Message::SVMessage(message));
 
                 ww.into()
             }

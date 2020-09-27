@@ -4,17 +4,24 @@ use iced::{
     Rectangle, Text,
 };
 
+use crate::components::display_wave::{WaveDisplayOptions,DisplayedWave};
 use iced::{button, scrollable, text_input, Align, Column, TextInput};
 use std::sync::Arc;
-
+use log::{info,warn};
 
 use wave2_wavedb::{SigType, Wave,InMemWave};
+
 pub const BUFFER_PX: f32 = 4.0;
 pub const WAVEHEIGHT: f32 = 19.0;
 pub const VEC_SHIFT_WIDTH: f32 = 4.0;
 pub const MAX_NUM_TEXT_HEADERS: u32 = 30;
 pub const TEXT_OFFSET: f32 = WAVEHEIGHT / 2.0;
 pub const TS_FONT_SIZE: f32 = 8.0;
+
+
+/// If we try to put a timestamp too close to the start of the wave window 
+/// it clips the black bounding box of the wave window and looks bad
+const TS_CLIP_RANGE : f32 = 5.0;
 
 const BLUE: Color = Color::from_rgba(
     0x1b as f32 / 255.0,
@@ -30,6 +37,9 @@ const ORANGE: Color = Color::from_rgba(
     0.4,
 );
 
+
+
+
 #[derive(Debug, Clone)]
 pub enum Message {
     ClearWaves,
@@ -38,92 +48,9 @@ pub enum Message {
     UpdateCursor(CursorState),
 }
 
-#[derive(Default)]
-pub struct Holder {
-    signals: Vec<Arc<InMemWave>>,
-    ww_state: WaveWindowState,
-    GlobalCursorState: CursorState,
-    scroll: scrollable::State,
-    button: button::State,
-    vec_button: button::State,
-    clear_button: button::State,
-}
-
-impl Holder {
-    pub fn update(&mut self, message: Message) {
-        match message {
-            Message::AddDummy => {
-                self.signals.push(Arc::new(InMemWave::default()));
-                self.ww_state.request_redraw();
-            }
-            Message::AddDummyVec => {
-                self.signals.push(Arc::new(InMemWave::default_vec()));
-                self.ww_state.request_redraw();
-            }
-            Message::ClearWaves => {
-                self.signals.clear();
-                self.ww_state = WaveWindowState::default();
-            }
-            Message::UpdateCursor(state) => {
-                self.GlobalCursorState = state;
-                self.ww_state.redraw_cursor();
-            }
-        }
-    }
-
-    pub fn view(&mut self) -> Element<Message> {
-        let Holder {
-            signals,
-            ww_state,
-            GlobalCursorState,
-            scroll,
-            button,
-            vec_button,
-            clear_button,
-        } = self;
-        let button: Element<_> = Button::new(button, Text::new("AddWave"))
-            .padding(10)
-            .on_press(Message::AddDummy)
-            .into();
-
-        let ww = self.ww_state.view(signals, *GlobalCursorState);
-
-        Column::new()
-            .padding(20)
-            .spacing(20)
-            .align_items(Align::Center)
-            .max_height(1000)
-            .push(
-                Text::new("Wavewindow example")
-                    .width(Length::Shrink)
-                    .size(50),
-            )
-            .push(button)
-            .push(ww)
-            .push(
-                Button::new(&mut self.clear_button, Text::new("Clear Waves"))
-                    .padding(10)
-                    .on_press(Message::ClearWaves),
-            )
-            .push(
-                Button::new(&mut self.vec_button, Text::new("AddVecWave"))
-                    .padding(10)
-                    .on_press(Message::AddDummyVec),
-            )
-            .push(
-                Text::new(format!(
-                    "Cursor pos: {}",
-                    self.GlobalCursorState.cursor_location
-                ))
-                .width(Length::Shrink)
-                .size(50),
-            )
-            .into()
-    }
-}
 
 pub struct WaveWindow<'a> {
-    signals: &'a [Arc<InMemWave>],
+    signals: &'a [DisplayedWave],
     state: &'a WaveWindowState,
     cur_state: CursorState,
 }
@@ -152,7 +79,7 @@ impl Default for CursorState {
 impl WaveWindowState {
     pub fn view<'a>(
         &'a mut self,
-        signals: &'a [Arc<InMemWave>],
+        signals: &'a [DisplayedWave],
         cur_state: CursorState,
     ) -> Element<'a, Message> {
         Canvas::new(WaveWindow {
@@ -241,17 +168,19 @@ impl<'a> WaveWindow<'a> {
             .step_by(ts_width as usize)
         {
             xpos += self.xdelt_from_prev(ts, prev_ts, bounds);
-            frame.fill_text(canvas::Text {
-                content: format!("{}ns", ts),
-                position: Point {
-                    x: xpos,
-                    y: bounds.y,
-                },
-                color: Color::WHITE,
-                size: TS_FONT_SIZE,
-                horizontal_alignment: HorizontalAlignment::Center,
-                ..canvas::Text::default()
-            });
+            if xpos > TS_CLIP_RANGE {
+                frame.fill_text(canvas::Text {
+                    content: format!("{}ns", ts),
+                    position: Point {
+                        x: xpos,
+                        y: bounds.y,
+                    },
+                    color: GREEN,
+                    size: TS_FONT_SIZE,
+                    horizontal_alignment: HorizontalAlignment::Right,
+                    ..canvas::Text::default()
+                }); 
+            }
             let vert_path = Path::new(|p| {
                 p.move_to([xpos, bounds.y + TS_FONT_SIZE].into());
                 p.line_to([xpos, bounds.y + bounds.height].into());
@@ -279,19 +208,19 @@ impl<'a> WaveWindow<'a> {
 
     //TODO: only redraw "dirty" signals
     fn draw_all(&self, frame: &mut Frame, bounds: Rectangle) {
-        let mut leftmost_pt = bounds.position();
+        let mut leftmost_pt = Point::default();
         leftmost_pt.y += 1.5 * WAVEHEIGHT + BUFFER_PX;
-        //TODO: file issue on iced? maybe its a line width issue
         let mut bgpt = bounds.position();
-        bgpt.x -= 2.0;
-        let background = Path::rectangle(bgpt, bounds.size());
+        let background = Path::rectangle(Point::default(), bounds.size());
+        info!("Bounds are x : {} y: {}, width: {}, height: {}", bounds.x, bounds.y, bounds.width, bounds.height);
         frame.fill(&background, Color::BLACK);
         self.draw_header(frame, &bounds);
         let wave_list: Vec<Path> = self
             .signals
             .iter()
-            .map(|wave| {
+            .map(|display| {
                 Path::new(|p| {
+                    let wave = display.get_wave();
                     let mut working_pt = leftmost_pt.clone();
                     p.move_to(leftmost_pt);
                     let mut prev_xcoord = self.cur_state.view_range.0;
@@ -400,11 +329,13 @@ impl<'a> canvas::Program<Message> for WaveWindow<'a> {
         cursor: Cursor,
     ) -> Option<Message> {
         let cursor_position = cursor.position_in(&bounds)?;
+
         match event {
             Event::Mouse(mouse_event) => match mouse_event {
                 mouse::Event::ButtonReleased(mouse::Button::Left) => {
                     self.cur_state.cursor_location =
                         self.get_timestamp(bounds, cursor_position.x);
+                    info!("Cursors pos x : {} y: {}", cursor_position.x, cursor_position.y);
                     Some(Message::UpdateCursor(self.cur_state.clone()))
                 }
                 _ => None,
