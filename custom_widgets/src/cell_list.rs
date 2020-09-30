@@ -6,6 +6,9 @@ use iced_native::{
 };
 
 /// A widget for selecting a single value from a list of options.
+///
+/// This is the core widget on which most components are built on. add doc comments in sooner
+/// rather than later
 #[allow(missing_debug_implementations)]
 pub struct CellList<'a, T, O, Message, Renderer: self::Renderer>
 where
@@ -24,11 +27,13 @@ where
     menu_last_selection: &'a mut Option<O>,
     //on_right_click: Box<dyn Fn(&'a [T]) -> Message>,
     on_selected: Box<dyn Fn(T) -> Message>,
+    heading : Option<String>,
     items: &'a [T],
     options : &'a [O],
     width: Length,
     padding: u16,
     text_size: Option<u16>,
+    heading_size : Option<u16>,
     font: Renderer::Font,
     style: <Renderer as self::Renderer>::Style,
 }
@@ -112,6 +117,7 @@ where
             can_select_multiple,
             hovered_option,
             last_selection,
+            heading : None,
             items: items,
             options: menu_options,
             menu_hovered_option,
@@ -119,6 +125,7 @@ where
             on_selected: Box::new(on_selected),
             width: Length::Shrink,
             text_size: None,
+            heading_size: None,
             padding: Renderer::DEFAULT_PADDING,
             font: Default::default(),
             style: Default::default(),
@@ -148,6 +155,25 @@ where
         self.text_size = Some(size);
         self
     }
+
+    /// Sets the text size of the [`CellList`].
+    ///
+    /// [`CellList`]: struct.CellList.html
+    pub fn heading_size(mut self, size: u16) -> Self {
+        self.heading_size = Some(size);
+        self 
+    }
+
+
+    /// Sets the heading string of the [`CellList`]
+    ///
+    /// [`CellList`]: struct.CellList.html
+    pub fn heading(mut self, header: String) -> Self {
+        self.heading = Some(header);
+        self 
+    }
+
+
 
     /// Sets the font of the [`CellList`].
     ///
@@ -192,7 +218,7 @@ where
     ) -> layout::Node {
         use std::f32;
 
-        let limits = limits.width(Length::Fill).height(Length::Shrink);
+        let limits = limits.width(Length::Fill).height(Length::Fill);
         let text_size = self.text_size.unwrap_or(renderer.default_size());
 
         let size = {
@@ -295,10 +321,17 @@ where
                 *self.bulk_select = mod_state.shift;
             }
             Event::Mouse(mouse::Event::CursorMoved { .. }) => {
-                let bounds = layout.bounds();
                 let text_size =
                     self.text_size.unwrap_or(renderer.default_size());
 
+                let bounds = if let Some(_) =  self.heading  {
+                    let mut tbounds = layout.bounds();
+                    tbounds.y += f32::from(self.heading_size.unwrap_or(text_size) + self.padding * 2);
+                    tbounds
+                } else {
+                    layout.bounds()
+                };
+                
                 if bounds.contains(cursor_position) {
                     *self.hovered_option = Some(
                         ((cursor_position.y - bounds.y)
@@ -325,10 +358,12 @@ where
             layout.bounds(),
             cursor_position,
             *self.cursor_held,
+            self.heading.clone(),
             self.items,
             Some(&self.last_selection[..]),
             self.padding,
             self.text_size.unwrap_or(renderer.default_size()),
+            self.heading_size.unwrap_or(renderer.default_size()),
             self.font,
             &self.style,
         )
@@ -398,10 +433,12 @@ pub trait Renderer: text::Renderer + menu::Renderer {
         bounds: Rectangle,
         cursor_position: Point,
         cursor_held: bool,
+        heading : Option<String>,
         items: &[T],
         selected: Option<&[usize]>,
         padding: u16,
         text_size: u16,
+        header_size: u16,
         font: Self::Font,
         style: &<Self as Renderer>::Style,
     ) -> Self::Output;

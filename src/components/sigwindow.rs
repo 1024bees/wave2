@@ -122,12 +122,14 @@ impl SigViewer {
                 &live_waves[..],
                 &WaveOptions::ALL,
                 Message::CellListPlaceholder,
-                );
+                )
+            .heading("Time".into())
+            .heading_size(10);
 
         let pick_list = Column::new()
             .push(cl)
-            .width(iced::Length::Shrink)
-            .height(iced::Length::Shrink)
+            .width(iced::Length::Fill)
+            .height(iced::Length::Fill)
             .max_height(800)
             .max_width(400)
             .padding(20)

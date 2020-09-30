@@ -7,10 +7,12 @@ mod cell_list {
         mouse, Color, HorizontalAlignment, Point, Rectangle,
         VerticalAlignment,
     };
-    use iced_style::menu::Style;
+    
 
-    pub use iced_native::pick_list::State;
-    pub use iced_style::pick_list::StyleSheet;
+    use iced_style::menu::Style as MenuStyle;
+   
+    use crate::styles::cell_list::{StyleSheet};
+
 
     /// A widget allowing the selection of a single value from a list of options.
     //pub type CellList<'a, T, O, Message, Backend> =
@@ -24,8 +26,8 @@ mod cell_list {
 
         const DEFAULT_PADDING: u16 = 5;
 
-        fn menu_style(style: &Box<dyn StyleSheet>) -> Style {
-            style.menu()
+        fn menu_style(style: &Box<dyn StyleSheet>) -> MenuStyle {
+            style.options()
         }
 
         fn draw<T: ToString>(
@@ -33,21 +35,71 @@ mod cell_list {
             bounds: Rectangle,
             cursor_position: Point,
             cursor_held: bool,
+            heading : Option<String>,
             items: &[T],
             selected: Option<&[usize]>,
             padding: u16,
             text_size: u16,
+            heading_size : u16,
             font: Self::Font,
             style: &Box<dyn StyleSheet>,
         ) -> Self::Output {
             let is_mouse_over = bounds.contains(cursor_position);
 
-            let mut primitives = Vec::new();
             let style = if is_mouse_over {
                 style.hovered()
             } else {
                 style.active()
             };
+
+            let bg = Primitive::Quad {
+                bounds, 
+                background : style.background,
+                border_color : Color::BLACK,
+                border_width : 1,
+                border_radius : 1,
+            };
+
+            let mut primitives = vec![bg];
+            
+            let mut header_offset : usize = 0;
+            if let Some(head_str) = heading {
+                header_offset = (heading_size + padding*2) as usize;
+                let header_bounds = Rectangle {
+                    x: bounds.x,
+                    y: bounds.y,
+                    width: bounds.width,
+                    height: f32::from(heading_size + padding * 2),
+                };
+
+                primitives.push(Primitive::Quad {
+                        bounds: header_bounds,
+                        background: style.heading_background,
+                        border_color: Color::BLACK,
+                        border_width: 1,
+                        border_radius: 1,
+                    });
+
+
+                primitives.push(Primitive::Text {
+                    content: head_str.into(),
+                    bounds: Rectangle {
+                        x: header_bounds.x + f32::from(padding),
+                        y: header_bounds.center_y(),
+                        width: f32::INFINITY,
+                        ..header_bounds
+                    },
+                    size: f32::from(text_size),
+                    font,
+                    color : style.text_color,
+                    horizontal_alignment: HorizontalAlignment::Left,
+                    vertical_alignment: VerticalAlignment::Center,
+                });
+
+
+            }
+
+            
 
             let selected = selected.unwrap_or_default();
             for (i, item) in items.iter().enumerate() {
@@ -55,7 +107,7 @@ mod cell_list {
                 let bounds = Rectangle {
                     x: bounds.x,
                     y: bounds.y
-                        + ((text_size as usize + padding as usize * 2) * i)
+                        + ((text_size as usize + padding as usize * 2) * (i) + header_offset)
                             as f32,
                     width: bounds.width,
                     height: f32::from(text_size + padding * 2),
@@ -67,19 +119,19 @@ mod cell_list {
                     true => {
                         primitives.push(Primitive::Quad {
                             bounds,
-                            background: Style::default().selected_background,
-                            border_color: Color::TRANSPARENT,
-                            border_width: 0,
-                            border_radius: 0,
+                            background: style.selected_background,
+                            border_color: Color::BLACK,
+                            border_width: 1,
+                            border_radius: 1,
                         });
                     }
                     false => {
                         primitives.push(Primitive::Quad {
                             bounds,
-                            background: Style::default().background,
+                            background: style.background,
                             border_color: Color::TRANSPARENT,
-                            border_width: 0,
-                            border_radius: 0,
+                            border_width: 1,
+                            border_radius: 1,
                         });
                     }
                 }
@@ -95,7 +147,7 @@ mod cell_list {
                     size: f32::from(text_size),
                     font,
                     color: if is_selected {
-                        Style::default().selected_text_color
+                        style.selected_text_color
                     } else {
                         style.text_color
                     },

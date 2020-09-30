@@ -74,7 +74,9 @@ impl Sandbox for Example {
             &Language::ALL[..],
             &Menu::ALL,
             Message::LanguageSelected,
-        );
+        )
+        .heading("Dog!".into())
+        .heading_size(8);
 
         let mut content = Scrollable::new(&mut self.scroll)
             .width(Length::Fill)
