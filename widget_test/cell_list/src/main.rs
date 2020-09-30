@@ -7,8 +7,11 @@ use iced::{pick_list, PickList};
 
 use wave2_custom_widgets::cell_list;
 use wave2_custom_widgets::cell_list::CellList;
-
+use env_logger;
+use log::info;
 pub fn main() -> Result<(), iced::Error>{
+    env_logger::init();
+    info!("TEST");
     Example::run(Settings::default())
 }
 

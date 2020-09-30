@@ -238,11 +238,13 @@ dependencies = [
 name = "cell_list"
 version = "0.1.0"
 dependencies = [
+ "env_logger",
  "iced 0.1.1 (git+https://github.com/hecrj/iced?rev=4f2962d73f3bdeeca8a11817e404c45e91e2c2cc)",
  "iced_glutin 0.0.0",
  "iced_graphics 0.1.0 (git+https://github.com/hecrj/iced?rev=4f2962d73f3bdeeca8a11817e404c45e91e2c2cc)",
  "iced_native 0.2.2 (git+https://github.com/hecrj/iced?rev=4f2962d73f3bdeeca8a11817e404c45e91e2c2cc)",
  "iced_wgpu 0.2.2 (git+https://github.com/hecrj/iced?rev=4f2962d73f3bdeeca8a11817e404c45e91e2c2cc)",
+ "log",
  "tokio",
  "wave2",
  "wave2_custom_widgets",
@@ -2460,6 +2462,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c36fa947111f5c62a733b652544dd0016a43ce89619538a8ef92724a6f501a20"
 
 [[package]]
+name = "pretty_env_logger"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "926d36b9553851b8b0005f1275891b392ee4d2d833852c417ed025477350fb9d"
+dependencies = [
+ "env_logger",
+ "log",
+]
+
+[[package]]
 name = "proc-macro-crate"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3365,6 +3377,8 @@ dependencies = [
  "iced_native 0.2.2 (git+https://github.com/hecrj/iced?rev=4f2962d73f3bdeeca8a11817e404c45e91e2c2cc)",
  "iced_style 0.1.0 (git+https://github.com/hecrj/iced?rev=4f2962d73f3bdeeca8a11817e404c45e91e2c2cc)",
  "iced_wgpu 0.2.2 (git+https://github.com/hecrj/iced?rev=4f2962d73f3bdeeca8a11817e404c45e91e2c2cc)",
+ "log",
+ "pretty_env_logger",
 ]
 
 [[package]]

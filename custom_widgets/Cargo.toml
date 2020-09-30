@@ -14,4 +14,6 @@ iced_core = {git = "https://github.com/hecrj/iced", rev="4f2962d73f3bdeeca8a1181
 iced_wgpu = {git = "https://github.com/hecrj/iced", rev="4f2962d73f3bdeeca8a11817e404c45e91e2c2cc"}
 iced_graphics = {git = "https://github.com/hecrj/iced", rev="4f2962d73f3bdeeca8a11817e404c45e91e2c2cc"}
 iced_style = {git = "https://github.com/hecrj/iced", rev="4f2962d73f3bdeeca8a11817e404c45e91e2c2cc"}
+log = "0.4.0"
+pretty_env_logger = "0.4"
 

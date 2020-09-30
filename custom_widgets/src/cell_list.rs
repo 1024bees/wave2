@@ -5,6 +5,8 @@ use iced_native::{
     Rectangle, Size, Widget,
 };
 
+use log::{info};
+
 /// A widget for selecting a single value from a list of options.
 ///
 /// This is the core widget on which most components are built on. add doc comments in sooner
@@ -20,6 +22,7 @@ where
     ctrl_select: &'a mut bool,
     cursor_held: &'a mut bool,
     menu_open : &'a mut bool,
+    menu_point : &'a mut Point,
     can_select_multiple: &'a mut bool,
     hovered_option: &'a mut Option<usize>,
     last_selection: &'a mut Vec<usize>,
@@ -50,6 +53,7 @@ pub struct State<O> {
     ctrl_select: bool,
     cursor_held: bool,
     menu_open: bool,
+    menu_point: Point,
     hovered_option: Option<usize>,
     last_selection: Vec<usize>,
     menu_hovered_option: Option<usize>,
@@ -65,6 +69,7 @@ impl<O> Default for State<O> {
             ctrl_select: bool::default(),
             cursor_held: bool::default(),
             menu_open : bool::default(),
+            menu_point: Point::default(),
             hovered_option: Option::default(),
             last_selection: Vec::new(),
             menu_hovered_option: Option::default(),
@@ -102,6 +107,7 @@ where
             ctrl_select,
             cursor_held,
             menu_open,
+            menu_point,
             hovered_option,
             last_selection,
             menu_hovered_option,
@@ -114,6 +120,7 @@ where
             ctrl_select,
             cursor_held,
             menu_open,
+            menu_point,
             can_select_multiple,
             hovered_option,
             last_selection,
@@ -211,6 +218,7 @@ where
         Length::Shrink
     }
 
+     
     fn layout(
         &self,
         renderer: &Renderer,
@@ -259,49 +267,51 @@ where
         renderer: &Renderer,
         _clipboard: Option<&dyn Clipboard>,
     ) {
+        
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
                 let bounds = layout.bounds();
-                if bounds.contains(cursor_position) {
-                    if *self.menu_open {
-                        if let Some(index) = *self.menu_hovered_option {
-                            if let Some(option) = self.options.get(index) {
-                                println!("Selected {} from menu",option.to_string());
-                                *self.menu_open = false;
-                            }
-                        }
 
+                if *self.menu_open {
+                    if let Some(selection) = self.menu_last_selection {
+                            info!("Selected {} from menu",selection.to_string());
+                            *self.menu_open = false;
                     } else {
                         *self.cursor_held = true;
-                        if let Some(index) = *self.hovered_option {
-                            if let Some(option) = self.items.get(index) {
-                                match (*self.ctrl_select, *self.bulk_select) {
-                                    (true, _) => {
-                                        if self.last_selection.contains(&index) {
-                                            self.last_selection
-                                                .retain(|x| *x != index);
-                                        } else {
-                                            self.last_selection.push(index);
-                                        }
-                                    }
-                                    (false, true) => {
-                                        let starting_val = *self
-                                            .last_selection
-                                            .first()
-                                            .unwrap_or(&0);
-                                        self.last_selection.clear();
-                                        if starting_val > index {
-                                            self.last_selection
-                                                .extend(index..starting_val);
-                                        } else {
-                                            self.last_selection
-                                                .extend(starting_val..index);
-                                        }
-                                    }
-                                    (false, false) => {
-                                        self.last_selection.clear();
+                        *self.menu_last_selection = None;
+                        *self.menu_open = false;
+                        *self.menu_last_selection = None;
+
+                    }
+                } else if bounds.contains(cursor_position) {
+                    if let Some(index) = *self.hovered_option {
+                        if let Some(option) = self.items.get(index) {
+                            match (*self.ctrl_select, *self.bulk_select) {
+                                (true, _) => {
+                                    if self.last_selection.contains(&index) {
+                                        self.last_selection
+                                            .retain(|x| *x != index);
+                                    } else {
                                         self.last_selection.push(index);
                                     }
+                                }
+                                (false, true) => {
+                                    let starting_val = *self
+                                        .last_selection
+                                        .first()
+                                        .unwrap_or(&0);
+                                    self.last_selection.clear();
+                                    if starting_val > index {
+                                        self.last_selection
+                                            .extend(index..starting_val);
+                                    } else {
+                                        self.last_selection
+                                            .extend(starting_val..index);
+                                    }
+                                }
+                                (false, false) => {
+                                    self.last_selection.clear();
+                                    self.last_selection.push(index);
                                 }
                             }
                         }
@@ -314,6 +324,9 @@ where
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right)) => {
                 if *self.cursor_held == false && !self.last_selection.is_empty() {
                     *self.menu_open = !*self.menu_open;
+                    *self.menu_point = cursor_position;
+                    *self.menu_last_selection = None;
+                    *self.menu_last_selection = None;
                 }
             }
             Event::Keyboard(keyboard::Event::ModifiersChanged(mod_state)) => {
@@ -391,7 +404,7 @@ where
                 menu = menu.text_size(text_size);
             }
 
-            Some(menu.overlay(layout.position(), bounds.height))
+            Some(menu.overlay(*self.menu_point, bounds.height))
         } else {
             None
         }
