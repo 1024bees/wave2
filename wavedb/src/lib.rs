@@ -3,7 +3,9 @@ use serde::{Deserialize, Serialize};
 use vcd::{Value};
 mod errors;
 mod vcd_parser;
+pub mod hier_map;
 pub mod wavedb;
+pub mod api;
 use errors::Waverr;
 const DEFAULT_SLIZE_SIZE: u32 = 10000;
 
@@ -95,7 +97,7 @@ impl std::fmt::Display for InMemWave {
     }
 }
 
-
+///In memory DS for wave content; created from a list of Buckets
 impl InMemWave {
     pub fn default_vec() -> Self {
         InMemWave {
@@ -112,6 +114,7 @@ impl InMemWave {
         buckets: Vec<Result<Bucket, Waverr>>,
     ) -> Result<InMemWave, Waverr> {
         let mut signal_content = Vec::new();
+        //TODO: can parallelize
         for bucket in buckets {
             match bucket {
                 Ok(mut bucket) => signal_content.append(&mut bucket.sig_dumps),
@@ -129,9 +132,7 @@ impl InMemWave {
     }
 }
 
-///Chunk of a signal that is stored in wave2 db.
-///
-///If Indices is Some() then this bucket is slice of some larger signal
+///Chunk of a signal that is stored in wave2 db; on disk signal data structure
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 struct Bucket {
     timestamp_range: (u32, u32),

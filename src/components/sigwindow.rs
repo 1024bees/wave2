@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-//TODO: delete
+//TODO: add options, move to its own module?
 pub enum WaveOptions {
     Delete
 }
@@ -123,6 +123,7 @@ impl SigViewer {
                 &WaveOptions::ALL,
                 Message::CellListPlaceholder,
                 )
+            .text_size(12)
             .heading("Time".into())
             .heading_size(10);
 

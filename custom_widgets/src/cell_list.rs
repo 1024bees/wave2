@@ -267,10 +267,12 @@ where
         renderer: &Renderer,
         _clipboard: Option<&dyn Clipboard>,
     ) {
-        
+        let bounds = layout.bounds();       
+
         match event {
+
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
-                let bounds = layout.bounds();
+
 
                 if *self.menu_open {
                     if let Some(selection) = self.menu_last_selection {
@@ -322,11 +324,14 @@ where
                 *self.cursor_held = false;
             },
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right)) => {
-                if *self.cursor_held == false && !self.last_selection.is_empty() {
-                    *self.menu_open = !*self.menu_open;
-                    *self.menu_point = cursor_position;
-                    *self.menu_last_selection = None;
-                    *self.menu_last_selection = None;
+                if bounds.contains(cursor_position) {
+                    if *self.cursor_held == false && !self.last_selection.is_empty() {
+                        *self.menu_open = !*self.menu_open;
+                        *self.menu_point = cursor_position;
+                        info!("Opening menu at position x: {}, y: {}", cursor_position.x, cursor_position.y);
+                        *self.menu_last_selection = None;
+                        *self.menu_last_selection = None;
+                    }
                 }
             }
             Event::Keyboard(keyboard::Event::ModifiersChanged(mod_state)) => {
@@ -404,7 +409,10 @@ where
                 menu = menu.text_size(text_size);
             }
 
-            Some(menu.overlay(*self.menu_point, bounds.height))
+            //FIXME: this is some bullshit default; if we dont set text this is broken as hell
+            let text_size = self.text_size.unwrap_or(8);
+            info!("Bounds height is {}",bounds.height);
+            Some(menu.overlay(*self.menu_point, 0.0))//(self.options.len() * ( 2 * self.padding + text_size ) as usize) as f32))
         } else {
             None
         }
