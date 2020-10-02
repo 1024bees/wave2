@@ -1,11 +1,22 @@
 use crate::{InMemWave};
-
+use crate::wavedb::WaveDB;
+use crate::errors::Waverr;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash,Hasher};
 
 /// Interface provided to wave2 for querying signal hierarchy
 pub struct WdbAPI {
-    temp_field : Vec<String>,
+    wdb : WaveDB,
 }
 
+///Helper to hash type -> String
+fn quick_hash<T: Hash>(t: &T) -> String {
+    let mut s = DefaultHasher::new(); 
+    t.hash(&mut s);
+    let mut rs = format!("{:x}",s.finish());
+    rs.truncate(10);
+    rs
+}
 
 
 
@@ -13,8 +24,11 @@ pub struct WdbAPI {
 impl WdbAPI {
     
 
-    pub fn open_from_file(path_to_file) -> Self {
-        unimplemented!()
+    pub fn open_from_vcd(path_to_vcd : &str) -> Result<WdbAPI,Waverr> {
+        let wdb_path = format!("/tmp/wavedb/{}/wdb",quick_hash(&path_to_vcd));
+        Ok(WdbAPI {
+            wdb : WaveDB::from_vcd(path_to_vcd.into(),wdb_path.as_str())?
+        })
     }
 
     /// Get the signal content associated with this path
@@ -31,7 +45,7 @@ impl WdbAPI {
     /// Get module names underneath module_path
     /// TODO: encode if there is a submodule here
     pub fn get_submodules(&self, module_path : String) -> &[String] {
-        unimplemented!(..)
+        unimplemented!()
     }
 
 

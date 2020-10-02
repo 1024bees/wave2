@@ -92,6 +92,7 @@ impl WaveDB {
     }
 
     //TODO: parallelize this
+    //TODO: move filepath from String to &str!!!
     pub fn from_vcd(
         vcd_file_path: String,
         wdb_path: &str,
