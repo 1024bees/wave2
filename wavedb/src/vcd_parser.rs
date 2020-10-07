@@ -1,4 +1,5 @@
 use crate::errors;
+use crate::hier_map::HierMap;
 use serde::ser::SerializeMap;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
@@ -12,6 +13,9 @@ pub struct WaveParser<R: io::Read> {
     header: Option<vcd::Header>,
 }
 
+
+///Flat map from path -> IdCode. 
+/// In practice, not really useful, going to be depricated
 #[derive(Default)]
 pub struct IDMap(HashMap<String, IdCode>);
 
@@ -159,6 +163,17 @@ impl<R: io::Read> WaveParser<R> {
             IDMap::default()
         }
     }
+
+    pub fn create_hiermap(&self) -> Result<HierMap, errors::Waverr> {
+        if let Some(ref header) = self.header {
+            Ok(HierMap::from(header))
+        } else {
+            Err(errors::Waverr::VCDErr("Header is not found from vcd!"))
+        }
+
+    }
+
+
 }
 
 impl<P: io::Read> Iterator for WaveParser<P> {
