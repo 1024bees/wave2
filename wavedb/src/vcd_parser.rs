@@ -164,8 +164,8 @@ impl<R: io::Read> WaveParser<R> {
         }
     }
 
-    pub fn create_hiermap(&self) -> Result<HierMap, errors::Waverr> {
-        if let Some(ref header) = self.header {
+    pub fn create_hiermap(&mut self) -> Result<HierMap, errors::Waverr> {
+        if let Some(header) = self.header.take() {
             Ok(HierMap::from(header))
         } else {
             Err(errors::Waverr::VCDErr("Header is not found from vcd!"))

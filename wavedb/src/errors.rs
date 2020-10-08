@@ -5,6 +5,7 @@ pub enum Waverr {
     VCDErr(&'static str),
     MissingID(&'static str),
     SledError(&'static str),
+    HierMapError(&'static str),
     GenericErr(String),
 }
 
