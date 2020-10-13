@@ -1,15 +1,82 @@
+use wave2_wavedb::hier_map::{SignalItem};
+use std::sync::Arc;
+use wave2_custom_widgets::{cell_list};
+use wave2_custom_widgets::cell_list::CellList;
+use iced::{button, scrollable, text_input, Align, Column,Row, TextInput, Element, Container, Scrollable,Length};
+use strum::IntoEnumIterator;
+use strum_macros;
+use log::{error};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, strum_macros::Display)]
+//TODO: add options, move to its own module?
+pub enum SigOptions {
+    Add,
+}
 
 
+impl SigOptions{
+    //TODO: create ALL macro
+   const ALL: [SigOptions; 1] =  [SigOptions::Add];
+}
+
+///This is for navigating signals within a module
+#[derive(Default)]
 pub struct ModNavigator {
-    module_path : String,
-    module_members : Vec<String>,
-    
+    signals : Vec<SignalItem>,
+    scroll_x: scrollable::State,
+    sig_state : cell_list::State<SigOptions>,
+
 }
 
 #[derive(Debug,Clone)]
 pub enum Message {
-    ChangePath(String),
+    SignalUpdate(Arc<Vec<SignalItem>>),
+    AddSig(SignalItem),
 }
 
 
-impl ModN
+impl ModNavigator {
+    pub fn update(&mut self, message: Message) {
+        match message {
+            Message::SignalUpdate(payload) => {
+                self.signals = Arc::try_unwrap(payload).unwrap();
+            },
+            _ => {
+                error!("Not implimented yet!");
+            }
+
+        }
+    }
+    pub fn view(&mut self) -> Element<Message> {
+        let ModNavigator {
+            signals,
+            scroll_x,
+            sig_state
+        } = self;
+
+
+        let ts = CellList::new(
+                sig_state,
+                &signals[..],
+                &SigOptions::ALL,
+                Message::AddSig,
+            )
+            .text_size(12)
+            .heading("Time".into())
+            .heading_size(10);
+
+
+        let scrollable = Scrollable::new(scroll_x)
+            .push(Container::new(ts).width(Length::Fill).center_x());
+
+        Container::new(scrollable)
+            .height(Length::Fill)
+            .center_y()
+            .into()
+
+
+
+    }
+
+
+}
