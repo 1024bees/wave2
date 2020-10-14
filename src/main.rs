@@ -1,6 +1,6 @@
 use iced::{
     Application, Command, Container, Element,
-    HorizontalAlignment, Length, Settings, Text,
+    HorizontalAlignment, Length, Settings, Text, Column, Row
 };
 
 use clap::Clap;
@@ -46,6 +46,7 @@ fn main() {
 
 struct State {
     sig_viewer : sigwindow::SigViewer,
+    mod_nav : module_nav::ModNavigator,
 }
 
 enum Wave2 {
@@ -57,6 +58,7 @@ enum Wave2 {
 enum Message {
     // Component messages
     SVMessage(sigwindow::Message),
+    MNMessage(module_nav::Message),
     //IoMessage
     Loaded(Result<(), std::io::Error>),
 }
@@ -84,6 +86,8 @@ impl Application for Wave2 {
                     Message::Loaded(Ok(void)) => {
                         *self = Wave2::Loaded(State {
                             sig_viewer: sigwindow::SigViewer::default(),
+                            mod_nav : module_nav::ModNavigator::default(),
+
                         });
                     }
                     _ => {}
@@ -105,12 +109,20 @@ impl Application for Wave2 {
     fn view(&mut self) -> Element<Self::Message> {
         match self {
             Wave2::Loading => loading_message(),
-            Wave2::Loaded(State { sig_viewer }) => {
+            Wave2::Loaded(State { sig_viewer, mod_nav }) => {
                 let ww = sig_viewer
                     .view()
                     .map(move |message| Message::SVMessage(message));
+                let mod_nav_view = mod_nav
+                    .view()
+                    .map(move |message| Message::MNMessage(message));
+                let all_content = Column::new()
+                    .push(
+                        Row::new()
+                        .push(mod_nav_view))
+                    .push(ww);
+                all_content.into()
 
-                ww.into()
             }
         }
     }
