@@ -77,6 +77,11 @@ impl Sandbox for Example {
             &Menu::ALL,
             Message::LanguageSelected,
         );
+
+
+        let container = Container::new(
+            cell
+        ).width(Length::Units(400));
         
         let mut content = Scrollable::new(&mut self.scroll)
             .width(Length::Fill)
@@ -84,7 +89,7 @@ impl Sandbox for Example {
             .spacing(10)
             .push(Space::with_height(Length::Units(600)))
             .push(Text::new("Which is your favorite language?"))
-            .push(cell);
+            .push(container);
 
         content = content.push(Space::with_height(Length::Units(600)));
 
