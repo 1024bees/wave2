@@ -182,7 +182,7 @@ where
     ) -> layout::Node {
         use std::f32;
 
-        let limits = limits.width(Length::Shrink).height(Length::Shrink);
+        let limits = limits.width(Length::Fill).height(Length::Shrink);
         let text_size = self.text_size.unwrap_or(renderer.default_size());
 
         let size = {
