@@ -1,6 +1,5 @@
-mod cell_list {
     //! Display a dropdown list of selectable values.
-    use crate::cell_list;
+    use crate::widget::cell_list;
     use iced_graphics::backend::{self, Backend};
     use iced_graphics::{Primitive, Renderer};
     use iced_native::{
@@ -169,4 +168,3 @@ mod cell_list {
             )
         }
     }
-}

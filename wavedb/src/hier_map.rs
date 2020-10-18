@@ -3,10 +3,11 @@ use std::cell::Cell;
 use crate::errors::Waverr;
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug)]
 pub struct HierMap{ 
     module_list : Vec<ModuleItem>,
     top_indices : Vec<usize>,
-    live_module : Cell<usize>, 
+    live_module : Cell<usize>,
 } 
 
 
@@ -159,7 +160,7 @@ impl From<vcd::Header> for HierMap {
 
     }
 }
-#[derive(Default)]
+#[derive(Default,Debug)]
 pub struct ModuleItem {
     name : String,
     submodules : Vec<usize>,

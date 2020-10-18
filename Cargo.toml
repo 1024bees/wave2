@@ -37,6 +37,7 @@ tempfile = "3"
 [workspace]
 members = [ "widget_test/wavewindow",
             "widget_test/cell_list",
+            "widget_test/cell",
             "custom_widgets",
             "wavedb",
 ]

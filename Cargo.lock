@@ -235,6 +235,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "cell"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "iced 0.1.1 (git+https://github.com/hecrj/iced?rev=4f2962d73f3bdeeca8a11817e404c45e91e2c2cc)",
+ "iced_glutin 0.0.0",
+ "iced_graphics 0.1.0 (git+https://github.com/hecrj/iced?rev=4f2962d73f3bdeeca8a11817e404c45e91e2c2cc)",
+ "iced_native 0.2.2 (git+https://github.com/hecrj/iced?rev=4f2962d73f3bdeeca8a11817e404c45e91e2c2cc)",
+ "iced_wgpu 0.2.2 (git+https://github.com/hecrj/iced?rev=4f2962d73f3bdeeca8a11817e404c45e91e2c2cc)",
+ "log",
+ "tokio",
+ "wave2",
+ "wave2_custom_widgets",
+]
+
+[[package]]
 name = "cell_list"
 version = "0.1.0"
 dependencies = [

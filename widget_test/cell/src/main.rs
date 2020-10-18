@@ -3,10 +3,9 @@ use iced::{
     Settings, Space, Text,
 };
 
-use iced::{pick_list, PickList};
 
-use wave2_custom_widgets::widget::cell_list;
-use wave2_custom_widgets::widget::cell_list::CellList;
+use wave2_custom_widgets::widget::cell;
+use wave2_custom_widgets::widget::cell::Cell;
 use env_logger;
 use log::info;
 pub fn main() -> Result<(), iced::Error>{
@@ -43,7 +42,7 @@ impl ToString for Menu {
 #[derive(Default)]
 struct Example {
     scroll: scrollable::State,
-    pick_list: cell_list::State<Menu>,
+    pick_list: cell::State<Menu>,
     selected_language: Language,
 }
 
@@ -72,22 +71,20 @@ impl Sandbox for Example {
     }
 
     fn view(&mut self) -> Element<Message> {
-        let pick_list = CellList::new(
+        let cell = Cell::new(
             &mut self.pick_list,
-            &Language::ALL[..],
+            &Language::ALL[0],
             &Menu::ALL,
             Message::LanguageSelected,
-        )
-        .heading("Dog!".into())
-        .heading_size(8);
-
+        );
+        
         let mut content = Scrollable::new(&mut self.scroll)
             .width(Length::Fill)
             .align_items(Align::Center)
             .spacing(10)
             .push(Space::with_height(Length::Units(600)))
             .push(Text::new("Which is your favorite language?"))
-            .push(pick_list);
+            .push(cell);
 
         content = content.push(Space::with_height(Length::Units(600)));
 

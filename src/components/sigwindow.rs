@@ -1,8 +1,8 @@
 use wave2_wavedb::{InMemWave};
 use crate::components::display_wave::{WaveDisplayOptions,DisplayedWave};
 use crate::components::wavewindow;
-use wave2_custom_widgets::{cell_list};
-use wave2_custom_widgets::cell_list::CellList;
+use wave2_custom_widgets::widget::cell_list;
+use wave2_custom_widgets::widget::cell_list::CellList;
 use iced::{button, scrollable, text_input, Align, Column,Row, TextInput, Element, Container, Scrollable};
 use std::sync::Arc;
 
