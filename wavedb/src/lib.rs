@@ -1,11 +1,11 @@
-use bit_vec::{BitVec};
+use bit_vec::BitVec;
 use serde::{Deserialize, Serialize};
-use vcd::{Value};
-mod errors;
-mod vcd_parser;
-pub mod hier_map;
-pub mod wavedb;
+use vcd::Value;
 pub mod api;
+mod errors;
+pub mod hier_map;
+mod vcd_parser;
+pub mod wavedb;
 use errors::Waverr;
 const DEFAULT_SLIZE_SIZE: u32 = 10000;
 
@@ -59,8 +59,7 @@ impl Wave {
     }
 }
 
-
-#[derive (Debug)]
+#[derive(Debug)]
 pub struct InMemWave {
     name: String,
     signal_content: Vec<(u32, ParsedVec)>,
@@ -84,16 +83,9 @@ impl Default for InMemWave {
     }
 }
 
-
-
-
 impl std::fmt::Display for InMemWave {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            self.name.as_str()
-        )
+        write!(f, "{}", self.name.as_str())
     }
 }
 
@@ -105,7 +97,7 @@ impl InMemWave {
             ..InMemWave::default()
         }
     }
-    pub fn changes(&self) -> std::slice::Iter<'_,(u32,ParsedVec)> {
+    pub fn changes(&self) -> std::slice::Iter<'_, (u32, ParsedVec)> {
         self.signal_content.iter()
     }
 
@@ -177,11 +169,10 @@ impl ParsedVec {
 }
 
 impl From<u8> for ParsedVec {
-    fn from(vec_val : u8) -> ParsedVec {
-        ParsedVec(BitVec::from_bytes(&[vec_val]),None)
+    fn from(vec_val: u8) -> ParsedVec {
+        ParsedVec(BitVec::from_bytes(&[vec_val]), None)
     }
 }
-
 
 impl From<Vec<Value>> for ParsedVec {
     fn from(vec_val: Vec<Value>) -> ParsedVec {

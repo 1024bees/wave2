@@ -9,7 +9,7 @@ pub struct Style {
     pub border_color: Color,
     pub selected_text_color: Color,
     pub selected_background: Background,
-    pub heading_background : Background,
+    pub heading_background: Background,
 }
 
 impl std::default::Default for Style {
@@ -21,7 +21,9 @@ impl std::default::Default for Style {
             border_color: [0.7, 0.7, 0.7].into(),
             selected_text_color: Color::WHITE,
             selected_background: Background::Color([0.4, 0.4, 1.0].into()),
-            heading_background: Background::Color([121.0 / 255.0, 132.0 /255.0, 143.0/ 255.0].into()),
+            heading_background: Background::Color(
+                [121.0 / 255.0, 132.0 / 255.0, 143.0 / 255.0].into(),
+            ),
         }
     }
 }
@@ -68,4 +70,3 @@ where
         Box::new(style)
     }
 }
-

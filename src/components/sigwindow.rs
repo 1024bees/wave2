@@ -1,24 +1,22 @@
-use wave2_wavedb::{InMemWave};
-use crate::components::display_wave::{WaveDisplayOptions,DisplayedWave};
+use crate::components::display_wave::{DisplayedWave, WaveDisplayOptions};
 use crate::components::wavewindow;
+use iced::{
+    button, scrollable, text_input, Align, Column, Container, Element, Row,
+    Scrollable, TextInput,
+};
+use std::sync::Arc;
 use wave2_custom_widgets::widget::cell_list;
 use wave2_custom_widgets::widget::cell_list::CellList;
-use iced::{button, scrollable, text_input, Align, Column,Row, TextInput, Element, Container, Scrollable};
-use std::sync::Arc;
-
-
+use wave2_wavedb::InMemWave;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 //TODO: add options, move to its own module?
 pub enum WaveOptions {
-    Delete
+    Delete,
 }
 
 impl WaveOptions {
-   const ALL : [WaveOptions; 1] = [
-        WaveOptions::Delete,
-   ];
-
+    const ALL: [WaveOptions; 1] = [WaveOptions::Delete];
 }
 impl std::fmt::Display for WaveOptions {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -32,42 +30,35 @@ impl std::fmt::Display for WaveOptions {
     }
 }
 
-
-
-
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub enum Message {
     AddWave(Arc<InMemWave>),
     RemoveWave(usize),
-    SetOpts(u32,WaveDisplayOptions),
+    SetOpts(u32, WaveDisplayOptions),
     UpdateCursor(wavewindow::Message),
     ClearWaves,
     CellListPlaceholder(DisplayedWave),
 }
 
-
 pub struct SigViewer {
-    waves_state : cell_list::State<WaveOptions>,
-    wavewindow : wavewindow::WaveWindowState,
-    live_waves : Vec<DisplayedWave>,
-    cursor : wavewindow::CursorState,
+    waves_state: cell_list::State<WaveOptions>,
+    wavewindow: wavewindow::WaveWindowState,
+    live_waves: Vec<DisplayedWave>,
+    cursor: wavewindow::CursorState,
     scroll_x: scrollable::State,
 }
 
 impl Default for SigViewer {
     fn default() -> Self {
-
         SigViewer {
-            waves_state : cell_list::State::default(),
-            wavewindow : wavewindow::WaveWindowState::default(),
-            live_waves : vec![DisplayedWave::default()],
-            cursor : wavewindow::CursorState::default(),
-            scroll_x : scrollable::State::default(),
+            waves_state: cell_list::State::default(),
+            wavewindow: wavewindow::WaveWindowState::default(),
+            live_waves: vec![DisplayedWave::default()],
+            cursor: wavewindow::CursorState::default(),
+            scroll_x: scrollable::State::default(),
         }
     }
 }
-
-
 
 impl SigViewer {
     pub fn update(&mut self, message: Message) {
@@ -99,14 +90,12 @@ impl SigViewer {
             live_waves,
             cursor,
             scroll_x,
-            } = self;
+        } = self;
 
-            //TODO: move message logic out of wavewindow
-            let ww = wavewindow.view(
-                    &live_waves[..],
-                    *cursor)
-            .map(move |message| Message::UpdateCursor(message)); 
-
+        //TODO: move message logic out of wavewindow
+        let ww = wavewindow
+            .view(&live_waves[..], *cursor)
+            .map(move |message| Message::UpdateCursor(message));
 
         let wave_view = Column::new()
             .padding(20)
@@ -116,16 +105,15 @@ impl SigViewer {
             .max_height(800)
             .push(ww);
 
-
         let cl = CellList::new(
-                waves_state,
-                &live_waves[..],
-                &WaveOptions::ALL,
-                Message::CellListPlaceholder,
-                )
-            .text_size(12)
-            .heading("Time".into())
-            .heading_size(10);
+            waves_state,
+            &live_waves[..],
+            &WaveOptions::ALL,
+            Message::CellListPlaceholder,
+        )
+        .text_size(12)
+        .heading("Time".into())
+        .heading_size(10);
 
         let pick_list = Column::new()
             .push(cl)
@@ -136,14 +124,12 @@ impl SigViewer {
             .padding(20)
             .spacing(20);
 
-        
-            Container::new(
-                Row::new()
+        Container::new(
+            Row::new()
                 .push(pick_list)
                 .push(wave_view)
-                .height(iced::Length::Fill)
-                ).into()
-        }
-
+                .height(iced::Length::Fill),
+        )
+        .into()
+    }
 }
-

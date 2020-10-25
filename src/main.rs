@@ -1,14 +1,14 @@
 use iced::{
-    Application, Command, Container, Element,
-    HorizontalAlignment, Length, Settings, Text, Column, Row
+    Application, Column, Command, Container, Element, HorizontalAlignment,
+    Length, Row, Settings, Text,
 };
 
 use clap::Clap;
 
 pub mod components;
 use components::*;
-use std::path::PathBuf;
 use env_logger;
+use std::path::PathBuf;
 
 #[derive(Clap, Default)]
 #[clap(version = "0.0", author = "Jimmy C <jimmy@1024bees.com>")]
@@ -31,8 +31,6 @@ impl Opts {
     }
 }
 
-
-
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
     let opts: Opts = Clap::parse();
@@ -45,8 +43,8 @@ fn main() {
 }
 
 struct State {
-    sig_viewer : sigwindow::SigViewer,
-    mod_nav : module_nav::ModNavigator,
+    sig_viewer: sigwindow::SigViewer,
+    mod_nav: module_nav::ModNavigator,
 }
 
 enum Wave2 {
@@ -86,8 +84,7 @@ impl Application for Wave2 {
                     Message::Loaded(Ok(void)) => {
                         *self = Wave2::Loaded(State {
                             sig_viewer: sigwindow::SigViewer::default(),
-                            mod_nav : module_nav::ModNavigator::default(),
-
+                            mod_nav: module_nav::ModNavigator::default(),
                         });
                     }
                     _ => {}
@@ -109,20 +106,19 @@ impl Application for Wave2 {
     fn view(&mut self) -> Element<Self::Message> {
         match self {
             Wave2::Loading => loading_message(),
-            Wave2::Loaded(State { sig_viewer, mod_nav }) => {
+            Wave2::Loaded(State {
+                sig_viewer,
+                mod_nav,
+            }) => {
                 let ww = sig_viewer
                     .view()
                     .map(move |message| Message::SVMessage(message));
                 let mod_nav_view = mod_nav
                     .view()
                     .map(move |message| Message::MNMessage(message));
-                let all_content = Column::new()
-                    .push(
-                        Row::new()
-                        .push(mod_nav_view))
-                    .push(ww);
+                let all_content =
+                    Column::new().push(Row::new().push(mod_nav_view)).push(ww);
                 all_content.into()
-
             }
         }
     }

@@ -5,7 +5,7 @@ use iced_native::{
     Rectangle, Size, Widget,
 };
 
-use log::{info};
+use log::info;
 
 /// A widget for selecting a single value from a list of options.
 ///
@@ -21,8 +21,8 @@ where
     bulk_select: &'a mut bool,
     ctrl_select: &'a mut bool,
     cursor_held: &'a mut bool,
-    menu_open : &'a mut bool,
-    menu_point : &'a mut Point,
+    menu_open: &'a mut bool,
+    menu_point: &'a mut Point,
     can_select_multiple: &'a mut bool,
     hovered_option: &'a mut Option<usize>,
     last_selection: &'a mut Vec<usize>,
@@ -30,13 +30,13 @@ where
     menu_last_selection: &'a mut Option<O>,
     //on_right_click: Box<dyn Fn(&'a [T]) -> Message>,
     on_selected: Box<dyn Fn(T) -> Message>,
-    heading : Option<String>,
+    heading: Option<String>,
     items: &'a [T],
-    options : &'a [O],
+    options: &'a [O],
     width: Length,
     padding: u16,
     text_size: Option<u16>,
-    heading_size : Option<u16>,
+    heading_size: Option<u16>,
     font: Renderer::Font,
     style: <Renderer as self::Renderer>::Style,
 }
@@ -47,7 +47,7 @@ where
 #[derive(Debug, Clone)]
 pub struct State<O> {
     menu: menu::State,
-    //TODO: put control flags into struct 
+    //TODO: put control flags into struct
     can_select_multiple: bool,
     bulk_select: bool,
     ctrl_select: bool,
@@ -68,25 +68,21 @@ impl<O> Default for State<O> {
             bulk_select: bool::default(),
             ctrl_select: bool::default(),
             cursor_held: bool::default(),
-            menu_open : bool::default(),
+            menu_open: bool::default(),
             menu_point: Point::default(),
             hovered_option: Option::default(),
             last_selection: Vec::new(),
             menu_hovered_option: Option::default(),
-            menu_last_selection:  Option::default(),
+            menu_last_selection: Option::default(),
         }
     }
 }
 
-
-
-
-impl<'a, T: 'a, O : 'a , Message, Renderer: self::Renderer>
+impl<'a, T: 'a, O: 'a, Message, Renderer: self::Renderer>
     CellList<'a, T, O, Message, Renderer>
 where
     T: ToString + Clone,
     O: ToString + Clone,
-
 {
     /// Creates a new [`CellList`] with the given [`State`], a list of options,
     /// the current selected value(s), and the message to produce when option(s) is / are
@@ -124,7 +120,7 @@ where
             can_select_multiple,
             hovered_option,
             last_selection,
-            heading : None,
+            heading: None,
             items: items,
             options: menu_options,
             menu_hovered_option,
@@ -168,19 +164,16 @@ where
     /// [`CellList`]: struct.CellList.html
     pub fn heading_size(mut self, size: u16) -> Self {
         self.heading_size = Some(size);
-        self 
+        self
     }
-
 
     /// Sets the heading string of the [`CellList`]
     ///
     /// [`CellList`]: struct.CellList.html
     pub fn heading(mut self, header: String) -> Self {
         self.heading = Some(header);
-        self 
+        self
     }
-
-
 
     /// Sets the font of the [`CellList`].
     ///
@@ -218,7 +211,6 @@ where
         Length::Shrink
     }
 
-     
     fn layout(
         &self,
         renderer: &Renderer,
@@ -267,23 +259,19 @@ where
         renderer: &Renderer,
         _clipboard: Option<&dyn Clipboard>,
     ) {
-        let bounds = layout.bounds();       
+        let bounds = layout.bounds();
 
         match event {
-
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
-
-
                 if *self.menu_open {
                     if let Some(selection) = self.menu_last_selection {
-                            info!("Selected {} from menu",selection.to_string());
-                            *self.menu_open = false;
+                        info!("Selected {} from menu", selection.to_string());
+                        *self.menu_open = false;
                     } else {
                         *self.cursor_held = true;
                         *self.menu_last_selection = None;
                         *self.menu_open = false;
                         *self.menu_last_selection = None;
-
                     }
                 } else if bounds.contains(cursor_position) {
                     if let Some(index) = *self.hovered_option {
@@ -322,13 +310,18 @@ where
             }
             Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
                 *self.cursor_held = false;
-            },
+            }
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right)) => {
                 if bounds.contains(cursor_position) {
-                    if *self.cursor_held == false && !self.last_selection.is_empty() {
+                    if *self.cursor_held == false
+                        && !self.last_selection.is_empty()
+                    {
                         *self.menu_open = !*self.menu_open;
                         *self.menu_point = cursor_position;
-                        info!("Opening menu at position x: {}, y: {}", cursor_position.x, cursor_position.y);
+                        info!(
+                            "Opening menu at position x: {}, y: {}",
+                            cursor_position.x, cursor_position.y
+                        );
                         *self.menu_last_selection = None;
                         *self.menu_last_selection = None;
                     }
@@ -342,14 +335,17 @@ where
                 let text_size =
                     self.text_size.unwrap_or(renderer.default_size());
 
-                let bounds = if let Some(_) =  self.heading  {
+                let bounds = if let Some(_) = self.heading {
                     let mut tbounds = layout.bounds();
-                    tbounds.y += f32::from(self.heading_size.unwrap_or(text_size) + self.padding * 2);
+                    tbounds.y += f32::from(
+                        self.heading_size.unwrap_or(text_size)
+                            + self.padding * 2,
+                    );
                     tbounds
                 } else {
                     layout.bounds()
                 };
-                
+
                 if bounds.contains(cursor_position) {
                     *self.hovered_option = Some(
                         ((cursor_position.y - bounds.y)
@@ -411,12 +407,11 @@ where
 
             //FIXME: this is some bullshit default; if we dont set text this is broken as hell
             let text_size = self.text_size.unwrap_or(8);
-            info!("Bounds height is {}",bounds.height);
-            Some(menu.overlay(*self.menu_point, 0.0))//(self.options.len() * ( 2 * self.padding + text_size ) as usize) as f32))
+            info!("Bounds height is {}", bounds.height);
+            Some(menu.overlay(*self.menu_point, 0.0)) //(self.options.len() * ( 2 * self.padding + text_size ) as usize) as f32))
         } else {
             None
         }
-
     }
 }
 
@@ -454,7 +449,7 @@ pub trait Renderer: text::Renderer + menu::Renderer {
         bounds: Rectangle,
         cursor_position: Point,
         cursor_held: bool,
-        heading : Option<String>,
+        heading: Option<String>,
         items: &[T],
         selected: Option<&[usize]>,
         padding: u16,

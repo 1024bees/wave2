@@ -7,7 +7,7 @@ use sled::Db;
 use std::collections::HashMap;
 use std::path::*;
 use toml;
-use vcd::{Command};
+use vcd::Command;
 
 #[derive(Serialize, Deserialize, Default)]
 struct WDBConfig {
@@ -171,9 +171,7 @@ impl WaveDB {
     fn insert_bucket(&self, bucket: &Bucket) -> Result<(), Waverr> {
         let tree: sled::Tree = self.db.open_tree(bucket.get_db_idx())?;
         let serialized = bincode::serialize(&bucket)?;
-        if let Ok(Some(_)) =
-            tree.insert(bucket.id.to_be_bytes(), serialized)
-        {
+        if let Ok(Some(_)) = tree.insert(bucket.id.to_be_bytes(), serialized) {
             return Err(Waverr::GenericErr(
                 "Value exists in tree already".into(),
             ));
@@ -215,9 +213,9 @@ impl WaveDB {
 
 #[cfg(test)]
 mod tests {
+    use crate::wavedb::*;
     use bit_vec::BitVec;
     use std::path::*;
-    use crate::wavedb::*;
     #[test]
     fn insert_sanity() {
         let mut tdb = WaveDB::new("TestDB".into(), None);

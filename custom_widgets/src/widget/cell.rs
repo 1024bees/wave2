@@ -5,7 +5,7 @@ use iced_native::{
     Rectangle, Size, Widget,
 };
 
-use log::{info};
+use log::info;
 
 /// A widget to represent a singular "Cell"
 ///
@@ -18,15 +18,15 @@ where
     O: ToString + Clone,
 {
     menu: &'a mut menu::State,
-    menu_open : &'a mut bool,
-    menu_point : &'a mut Point,
+    menu_open: &'a mut bool,
+    menu_point: &'a mut Point,
     hovered_option: &'a mut bool,
     last_selection: &'a mut bool,
     menu_hovered_option: &'a mut Option<usize>,
     menu_last_selection: &'a mut Option<O>,
     on_selected: Box<dyn Fn(T) -> Message>,
     item: &'a T,
-    options : &'a [O],
+    options: &'a [O],
     width: Length,
     padding: u16,
     text_size: Option<u16>,
@@ -52,25 +52,21 @@ impl<O> Default for State<O> {
     fn default() -> Self {
         Self {
             menu: menu::State::default(),
-            menu_open : bool::default(),
+            menu_open: bool::default(),
             menu_point: Point::default(),
             hovered_option: bool::default(),
             last_selection: bool::default(),
             menu_hovered_option: Option::default(),
-            menu_last_selection:  Option::default(),
+            menu_last_selection: Option::default(),
         }
     }
 }
 
-
-
-
-impl<'a, T: 'a, O : 'a , Message, Renderer: self::Renderer>
+impl<'a, T: 'a, O: 'a, Message, Renderer: self::Renderer>
     Cell<'a, T, O, Message, Renderer>
 where
     T: ToString + Clone,
     O: ToString + Clone,
-
 {
     /// Creates a new [`Cell`] with the given [`State`], a list of options,
     /// the current selected value(s), and the message to produce when option(s) is / are
@@ -137,7 +133,6 @@ where
         self
     }
 
-
     /// Sets the font of the [`Cell`].
     ///
     /// [`Cell`]: struct.Cell.html
@@ -174,7 +169,6 @@ where
         Length::Shrink
     }
 
-     
     fn layout(
         &self,
         renderer: &Renderer,
@@ -186,10 +180,8 @@ where
         let text_size = self.text_size.unwrap_or(renderer.default_size());
 
         let size = {
-            let intrinsic = Size::new(
-                0.0,
-                f32::from(text_size + self.padding * 2)
-            );
+            let intrinsic =
+                Size::new(0.0, f32::from(text_size + self.padding * 2));
 
             limits.resolve(intrinsic)
         };
@@ -202,9 +194,7 @@ where
 
         match self.width {
             Length::Shrink => {
-                self.item
-                    .to_string()
-                    .hash(state);
+                self.item.to_string().hash(state);
             }
             _ => {
                 self.width.hash(state);
@@ -221,33 +211,34 @@ where
         renderer: &Renderer,
         _clipboard: Option<&dyn Clipboard>,
     ) {
-        let bounds = layout.bounds();       
+        let bounds = layout.bounds();
 
         match event {
-
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
                 if *self.menu_open {
                     if let Some(selection) = self.menu_last_selection {
-                            info!("Selected {} from menu",selection.to_string());
-                            *self.menu_open = false;
+                        info!("Selected {} from menu", selection.to_string());
+                        *self.menu_open = false;
                     } else {
                         *self.menu_open = false;
                         *self.menu_last_selection = None;
-
                     }
                 } else if bounds.contains(cursor_position) {
-                    if  *self.hovered_option {
+                    if *self.hovered_option {
                         *self.last_selection = !*self.last_selection;
                     }
                 }
             }
-            
+
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right)) => {
                 if bounds.contains(cursor_position) {
                     if *self.last_selection {
                         *self.menu_open = !*self.menu_open;
                         *self.menu_point = cursor_position;
-                        info!("Opening menu at position x: {}, y: {}", cursor_position.x, cursor_position.y);
+                        info!(
+                            "Opening menu at position x: {}, y: {}",
+                            cursor_position.x, cursor_position.y
+                        );
                         *self.menu_last_selection = None;
                         *self.menu_last_selection = None;
                     }
@@ -258,7 +249,7 @@ where
                     self.text_size.unwrap_or(renderer.default_size());
 
                 let bounds = layout.bounds();
-                
+
                 if bounds.contains(cursor_position) {
                     *self.hovered_option = true;
                 }
@@ -313,12 +304,11 @@ where
 
             //FIXME: this is some bullshit default; if we dont set text this is broken as hell
             let text_size = self.text_size.unwrap_or(8);
-            info!("Bounds height is {}",bounds.height);
-            Some(menu.overlay(*self.menu_point, 0.0))//(self.options.len() * ( 2 * self.padding + text_size ) as usize) as f32))
+            info!("Bounds height is {}", bounds.height);
+            Some(menu.overlay(*self.menu_point, 0.0)) //(self.options.len() * ( 2 * self.padding + text_size ) as usize) as f32))
         } else {
             None
         }
-
     }
 }
 

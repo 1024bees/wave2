@@ -4,12 +4,12 @@ use iced::{
     Rectangle, Text,
 };
 
-use crate::components::display_wave::{WaveDisplayOptions,DisplayedWave};
+use crate::components::display_wave::{DisplayedWave, WaveDisplayOptions};
 use iced::{button, scrollable, text_input, Align, Column, TextInput};
+use log::{info, warn};
 use std::sync::Arc;
-use log::{info,warn};
 
-use wave2_wavedb::{SigType, Wave,InMemWave};
+use wave2_wavedb::{InMemWave, SigType, Wave};
 
 pub const BUFFER_PX: f32 = 4.0;
 pub const WAVEHEIGHT: f32 = 19.0;
@@ -18,10 +18,9 @@ pub const MAX_NUM_TEXT_HEADERS: u32 = 30;
 pub const TEXT_OFFSET: f32 = WAVEHEIGHT / 2.0;
 pub const TS_FONT_SIZE: f32 = 8.0;
 
-
-/// If we try to put a timestamp too close to the start of the wave window 
+/// If we try to put a timestamp too close to the start of the wave window
 /// it clips the black bounding box of the wave window and looks bad
-const TS_CLIP_RANGE : f32 = 5.0;
+const TS_CLIP_RANGE: f32 = 5.0;
 
 const BLUE: Color = Color::from_rgba(
     0x1b as f32 / 255.0,
@@ -37,9 +36,6 @@ const ORANGE: Color = Color::from_rgba(
     0.4,
 );
 
-
-
-
 #[derive(Debug, Clone)]
 pub enum Message {
     ClearWaves,
@@ -47,7 +43,6 @@ pub enum Message {
     AddDummyVec,
     UpdateCursor(CursorState),
 }
-
 
 pub struct WaveWindow<'a> {
     signals: &'a [DisplayedWave],
@@ -179,7 +174,7 @@ impl<'a> WaveWindow<'a> {
                     size: TS_FONT_SIZE,
                     horizontal_alignment: HorizontalAlignment::Right,
                     ..canvas::Text::default()
-                }); 
+                });
             }
             let vert_path = Path::new(|p| {
                 p.move_to([xpos, bounds.y + TS_FONT_SIZE].into());
@@ -212,7 +207,10 @@ impl<'a> WaveWindow<'a> {
         leftmost_pt.y += 1.5 * WAVEHEIGHT + BUFFER_PX;
         let mut bgpt = bounds.position();
         let background = Path::rectangle(Point::default(), bounds.size());
-        info!("Bounds are x : {} y: {}, width: {}, height: {}", bounds.x, bounds.y, bounds.width, bounds.height);
+        info!(
+            "Bounds are x : {} y: {}, width: {}, height: {}",
+            bounds.x, bounds.y, bounds.width, bounds.height
+        );
         frame.fill(&background, Color::BLACK);
         self.draw_header(frame, &bounds);
         let wave_list: Vec<Path> = self
@@ -226,8 +224,7 @@ impl<'a> WaveWindow<'a> {
                     let mut prev_xcoord = self.cur_state.view_range.0;
                     match wave.sig_type {
                         SigType::Bit => {
-                            for (time,sig_payload) in wave.changes() {
-
+                            for (time, sig_payload) in wave.changes() {
                                 working_pt.x += self.xdelt_from_prev(
                                     *time,
                                     prev_xcoord,
@@ -264,7 +261,6 @@ impl<'a> WaveWindow<'a> {
                                     prev_xcoord,
                                     &bounds,
                                 ) - VEC_SHIFT_WIDTH / 2.0;
-
 
                                 for (point, direction) in working_pts
                                     .iter_mut()
@@ -335,7 +331,10 @@ impl<'a> canvas::Program<Message> for WaveWindow<'a> {
                 mouse::Event::ButtonReleased(mouse::Button::Left) => {
                     self.cur_state.cursor_location =
                         self.get_timestamp(bounds, cursor_position.x);
-                    info!("Cursors pos x : {} y: {}", cursor_position.x, cursor_position.y);
+                    info!(
+                        "Cursors pos x : {} y: {}",
+                        cursor_position.x, cursor_position.y
+                    );
                     Some(Message::UpdateCursor(self.cur_state.clone()))
                 }
                 _ => None,

@@ -3,15 +3,12 @@ use crate::widget::cell;
 use iced_graphics::backend::{self, Backend};
 use iced_graphics::{Primitive, Renderer};
 use iced_native::{
-    mouse, Color, HorizontalAlignment, Point, Rectangle,
-    VerticalAlignment,
+    mouse, Color, HorizontalAlignment, Point, Rectangle, VerticalAlignment,
 };
-
 
 use iced_style::menu::Style as MenuStyle;
 
-use crate::styles::cell_list::{StyleSheet};
-
+use crate::styles::cell_list::StyleSheet;
 
 /// A widget allowing the selection of a single value from a list of options.
 pub type Cell<'a, T, O, Message, Backend> =
@@ -49,17 +46,16 @@ where
         };
 
         let bg = Primitive::Quad {
-            bounds, 
-            background : style.background,
-            border_color : Color::BLACK,
-            border_width : 1,
-            border_radius : 1,
+            bounds,
+            background: style.background,
+            border_color: Color::BLACK,
+            border_width: 1,
+            border_radius: 1,
         };
 
         let mut primitives = vec![bg];
 
-        let mut header_offset : usize = 0;
-
+        let mut header_offset: usize = 0;
 
         let bounds = Rectangle {
             x: bounds.x,
@@ -120,4 +116,3 @@ where
         )
     }
 }
-

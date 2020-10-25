@@ -5,11 +5,11 @@ use iced::{
 
 use iced::{pick_list, PickList};
 
-use wave2_custom_widgets::widget::cell_list;
-use wave2_custom_widgets::widget::cell_list::CellList;
 use env_logger;
 use log::info;
-pub fn main() -> Result<(), iced::Error>{
+use wave2_custom_widgets::widget::cell_list;
+use wave2_custom_widgets::widget::cell_list::CellList;
+pub fn main() -> Result<(), iced::Error> {
     env_logger::init();
     info!("TEST");
     Example::run(Settings::default())
@@ -18,15 +18,11 @@ pub fn main() -> Result<(), iced::Error>{
 #[derive(Clone)]
 enum Menu {
     Test1,
-    Test2
+    Test2,
 }
 
 impl Menu {
-    const ALL : [Menu; 2] = [
-        Menu::Test1,
-        Menu::Test2
-    ];
-
+    const ALL: [Menu; 2] = [Menu::Test1, Menu::Test2];
 }
 impl ToString for Menu {
     fn to_string(&self) -> String {
@@ -36,9 +32,7 @@ impl ToString for Menu {
             _ => "Unlabeled".into(),
         }
     }
-
 }
-
 
 #[derive(Default)]
 struct Example {

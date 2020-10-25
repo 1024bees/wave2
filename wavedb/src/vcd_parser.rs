@@ -13,8 +13,7 @@ pub struct WaveParser<R: io::Read> {
     header: Option<vcd::Header>,
 }
 
-
-///Flat map from path -> IdCode. 
+///Flat map from path -> IdCode.
 /// In practice, not really useful, going to be depricated
 #[derive(Default)]
 pub struct IDMap(HashMap<String, IdCode>);
@@ -170,10 +169,7 @@ impl<R: io::Read> WaveParser<R> {
         } else {
             Err(errors::Waverr::VCDErr("Header is not found from vcd!"))
         }
-
     }
-
-
 }
 
 impl<P: io::Read> Iterator for WaveParser<P> {

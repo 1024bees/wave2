@@ -1,11 +1,14 @@
-use wave2_wavedb::hier_map::{SignalItem};
+use iced::{
+    button, scrollable, text_input, Align, Column, Container, Element, Length,
+    Row, Scrollable, TextInput,
+};
+use log::error;
 use std::sync::Arc;
-use wave2_custom_widgets::widget::cell_list;
-use wave2_custom_widgets::widget::cell_list::CellList;
-use iced::{button, scrollable, text_input, Align, Column,Row, TextInput, Element, Container, Scrollable,Length};
 use strum::IntoEnumIterator;
 use strum_macros;
-use log::{error};
+use wave2_custom_widgets::widget::cell_list;
+use wave2_custom_widgets::widget::cell_list::CellList;
+use wave2_wavedb::hier_map::SignalItem;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, strum_macros::Display)]
 //TODO: add options, move to its own module?
@@ -13,58 +16,52 @@ pub enum SigOptions {
     Add,
 }
 
-
-impl SigOptions{
+impl SigOptions {
     //TODO: create ALL macro
-   const ALL: [SigOptions; 1] =  [SigOptions::Add];
+    const ALL: [SigOptions; 1] = [SigOptions::Add];
 }
 
 ///This is for navigating signals within a module
 #[derive(Default)]
 pub struct ModNavigator {
-    signals : Vec<SignalItem>,
+    signals: Vec<SignalItem>,
     scroll_x: scrollable::State,
-    sig_state : cell_list::State<SigOptions>,
-
+    sig_state: cell_list::State<SigOptions>,
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub enum Message {
     SignalUpdate(Arc<Vec<SignalItem>>),
     AddSig(SignalItem),
 }
-
 
 impl ModNavigator {
     pub fn update(&mut self, message: Message) {
         match message {
             Message::SignalUpdate(payload) => {
                 self.signals = Arc::try_unwrap(payload).unwrap();
-            },
+            }
             _ => {
                 error!("Not implimented yet!");
             }
-
         }
     }
     pub fn view(&mut self) -> Element<Message> {
         let ModNavigator {
             signals,
             scroll_x,
-            sig_state
+            sig_state,
         } = self;
 
-
         let ts = CellList::new(
-                sig_state,
-                &signals[..],
-                &SigOptions::ALL,
-                Message::AddSig,
-            )
-            .text_size(12)
-            .heading("Time".into())
-            .heading_size(10);
-
+            sig_state,
+            &signals[..],
+            &SigOptions::ALL,
+            Message::AddSig,
+        )
+        .text_size(12)
+        .heading("Time".into())
+        .heading_size(10);
 
         let scrollable = Scrollable::new(scroll_x)
             .push(Container::new(ts).width(Length::Fill).center_x());
@@ -73,10 +70,5 @@ impl ModNavigator {
             .height(Length::Fill)
             .center_y()
             .into()
-
-
-
     }
-
-
 }
