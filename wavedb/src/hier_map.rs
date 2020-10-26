@@ -3,14 +3,19 @@ use serde::{Deserialize, Serialize};
 use std::cell::Cell;
 use vcd::{IdCode, Scope, ScopeItem};
 
-#[derive(Debug)]
+#[derive(Debug,Default)]
 pub struct HierMap {
-    module_list: Vec<ModuleItem>,
+    pub module_list: Vec<ModuleItem>,
     top_indices: Vec<usize>,
     live_module: Cell<usize>,
 }
 
 impl HierMap {
+    pub fn get_roots(&self) -> &[usize] {
+        &self.top_indices[..]
+    }
+
+
     fn get_starting_idx(&self, mod_name: &str) -> Result<usize, Waverr> {
         for idx in self.top_indices.iter().cloned() {
             if mod_name == self.module_list[idx].name {
@@ -93,23 +98,29 @@ impl HierMap {
         self.module_list[self.live_module.get()].signals.as_slice()
     }
 
+
+    fn idx_to_path(&self, in_idx : usize) -> String {
+        let mut idx = in_idx;
+        let mut path = self.module_list[idx].name.clone();
+            loop {
+                if let Some(pidx) = self.module_list[idx].parent {
+                    path = format!(
+                        "{}.{}",
+                        self.module_list[pidx].name.as_str(),
+                        path
+                    );
+                    idx = pidx;
+                } else {
+                    break;
+                }
+            }
+        path
+    }
+
     /// Return string of "current path"
     pub fn get_current_path(&self) -> String {
         let mut idx = self.live_module.get();
-        let mut path = self.module_list[idx].name.clone();
-        loop {
-            if let Some(pidx) = self.module_list[idx].parent {
-                path = format!(
-                    "{}.{}",
-                    self.module_list[pidx].name.as_str(),
-                    path
-                );
-                idx = pidx;
-            } else {
-                break;
-            }
-        }
-        path
+        self.idx_to_path(idx)
     }
 }
 
@@ -140,6 +151,7 @@ impl From<vcd::Header> for HierMap {
                         map.push(ModuleItem::new(
                             scope.identifier.clone(),
                             parent_mod,
+                            map.len()
                         ));
                         let new_idx = map.len() - 1;
 
@@ -176,12 +188,15 @@ impl From<vcd::Header> for HierMap {
         }
     }
 }
+
+
 #[derive(Default, Debug)]
 pub struct ModuleItem {
-    name: String,
-    submodules: Vec<usize>,
-    signals: Vec<SignalItem>,
-    parent: Option<usize>,
+    pub name: String,
+    pub submodules: Vec<usize>,
+    pub signals: Vec<SignalItem>,
+    pub self_idx : usize,
+    pub parent: Option<usize>,
 }
 
 impl From<vcd::Var> for SignalItem {
@@ -191,7 +206,7 @@ impl From<vcd::Var> for SignalItem {
 }
 
 impl ModuleItem {
-    fn new(name: String, parent: Option<usize>) -> Self {
+    fn new(name: String, parent: Option<usize>, self_idx : usize) -> Self {
         ModuleItem {
             name,
             parent,

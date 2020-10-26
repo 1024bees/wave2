@@ -15,7 +15,7 @@ use log::info;
 pub struct Cell<'a, T, O, Message, Renderer: self::Renderer>
 where
     T: ToString + Clone,
-    O: ToString + Clone,
+    O: ToString + Clone + 'static,
 {
     menu: &'a mut menu::State,
     menu_open: &'a mut bool,
@@ -26,7 +26,7 @@ where
     menu_last_selection: &'a mut Option<O>,
     on_selected: Box<dyn Fn(T) -> Message>,
     item: &'a T,
-    options: &'a [O],
+    options: &'static [O],
     width: Length,
     padding: u16,
     text_size: Option<u16>,
@@ -66,7 +66,7 @@ impl<'a, T: 'a, O: 'a, Message, Renderer: self::Renderer>
     Cell<'a, T, O, Message, Renderer>
 where
     T: ToString + Clone,
-    O: ToString + Clone,
+    O: ToString + Clone + 'static,
 {
     /// Creates a new [`Cell`] with the given [`State`], a list of options,
     /// the current selected value(s), and the message to produce when option(s) is / are
@@ -77,7 +77,7 @@ where
     pub fn new(
         state: &'a mut State<O>,
         item: &'a T,
-        menu_options: &'a [O],
+        menu_options: &'static [O],
         on_selected: impl Fn(T) -> Message + 'static,
     ) -> Self {
         let State {
@@ -157,7 +157,7 @@ impl<'a, T: 'a, O: 'a, Message, Renderer> Widget<Message, Renderer>
     for Cell<'a, T, O, Message, Renderer>
 where
     T: Clone + ToString,
-    O: Clone + ToString,
+    O: Clone + ToString + 'static,
     Message: 'static,
     Renderer: self::Renderer + scrollable::Renderer + 'a,
 {
@@ -358,7 +358,7 @@ impl<'a, T: 'a, O: 'a, Message, Renderer> Into<Element<'a, Message, Renderer>>
     for Cell<'a, T, O, Message, Renderer>
 where
     T: Clone + ToString,
-    O: ToString + Clone,
+    O: ToString + Clone + 'static,
 
     Renderer: self::Renderer + 'a,
     Message: 'static,

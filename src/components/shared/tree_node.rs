@@ -16,7 +16,7 @@ pub enum Message<M>
 where
     M: 'static + Clone,
 {
-    Toggle(Arc<Mutex<bool>>),
+    Toggle,
     AppMessage(M),
     Blank(M),
     Placeholder,
@@ -25,29 +25,26 @@ where
 struct TreeNode<'a, T, O>
 where
     T: 'a + ToString + Clone + HasChildren,
-    O: 'a + ToString + Clone,
+    O: 'a + ToString + Clone + 'static,
 {
     children: Vec<TreeNode<'a, T, O>>,
     ui_state: cell::State<O>,
     expanded_button: button::State,
-    expanded: Arc<bool>,
+    expanded: bool,
     payload: &'a T,
-    options: &'a [O],
+    options: &'static [O],
 }
 
 impl<'a, T, O> TreeNode<'a, T, O>
 where
     T: 'a + ToString + Clone + HasChildren,
-    O: 'a + ToString + Clone,
+    O: 'static + ToString + Clone,
 {
     pub fn update<M>(&mut self, message: Message<M>)
     where
         M: 'static + Clone + ToString,
     {
         match message {
-            Message::Toggle => {
-                
-            }
             _ => panic!("Unhandled"),
         }
     }
@@ -66,8 +63,6 @@ where
         } = self;
 
 
-
-        let a = Arc::new(|| { *expanded = !*expanded});
 
 
         let expander = Button::new(
