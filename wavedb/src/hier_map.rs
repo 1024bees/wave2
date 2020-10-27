@@ -99,7 +99,7 @@ impl HierMap {
     }
 
 
-    fn idx_to_path(&self, in_idx : usize) -> String {
+    pub fn idx_to_path(&self, in_idx : usize) -> String {
         let mut idx = in_idx;
         let mut path = self.module_list[idx].name.clone();
             loop {

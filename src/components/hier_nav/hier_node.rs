@@ -51,7 +51,7 @@ pub struct HierNode {
 pub struct HierRoot (Vec<HierNode>);
 
 impl HierRoot {
-    fn expand_module<S: Into<String>>(&self, in_path : S) -> Result<(), &'static str>{
+    pub fn expand_module<S: Into<String>>(&self, in_path : S) -> Result<(), &'static str>{
         let path = in_path.into();
         let scope_list: Vec<&str> = path.split(".").collect();
         let mut hierarchy_ptr : &Vec<HierNode> = &self.0;
@@ -70,10 +70,21 @@ impl HierRoot {
             expandee.expanded.set(!expandee.expanded.get());
             Ok(())
         } else {
-            Err("Trying to expand nonexistent path; TODO: refactor errors")
+            Err("Trying to expand nonexistent path; TODO: refactor this error")
         }
 
     }
+    pub fn view(&mut self) -> Element<Message> {
+
+        let elements = self.0.
+            iter_mut()
+            .map(|x| x.view())
+            .collect();
+
+        //elements.extend(child_refs.iter())
+        Column::with_children(elements).into()
+    }
+
 
 }
 
@@ -137,9 +148,10 @@ impl HierNode {
 
 
 
+
         //TODO: fixme, placeholder message closure
         let root_cell =
-            VizCell::new(ui_state, payload, &HierOptions::ALL, |T| Message::Placeholder);
+            VizCell::new(ui_state, payload, &HierOptions::ALL, |module| Message::SendModule(module.hier_idx));
 
         let top_row = if !children.is_empty() {
             Row::new()
