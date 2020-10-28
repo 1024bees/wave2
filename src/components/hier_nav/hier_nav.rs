@@ -8,7 +8,7 @@ use strum::IntoEnumIterator;
 use strum_macros;
 use wave2_custom_widgets::widget::cell_list;
 use wave2_custom_widgets::widget::cell_list::CellList;
-use wave2_wavedb::hier_map::{HierMap, SignalItem};
+use wave2_wavedb::hier_map::{MobileHierMap, HierMap, SignalItem};
 use crate::components::hier_nav::hier_node::{HierNode, HierRoot};
 
 
@@ -22,8 +22,9 @@ impl HierOptions {
     pub const ALL: [HierOptions; 1] = [HierOptions::Expand];
 }
 
+#[derive(Default)]
 pub struct HierNav {
-    live_hier: Arc<HierMap>,
+    live_hier: HierMap,
     scroll_x: scrollable::State,
     hier_root: HierRoot,
 }
@@ -31,7 +32,7 @@ pub struct HierNav {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    SetHier(Arc<HierMap>),
+    SetHier(Arc<MobileHierMap>),
     UpdateModNav(Arc<Vec<SignalItem>>),
     Toggle(usize),
     SendModule(usize),
@@ -42,11 +43,11 @@ impl HierNav {
     pub fn update(&mut self, message: Message) {
         match message {
             Message::SetHier(payload) => {
-                self.live_hier = payload;
-                self.hier_root = HierRoot::from(self.live_hier.as_ref());
+                self.live_hier = HierMap::from(Arc::try_unwrap(payload).unwrap());
+                self.hier_root = HierRoot::from(&self.live_hier);
             },
             Message::Toggle(idx) => {
-                let map_ref = self.live_hier.as_ref();
+                let map_ref = &self.live_hier;
                 self.hier_root.expand_module(map_ref.idx_to_path(idx));
             },
 
@@ -56,12 +57,23 @@ impl HierNav {
         }
     }
     pub fn view(&mut self) -> Element<Message> {
+        let HierNav {
+            live_hier,
+            scroll_x,
+            hier_root,
+        } = self;
 
-        Container::new(self.hier_root.view())
+
+        let content = Container::new(hier_root.view())
             .padding(20)
             .width(iced::Length::Fill)
             .height(iced::Length::Fill)
             .max_height(800)
+            .center_x();
+
+    
+        Scrollable::new(scroll_x)
+            .push(content)
             .into()
 
     }

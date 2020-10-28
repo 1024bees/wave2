@@ -10,6 +10,41 @@ pub struct HierMap {
     live_module: Cell<usize>,
 }
 
+
+/// A subset of HierMap that is movable across threads. We send this as a message to set state
+/// in HierNav 
+#[derive(Debug)]
+pub struct MobileHierMap {
+    module_list: Vec<ModuleItem>,
+    top_indices: Vec<usize>,
+}
+
+
+
+impl From<HierMap> for MobileHierMap {
+    fn from(in_map : HierMap) -> MobileHierMap {
+        MobileHierMap {
+            module_list : in_map.module_list,
+            top_indices : in_map.top_indices
+        }
+    }
+}
+
+
+impl From<MobileHierMap> for HierMap {
+    fn from(mobile_map : MobileHierMap) -> HierMap {
+        // is there a cleaner way to do this?
+        let dv = mobile_map.top_indices.first().unwrap().clone();
+        HierMap {
+            module_list : mobile_map.module_list,
+            top_indices : mobile_map.top_indices,
+            live_module : Cell::new(dv)
+        }
+    }
+}
+
+
+
 impl HierMap {
     pub fn get_roots(&self) -> &[usize] {
         &self.top_indices[..]

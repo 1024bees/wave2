@@ -1,11 +1,11 @@
-#[derive(Debug, Clone)]
+use std::io;
+#[derive(Debug)]
 pub enum Waverr {
-    //    SledErr(sled::Error),
-    //
     VCDErr(&'static str),
     MissingID(&'static str),
     SledError(&'static str),
     HierMapError(&'static str),
+    IOError(io::Error),
     GenericErr(String),
 }
 

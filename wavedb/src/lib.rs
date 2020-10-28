@@ -6,6 +6,7 @@ mod errors;
 pub mod hier_map;
 mod vcd_parser;
 pub mod wavedb;
+pub mod inout;
 use errors::Waverr;
 const DEFAULT_SLIZE_SIZE: u32 = 10000;
 
@@ -111,7 +112,7 @@ impl InMemWave {
             match bucket {
                 Ok(mut bucket) => signal_content.append(&mut bucket.sig_dumps),
                 Err(Waverr::MissingID(_)) => (),
-                Err(bucket_err) => return Err(bucket_err.clone()),
+                Err(bucket_err) => return Err(bucket_err),
             }
         }
 

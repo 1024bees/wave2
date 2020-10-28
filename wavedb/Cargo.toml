@@ -14,6 +14,7 @@ sled = "*"
 serde = "*"
 cached = "*"
 toml = "*"
+nfd = "*"
 
 clap = "3.0.0-beta.1"
 bit-vec = { version = "0.6", features = ["serde"] }

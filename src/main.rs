@@ -6,7 +6,9 @@ use iced::{
 use clap::Clap;
 
 pub mod components;
-use components::*;
+pub mod inout;
+use components::{module_nav,sigwindow};
+use components::hier_nav::hier_nav;
 use env_logger;
 use std::path::PathBuf;
 
@@ -45,6 +47,7 @@ fn main() {
 struct State {
     sig_viewer: sigwindow::SigViewer,
     mod_nav: module_nav::ModNavigator,
+    hier_nav: hier_nav::HierNav,
 }
 
 enum Wave2 {
@@ -57,6 +60,7 @@ enum Message {
     // Component messages
     SVMessage(sigwindow::Message),
     MNMessage(module_nav::Message),
+    HNMessage(hier_nav::Message),
     //IoMessage
     Loaded(Result<(), std::io::Error>),
 }
@@ -85,6 +89,7 @@ impl Application for Wave2 {
                         *self = Wave2::Loaded(State {
                             sig_viewer: sigwindow::SigViewer::default(),
                             mod_nav: module_nav::ModNavigator::default(),
+                            hier_nav: hier_nav::HierNav::default(),
                         });
                     }
                     _ => {}
@@ -95,6 +100,9 @@ impl Application for Wave2 {
                 match message {
                     Message::SVMessage(message) => {
                         state.sig_viewer.update(message)
+                    },
+                    Message::HNMessage(message) => {
+                        state.hier_nav.update(message)
                     }
                     _ => {}
                 }
@@ -109,6 +117,7 @@ impl Application for Wave2 {
             Wave2::Loaded(State {
                 sig_viewer,
                 mod_nav,
+                hier_nav,
             }) => {
                 let ww = sig_viewer
                     .view()
@@ -116,6 +125,10 @@ impl Application for Wave2 {
                 let mod_nav_view = mod_nav
                     .view()
                     .map(move |message| Message::MNMessage(message));
+                let hierarchy_view = hier_nav
+                    .view()
+                    .map(move |message| Message::HNMessage(message));
+
                 let all_content =
                     Column::new().push(Row::new().push(mod_nav_view)).push(ww);
                 all_content.into()

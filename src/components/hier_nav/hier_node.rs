@@ -75,7 +75,6 @@ impl HierRoot {
 
     }
     pub fn view(&mut self) -> Element<Message> {
-
         let elements = self.0.
             iter_mut()
             .map(|x| x.view())

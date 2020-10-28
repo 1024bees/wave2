@@ -1,7 +1,7 @@
+use bincode;
 use crate::errors::Waverr;
 use crate::vcd_parser::{IDMap, WaveParser};
 use crate::{Bucket, InMemWave, DEFAULT_SLIZE_SIZE};
-use bincode;
 use serde::{Deserialize, Serialize};
 use sled::Db;
 use std::collections::HashMap;
@@ -97,7 +97,6 @@ impl WaveDB {
         vcd_file_path: String,
         wdb_path: &str,
     ) -> Result<WaveDB, Waverr> {
-        if Path::new(wdb_path).exists() {}
 
         let parser = WaveParser::new(vcd_file_path.clone())?;
         let wdb_name = {

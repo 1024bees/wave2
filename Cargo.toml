@@ -13,6 +13,7 @@ iced_native = {git = "https://github.com/hecrj/iced", rev="4f2962d73f3bdeeca8a11
 iced_wgpu = {git = "https://github.com/hecrj/iced", rev="4f2962d73f3bdeeca8a11817e404c45e91e2c2cc"}
 iced_graphics = {git = "https://github.com/hecrj/iced", rev="4f2962d73f3bdeeca8a11817e404c45e91e2c2cc"}
 env = "*"
+nfd = "*"
 log = "0.4.0"
 env_logger = "0.7.1"
 bincode = "*"
