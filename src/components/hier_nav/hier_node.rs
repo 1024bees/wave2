@@ -75,8 +75,8 @@ impl HierRoot {
 
     }
     pub fn view(&mut self) -> Element<Message> {
-        let elements = self.0.
-            iter_mut()
+        let elements = self.0
+            .iter_mut()
             .map(|x| x.view())
             .collect();
 
@@ -143,7 +143,7 @@ impl HierNode {
         let expander = Button::new(
             expanded_button,
             Text::new(if expanded_val{ "↓" } else { "←" }),
-        ).on_press(Message::Toggle(0));
+        ).on_press(Message::Toggle(payload.hier_idx));
 
 
 
@@ -176,10 +176,5 @@ impl HierNode {
             top_row.into()
         }
 
-        
-
     }
-
-
 }
-

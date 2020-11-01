@@ -2,7 +2,7 @@ use bit_vec::BitVec;
 use serde::{Deserialize, Serialize};
 use vcd::Value;
 pub mod api;
-mod errors;
+pub mod errors;
 pub mod hier_map;
 mod vcd_parser;
 pub mod wavedb;
@@ -230,6 +230,7 @@ mod tests {
     use crate::*;
     use bit_vec::BitVec;
     use std::path::*;
+    use std::path::Path;
     use wavedb::WaveDB;
     #[test]
     fn hello_test() {
@@ -241,11 +242,9 @@ mod tests {
     fn wdb_from_wikivcd() {
         let mut path_to_wikivcd = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path_to_wikivcd.push("test_vcds/wikipedia.vcd");
-        let pathstr = path_to_wikivcd.into_os_string().into_string().unwrap();
-        println!("{}", pathstr);
         //a little naughty but hey... is what it is
         std::fs::remove_dir_all("/tmp/rng");
-        let wdb = WaveDB::from_vcd(pathstr, "/tmp/rng");
+        let wdb = WaveDB::from_vcd(path_to_wikivcd, Path::new("/tmp/rng"));
         let actualdb = match wdb {
             Ok(wdb) => wdb,
             Err(errors::Waverr::VCDErr(vcdmess)) => {

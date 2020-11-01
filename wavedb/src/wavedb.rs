@@ -27,7 +27,7 @@ pub struct WaveDB {
 }
 
 impl WaveDB {
-    fn new(db_name: String, db_path: Option<&str>) -> WaveDB {
+    fn new(db_name: String, db_path: Option<&Path>) -> WaveDB {
         WaveDB {
             db: sled::open(db_path.unwrap_or(db_name.as_ref())).unwrap(),
             id_map: IDMap::default(),
@@ -84,7 +84,7 @@ impl WaveDB {
         }
     }
 
-    pub fn open_wdb(wdb_path: &str) -> Result<WaveDB, Waverr> {
+    pub fn open_wdb(wdb_path: &Path) -> Result<WaveDB, Waverr> {
         let mut wdb = WaveDB::new("TempName".into(), Some(wdb_path));
         wdb.load_config()?;
         wdb.load_idmap()?;
@@ -94,19 +94,23 @@ impl WaveDB {
     //TODO: parallelize this
     //TODO: move filepath from String to &str!!!
     pub fn from_vcd(
-        vcd_file_path: String,
-        wdb_path: &str,
+        vcd_file_path: PathBuf,
+        wdb_path: &Path,
     ) -> Result<WaveDB, Waverr> {
 
         let parser = WaveParser::new(vcd_file_path.clone())?;
         let wdb_name = {
-            if let Some(vcd_file) = Path::new(&vcd_file_path).file_stem() {
+            if let Some(vcd_file) = vcd_file_path.file_stem() {
                 vcd_file
                     .to_str()
-                    .unwrap_or(vcd_file_path.as_ref())
+                    .unwrap()
                     .to_string()
             } else {
                 vcd_file_path
+                    .to_str()
+                    .unwrap()
+                    .to_string()
+
             }
         };
         let mut wdb = WaveDB::new(wdb_name, Some(wdb_path));

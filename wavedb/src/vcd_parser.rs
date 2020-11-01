@@ -5,11 +5,12 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io;
+use std::path::{Path, PathBuf};
 use vcd::{IdCode, Parser, ScopeItem};
 
 pub struct WaveParser<R: io::Read> {
     vcd_parser: Parser<R>,
-    filepath: String,
+    filepath: PathBuf,
     header: Option<vcd::Header>,
 }
 
@@ -122,7 +123,7 @@ impl From<&vcd::Header> for IDMap {
 impl WaveParser<io::BufReader<File>> {
     //TODO: move from option to waverr
     pub fn new(
-        file_path: String,
+        file_path: PathBuf,
     ) -> Result<WaveParser<io::BufReader<File>>, errors::Waverr> {
         if let Ok(f) = File::open(&file_path) {
             let mut rv = WaveParser {
@@ -142,7 +143,7 @@ impl<R: io::Read> WaveParser<R> {
     fn new_test(raw_file: R) -> WaveParser<R> {
         let mut rv = WaveParser {
             vcd_parser: Parser::new(raw_file),
-            filepath: String::default(),
+            filepath: PathBuf::default(),
             header: None,
         };
         rv.populate_header();

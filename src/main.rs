@@ -6,11 +6,14 @@ use iced::{
 use clap::Clap;
 
 pub mod components;
-pub mod inout;
 use components::{module_nav,sigwindow};
 use components::hier_nav::hier_nav;
 use env_logger;
 use std::path::PathBuf;
+use wave2_wavedb::errors::Waverr;
+use wave2_wavedb::inout::wave_loader::load_vcd;
+
+
 
 #[derive(Clap, Default)]
 #[clap(version = "0.0", author = "Jimmy C <jimmy@1024bees.com>")]
@@ -20,15 +23,20 @@ struct Opts {
     config: PathBuf,
 
     #[clap(short, long)]
-    wdbpath: Option<String>,
+    wdbpath: Option<PathBuf>,
 
     #[clap(short, long)]
-    vcdpath: Option<String>,
+    vcdpath: Option<PathBuf>,
 }
 
 impl Opts {
     async fn load(opt: Opts) -> Result<(), std::io::Error> {
-        //TODO: Impl me
+        let Opts {
+            config,
+            wdbpath,
+            vcdpath,
+
+        } = opt;
         Ok(())
     }
 }

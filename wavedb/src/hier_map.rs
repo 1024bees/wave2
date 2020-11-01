@@ -293,10 +293,10 @@ mod tests {
         };
     }
 
-    fn vcd_test_path(path: &str) -> String {
+    fn vcd_test_path(path: &str) -> PathBuf {
         let mut path_to_vcd = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path_to_vcd.push(path);
-        path_to_vcd.into_os_string().into_string().unwrap()
+        path_to_vcd
     }
 
     #[test]
