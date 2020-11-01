@@ -60,7 +60,7 @@ impl ModNavigator {
             Message::AddSig,
         )
         .text_size(12)
-        .heading("Time".into())
+        .heading("Signals".into())
         .heading_size(10);
 
         let scrollable = Scrollable::new(scroll_x)
@@ -69,6 +69,8 @@ impl ModNavigator {
         Container::new(scrollable)
             .height(Length::Fill)
             .center_y()
+            .max_width(200)
+            .max_height(400)
             .into()
     }
 }
