@@ -138,7 +138,11 @@ impl Application for Wave2 {
                     .map(move |message| Message::HNMessage(message));
 
                 let all_content =
-                    Column::new().push(Row::new().push(mod_nav_view)).push(ww);
+                    Column::new()
+                    .push(mod_nav_view)
+                    //.push(
+                    //    Row::new().push(mod_nav_view))
+                    .push(ww);
                 all_content.into()
             }
         }
