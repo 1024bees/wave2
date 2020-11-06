@@ -66,14 +66,15 @@ impl HierNav {
 
         let content = Container::new(hier_root.view())
             .padding(20)
-            .width(iced::Length::Fill)
-            .height(iced::Length::Fill)
-            .max_height(800)
+            .max_height(400)
+            .max_width(200)
             .center_x();
 
     
         Scrollable::new(scroll_x)
             .push(content)
+            .max_height(400)
+            .max_width(200)
             .into()
 
     }

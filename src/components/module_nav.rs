@@ -64,7 +64,7 @@ impl ModNavigator {
         .heading_size(10);
 
         let scrollable = Scrollable::new(scroll_x)
-            .push(Container::new(ts).width(Length::Fill).center_x());
+            .push(Container::new(ts).height(Length::Fill).width(Length::Fill).center_x());
 
         Container::new(scrollable)
             .height(Length::Fill)
