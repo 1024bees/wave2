@@ -30,7 +30,6 @@ struct Opts {
     vcdpath: Option<PathBuf>,
 }
 
-type WrappedContent = Rc<RefCell<Content>>;
 
 impl Opts {
     async fn load(opt: Opts) -> Result<(), std::io::Error> {
@@ -56,13 +55,18 @@ fn main() {
 }
 
 struct State {
-    panes: pane_grid::State<WrappedContent>,
-    sig_viewer: WrappedContent,
-    mod_nav: WrappedContent,
-    hier_nav: WrappedContent,
+    panes: pane_grid::State<Content>,
+    sv_pane: pane_grid::Pane,
+    mn_pane: pane_grid::Pane,
+    hn_pane: pane_grid::Pane,
 }
 
-
+/// Component level content; 
+/// This may be bad design, but as things curently signed, I've resigned for the pane_grid::State
+/// to own all Component level state. Content wraps each component level state.
+///
+/// In the future it will be better to have content own the iced widget state and have an 
+/// Rc<RefCell<>> wrapping application state
 enum Content {
     SigView(sigwindow::SigViewer),
     ModNav(module_nav::ModNavigator),
@@ -154,19 +158,20 @@ impl Application for Wave2 {
             Wave2::Loading => {
                 match message {
                     Message::Loaded(Ok(void)) => {
-                        let sig_viewer : WrappedContent = Rc::new(RefCell::new(Content::SigView(sigwindow::SigViewer::default())));
-                        let mod_nav = Rc::new(RefCell::new(Content::ModNav(module_nav::ModNavigator::default())));
-                        let hier_nav = Rc::new(RefCell::new(Content::HierNav(hier_nav::HierNav::default())));
-                        let (mut panes, opane) = pane_grid::State::new(sig_viewer);
-                        let mod_pane = panes.split(pane_grid::Axis::Vertical, &opane, mod_nav);
-                        panes.split(pane_grid::Axis::Horizontal, &(mod_pane.unwrap().0), hier_nav);
-
+                        let sig_viewer = Content::SigView(sigwindow::SigViewer::default());
+                        let mod_nav = Content::ModNav(module_nav::ModNavigator::default());
+                        let hier_nav = Content::HierNav(hier_nav::HierNav::default());
+                        let (mut panes, sv_pane) = pane_grid::State::new(sig_viewer);
+                        let (mn_pane, _) = panes.split(pane_grid::Axis::Vertical, &sv_pane, mod_nav).unwrap();
+                        let (hn_pane, _) = panes.split(pane_grid::Axis::Horizontal, &mn_pane, hier_nav).unwrap();
+                        //TODO: do some like uhhh... cleaning up here
+                        //      should probably initialize sizes of panes, etc
 
                         *self = Wave2::Loaded(State {
                             panes,
-                            sig_viewer,
-                            mod_nav,
-                            hier_nav
+                            sv_pane,
+                            mn_pane,
+                            hn_pane,
                         });
                     }
                     _ => {}
@@ -177,14 +182,16 @@ impl Application for Wave2 {
                 match message {
                     Message::SVMessage(_) => {
                         state
-                            .sig_viewer
-                            .borrow_mut()
+                            .panes
+                            .get_mut(&state.sv_pane)
+                            .unwrap()
                             .update(message)
                     },
                     Message::HNMessage(_) => {
                         state
-                            .hier_nav
-                            .borrow_mut()
+                            .panes
+                            .get_mut(&state.hn_pane)
+                            .unwrap()
                             .update(message)
                     }
                     _ => {}
@@ -199,22 +206,19 @@ impl Application for Wave2 {
             Wave2::Loading => loading_message(),
             Wave2::Loaded(State {
                 panes,
-                sig_viewer,
-                mod_nav,
-                hier_nav,
+                hn_pane,
+                sv_pane,
+                mn_pane,
             }) => {
-                let pane_grid = PaneGrid::new(&mut panes, |pane, content, focus| {
+                //all_content.into()
+                let pane_grid = PaneGrid::new(panes, |pane, content, focus| {
                 let is_focused = focus.is_some();
                 let title_bar =
                     pane_grid::TitleBar::new(format!("Focused pane"))
                         .padding(10);
 
-                    pane_grid::Content::new(content.borrow_mut().view())
+                    pane_grid::Content::new(content.view())
                     .title_bar(title_bar)
-
-
-
-
 
                 });
                 pane_grid.into()
