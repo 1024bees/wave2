@@ -1,10 +1,11 @@
 use iced::{
     Application, Column, Command, Container, Element, HorizontalAlignment,
-    Length, Row, Settings, Text,
+    Length, Row, Settings, Text, PaneGrid, pane_grid
 };
 
 use clap::Clap;
-
+use std::cell::RefCell;
+use std::rc::Rc;
 pub mod components;
 use components::{module_nav,sigwindow};
 use components::hier_nav::hier_nav;
@@ -28,6 +29,8 @@ struct Opts {
     #[clap(short, long)]
     vcdpath: Option<PathBuf>,
 }
+
+type WrappedContent = Rc<RefCell<Content>>;
 
 impl Opts {
     async fn load(opt: Opts) -> Result<(), std::io::Error> {
@@ -53,9 +56,18 @@ fn main() {
 }
 
 struct State {
-    sig_viewer: sigwindow::SigViewer,
-    mod_nav: module_nav::ModNavigator,
-    hier_nav: hier_nav::HierNav,
+    panes: pane_grid::State<WrappedContent>,
+    sig_viewer: WrappedContent,
+    mod_nav: WrappedContent,
+    hier_nav: WrappedContent,
+}
+
+
+enum Content {
+    SigView(sigwindow::SigViewer),
+    ModNav(module_nav::ModNavigator),
+    HierNav(hier_nav::HierNav),
+
 }
 
 enum Wave2 {
@@ -72,6 +84,54 @@ enum Message {
     //IoMessage
     Loaded(Result<(), std::io::Error>),
 }
+
+impl Content {
+    fn update(
+        &mut self,
+        app_message: Message,
+    ) {
+        match (self, &app_message) {
+            (Content::HierNav(hier_mod), Message::HNMessage(message)) => {
+                hier_mod.update(message.clone())
+            }
+            (Content::SigView(sig_view), Message::SVMessage(message)) => {
+                sig_view.update(message.clone())
+            }
+            (Content::ModNav(module_nav), Message::MNMessage(message)) => {
+                module_nav.update(message.clone())
+            }
+            (_,_) => {
+                panic!("Incorrect update message and content")
+            }
+        }
+    }
+
+    fn view(
+        &mut self
+    ) -> Element<Message> {
+        match self {
+            Content::HierNav(hier_mod) => {
+                hier_mod
+                    .view()
+                    .map(move |message| Message::HNMessage(message))
+
+            }
+            Content::SigView(sig_view) => {
+                sig_view
+                    .view()
+                    .map(move |message| Message::SVMessage(message))
+
+            }
+            Content::ModNav(module_nav) => {
+                module_nav
+                    .view()
+                    .map(move |message| Message::MNMessage(message))
+
+            }
+        }
+    }
+}
+
 
 impl Application for Wave2 {
     type Executor = iced::executor::Default;
@@ -94,10 +154,19 @@ impl Application for Wave2 {
             Wave2::Loading => {
                 match message {
                     Message::Loaded(Ok(void)) => {
+                        let sig_viewer : WrappedContent = Rc::new(RefCell::new(Content::SigView(sigwindow::SigViewer::default())));
+                        let mod_nav = Rc::new(RefCell::new(Content::ModNav(module_nav::ModNavigator::default())));
+                        let hier_nav = Rc::new(RefCell::new(Content::HierNav(hier_nav::HierNav::default())));
+                        let (mut panes, opane) = pane_grid::State::new(sig_viewer);
+                        let mod_pane = panes.split(pane_grid::Axis::Vertical, &opane, mod_nav);
+                        panes.split(pane_grid::Axis::Horizontal, &(mod_pane.unwrap().0), hier_nav);
+
+
                         *self = Wave2::Loaded(State {
-                            sig_viewer: sigwindow::SigViewer::default(),
-                            mod_nav: module_nav::ModNavigator::default(),
-                            hier_nav: hier_nav::HierNav::default(),
+                            panes,
+                            sig_viewer,
+                            mod_nav,
+                            hier_nav
                         });
                     }
                     _ => {}
@@ -106,11 +175,17 @@ impl Application for Wave2 {
             }
             Wave2::Loaded(state) => {
                 match message {
-                    Message::SVMessage(message) => {
-                        state.sig_viewer.update(message)
+                    Message::SVMessage(_) => {
+                        state
+                            .sig_viewer
+                            .borrow_mut()
+                            .update(message)
                     },
-                    Message::HNMessage(message) => {
-                        state.hier_nav.update(message)
+                    Message::HNMessage(_) => {
+                        state
+                            .hier_nav
+                            .borrow_mut()
+                            .update(message)
                     }
                     _ => {}
                 }
@@ -123,28 +198,27 @@ impl Application for Wave2 {
         match self {
             Wave2::Loading => loading_message(),
             Wave2::Loaded(State {
+                panes,
                 sig_viewer,
                 mod_nav,
                 hier_nav,
             }) => {
-                let ww = sig_viewer
-                    .view()
-                    .map(move |message| Message::SVMessage(message));
-                let mod_nav_view = mod_nav
-                    .view()
-                    .map(move |message| Message::MNMessage(message));
-                let hierarchy_view = hier_nav
-                    .view()
-                    .map(move |message| Message::HNMessage(message));
+                let pane_grid = PaneGrid::new(&mut panes, |pane, content, focus| {
+                let is_focused = focus.is_some();
+                let title_bar =
+                    pane_grid::TitleBar::new(format!("Focused pane"))
+                        .padding(10);
 
-                let all_content =
-                    Row::new()
-                    .push(
-                       Column::new()
-                       .push(hierarchy_view)
-                       .push(mod_nav_view))
-                    .push(ww);
-                all_content.into()
+                    pane_grid::Content::new(content.borrow_mut().view())
+                    .title_bar(title_bar)
+
+
+
+
+
+                });
+                pane_grid.into()
+
             }
         }
     }

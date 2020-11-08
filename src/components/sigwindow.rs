@@ -1,8 +1,8 @@
 use crate::components::display_wave::{DisplayedWave, WaveDisplayOptions};
 use crate::components::wavewindow;
 use iced::{
-    button, scrollable, text_input, Align, Column, Container, Element, Row,
-    Scrollable, TextInput,
+    button, scrollable, text_input, Align, Column, Container, Element, Row, pane_grid,
+    Scrollable, TextInput, PaneGrid
 };
 use std::sync::Arc;
 use wave2_custom_widgets::widget::cell_list;
