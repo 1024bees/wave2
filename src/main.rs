@@ -80,6 +80,13 @@ enum Wave2 {
 }
 
 #[derive(Debug)]
+enum PaneMessage {
+    Dragged(pane_grid::DragEvent),
+    Resize(pane_grid::ResizeEvent),
+}
+
+
+#[derive(Debug)]
 enum Message {
     // Component messages
     SVMessage(sigwindow::Message),
@@ -87,6 +94,8 @@ enum Message {
     HNMessage(hier_nav::Message),
     //IoMessage
     Loaded(Result<(), std::io::Error>),
+    //Pane Messages
+    PaneMessage(PaneMessage)
 }
 
 impl Content {
@@ -163,6 +172,7 @@ impl Application for Wave2 {
                         let hier_nav = Content::HierNav(hier_nav::HierNav::default());
                         let (mut panes, sv_pane) = pane_grid::State::new(sig_viewer);
                         let (mn_pane, _) = panes.split(pane_grid::Axis::Vertical, &sv_pane, mod_nav).unwrap();
+                        panes.swap(&mn_pane, &sv_pane);
                         let (hn_pane, _) = panes.split(pane_grid::Axis::Horizontal, &mn_pane, hier_nav).unwrap();
                         //TODO: do some like uhhh... cleaning up here
                         //      should probably initialize sizes of panes, etc
@@ -216,11 +226,17 @@ impl Application for Wave2 {
                 let title_bar =
                     pane_grid::TitleBar::new(format!("Focused pane"))
                         .padding(10);
-
+                        
                     pane_grid::Content::new(content.view())
                     .title_bar(title_bar)
 
-                });
+                })
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    //FIXME: causes int overflow in the glow backend
+                    //.on_drag(|pane_data| Message::PaneMessage(PaneMessage::Dragged(pane_data)))
+                    .on_resize(10, |resize_data| Message::PaneMessage(PaneMessage::Resize(resize_data)));
+
                 pane_grid.into()
 
             }
