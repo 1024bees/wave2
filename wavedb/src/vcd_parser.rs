@@ -16,7 +16,7 @@ pub struct WaveParser<R: io::Read> {
 
 ///Flat map from path -> IdCode.
 /// In practice, not really useful, going to be depricated
-#[derive(Default)]
+#[derive(Default,Debug)]
 pub struct IDMap(HashMap<String, IdCode>);
 
 impl Serialize for IDMap {

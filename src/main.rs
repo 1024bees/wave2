@@ -4,17 +4,19 @@ use iced::{
 };
 
 use clap::Clap;
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::Arc;
 pub mod components;
-use components::{module_nav,sigwindow};
+mod config;
+use components::{module_nav,sigwindow, menu_bar};
 use components::hier_nav::hier_nav;
 use env_logger;
+use log::{info,warn};
 use std::path::PathBuf;
+use wave2_wavedb::api::WdbAPI;
+use wave2_wavedb::wavedb::WaveDB;
 use wave2_wavedb::errors::Waverr;
 use wave2_wavedb::inout::wave_loader::load_vcd;
-
-
+use config::menu_update;
 
 #[derive(Clap, Default)]
 #[clap(version = "0.0", author = "Jimmy C <jimmy@1024bees.com>")]
@@ -54,19 +56,38 @@ fn main() {
     Wave2::run(settings);
 }
 
-struct State {
+pub struct State {
     panes: pane_grid::State<Content>,
     sv_pane: pane_grid::Pane,
     mn_pane: pane_grid::Pane,
     hn_pane: pane_grid::Pane,
+    menu_bar: menu_bar::MenuBar,
+    wdb_api : Option<Arc<WdbAPI>>
 }
 
-/// Component level content; 
-/// This may be bad design, but as things curently signed, I've resigned for the pane_grid::State
-/// to own all Component level state. Content wraps each component level state.
+
+impl State {
+
+    fn set_file_pending(&mut self, pending: bool) {
+        self.menu_bar.set_pending_file(pending);
+    }
+
+    fn open_file_pending(&mut self) -> bool{
+        self.menu_bar.get_pending_file()
+    }
+
+}
+
+
+// This may be bad design, but I've resigned for the pane_grid::State
+// to own all Component level state. 
+//
+// In the future it will be better to have content own the iced widget state and have an 
+// Rc<RefCell<>> wrapping application state
 ///
-/// In the future it will be better to have content own the iced widget state and have an 
-/// Rc<RefCell<>> wrapping application state
+/// Component level content; 
+/// Content wraps each component level state, and can be referenced via get_mut() using each pane
+/// as a key
 enum Content {
     SigView(sigwindow::SigViewer),
     ModNav(module_nav::ModNavigator),
@@ -80,22 +101,25 @@ enum Wave2 {
 }
 
 #[derive(Debug)]
-enum PaneMessage {
-    Dragged(pane_grid::DragEvent),
+pub enum PaneMessage {
+    //Dragged(pane_grid::DragEvent),
     Resize(pane_grid::ResizeEvent),
 }
 
 
 #[derive(Debug)]
-enum Message {
+pub enum Message {
     // Component messages
     SVMessage(sigwindow::Message),
     MNMessage(module_nav::Message),
     HNMessage(hier_nav::Message),
+    MBMessage(menu_bar::Message),
     //IoMessage
     Loaded(Result<(), std::io::Error>),
+    LoadWDB(Result<Arc<WdbAPI>,Waverr>),
     //Pane Messages
     PaneMessage(PaneMessage)
+
 }
 
 impl Content {
@@ -177,11 +201,16 @@ impl Application for Wave2 {
                         //TODO: do some like uhhh... cleaning up here
                         //      should probably initialize sizes of panes, etc
 
+
+
+                        let menu_bar = menu_bar::MenuBar::default();
                         *self = Wave2::Loaded(State {
                             panes,
                             sv_pane,
                             mn_pane,
                             hn_pane,
+                            menu_bar,
+                            wdb_api: Option::None
                         });
                     }
                     _ => {}
@@ -190,6 +219,9 @@ impl Application for Wave2 {
             }
             Wave2::Loaded(state) => {
                 match message {
+                    Message::MBMessage(menu_message) => {
+                        return menu_update(state,menu_message)
+                    }
                     Message::SVMessage(_) => {
                         state
                             .panes
@@ -204,6 +236,25 @@ impl Application for Wave2 {
                             .unwrap()
                             .update(message)
                     }
+                    Message::MNMessage(_) => {
+                        state
+                            .panes
+                            .get_mut(&state.mn_pane)
+                            .unwrap()
+                            .update(message)
+                    }
+
+                    Message::LoadWDB(payload) => {
+                        match payload {
+                            Ok(wdb_api) => {
+                                
+                            }
+                            Err(waverr) => {
+                                warn!("Failing loading vcd file due to some error. this will be updated")
+                            }
+                        }
+                        
+                    }
                     _ => {}
                 }
                 Command::none()
@@ -216,9 +267,8 @@ impl Application for Wave2 {
             Wave2::Loading => loading_message(),
             Wave2::Loaded(State {
                 panes,
-                hn_pane,
-                sv_pane,
-                mn_pane,
+                menu_bar,
+                ..
             }) => {
                 //all_content.into()
                 let pane_grid = PaneGrid::new(panes, |pane, content, focus| {
@@ -236,8 +286,15 @@ impl Application for Wave2 {
                     //FIXME: causes int overflow in the glow backend
                     //.on_drag(|pane_data| Message::PaneMessage(PaneMessage::Dragged(pane_data)))
                     .on_resize(10, |resize_data| Message::PaneMessage(PaneMessage::Resize(resize_data)));
+                
+                    let menu_bar_view = menu_bar
+                        .view()
+                        .map(|message| Message::MBMessage(message));
 
-                pane_grid.into()
+                Row::new()
+                    .push(menu_bar_view)
+                    .push(pane_grid)
+                    .into()
 
             }
         }

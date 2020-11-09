@@ -4,8 +4,10 @@ use crate::InMemWave;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::path::Path;
+use std::sync::Arc;
 
 /// Interface provided to wave2 for querying signal hierarchy
+#[derive(Debug)]
 pub struct WdbAPI {
     wdb: WaveDB,
 }
@@ -17,6 +19,15 @@ fn quick_hash<T: Hash>(t: &T) -> String {
     let mut rs = format!("{:x}", s.finish());
     rs.truncate(10);
     rs
+}
+
+
+impl From<WaveDB> for WdbAPI {
+    fn from(indb : WaveDB) -> WdbAPI {
+        WdbAPI {
+            wdb: indb
+        }
+    }
 }
 
 ///External API to use when interacting with WaveDB instances

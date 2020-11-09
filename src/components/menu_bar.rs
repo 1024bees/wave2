@@ -18,10 +18,19 @@ pub enum Message {
 #[derive(Debug,Clone,Default)]
 pub struct MenuBar {
     open_file : button::State,
+    pending_file : bool,
 }
 
 
 impl MenuBar {
+    pub fn set_pending_file(&mut self, pend_flag : bool) {
+        self.pending_file = pend_flag;
+    }
+    pub fn get_pending_file(&self) -> bool {
+        self.pending_file
+    }
+
+
     pub fn view(&mut self) -> Element<Message> {
         Button::new(
             &mut self.open_file,

@@ -9,7 +9,7 @@ use std::path::*;
 use toml;
 use vcd::Command;
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 struct WDBConfig {
     db_name: String,
     populated: bool,
@@ -19,6 +19,7 @@ struct WDBConfig {
 ///DB for holding buckets
 ///
 ///slize_size determines the bounding of size of the timestamp range in each bucket
+#[derive(Debug)]
 pub struct WaveDB {
     db: Db,
     //TODO: think about what should be wanted from a cfg file
