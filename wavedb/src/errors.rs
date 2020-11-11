@@ -10,10 +10,11 @@ pub enum Waverr {
     //Parse errors 
     #[error("VCDError found, issue is `{0}`. TODO: make a better error enum here!")]
     VCDErr(&'static str),
-
-
-    #[error("MissingID found, payload is `{0}` TODO: make a better error type!")]
-    MissingID(&'static str),
+    #[error("Wdb Bucket error for bucket id : {id:?}, ts : {ts:?}")]
+    BucketErr{
+       id: u32,
+       ts: u32,
+    },
     #[error("MissingID found, payload is `{0}` TODO: make a better error type!")]
     SledError(#[from] sled::Error),
     #[error("Payload Serialization (non-config) fail; from  bincode: `{0}`")]

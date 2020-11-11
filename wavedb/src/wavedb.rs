@@ -176,9 +176,10 @@ impl WaveDB {
         let tree: sled::Tree = self.db.open_tree(bucket.get_db_idx())?;
         let serialized = bincode::serialize(&bucket)?;
         if let Ok(Some(_)) = tree.insert(bucket.id.to_be_bytes(), serialized) {
-            return Err(Waverr::GenericErr(
-                "Value exists in tree already".into(),
-            ));
+            return Err(Waverr::BucketErr {
+                id : bucket.id,
+                ts : bucket.timestamp_range.0
+            });
         }
         Ok(())
     }
@@ -193,9 +194,7 @@ impl WaveDB {
             let bucket: Bucket = bincode::deserialize(bucket.as_ref())?;
             return Ok(bucket);
         }
-        Err(Waverr::MissingID(
-            "No bucket with that ID exists for this ts range!",
-        ))
+        Err(Waverr::BucketErr{ id,ts:ts_start})
     }
 
     pub fn get_imw(&self, sig: &str) -> Result<InMemWave, Waverr> {

@@ -111,7 +111,7 @@ impl InMemWave {
         for bucket in buckets {
             match bucket {
                 Ok(mut bucket) => signal_content.append(&mut bucket.sig_dumps),
-                Err(Waverr::MissingID(_)) => (),
+                Err(Waverr::BucketErr{..}) => (),
                 Err(bucket_err) => return Err(bucket_err),
             }
         }
