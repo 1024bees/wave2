@@ -1,40 +1,34 @@
+
+
 use std::io;
-#[derive(Debug)]
+use thiserror::Error;
+
+
+
+#[derive(Debug,Error)]
 pub enum Waverr {
+    //Parse errors 
+    #[error("VCDError found, issue is `{0}`. TODO: make a better error enum here!")]
     VCDErr(&'static str),
+
+
+    #[error("MissingID found, payload is `{0}` TODO: make a better error type!")]
     MissingID(&'static str),
-    SledError(&'static str),
+    #[error("MissingID found, payload is `{0}` TODO: make a better error type!")]
+    SledError(#[from] sled::Error),
+    #[error("Payload Serialization (non-config) fail; from  bincode: `{0}`")]
+    DataCorrupt(#[from] Box<bincode::ErrorKind>),
+    #[error("Config Serialization  fail; from  toml: `{0}`")]
+    SerConfig(#[from] toml::ser::Error),
+    #[error("Config deserialization failed; issue is `{0}`")]
+    DeserConfig(#[from] toml::de::Error),
+    #[error("MissingID found, payload is `{0}` TODO: make a better error type!")]
     HierMapError(&'static str),
+    #[error("Some IOErr `{0}`")]
     IOError(io::Error),
-    GenericErr(String),
+    #[error("Some cfg err `{0}`")]
+    WDBCfgErr(&'static str),
+    #[error("Generic error. This should be removed. Refactor this now")]
+    GenericErr(&'static str), 
 }
 
-//impl fmt::Display for Waverr {
-//    fn fmt(&self, f:&mut fmt::Formatter) -> fmt::Result {
-//        match self {
-//            Waverr::VCDErr(message) => {
-//                write!(f,"There was a parsing error at the VCD factory... Here's the message we got: {}",message)
-//            },
-//            Waverr::MissingID(message) => {
-//                write!(f,"There was a failure when looking up a bucket.. message is: {}", message)
-//            },
-//            Waverr::GenericErr(string) => {
-//                write!(f,"Generic error: This should probably be made into its own error type: {}",string)
-//            }
-//        }
-//    }
-//}
-
-//impl From<sled::Error> for Waverr{
-//    #[inline]
-//    fn from(sled_err : sled::Error) -> Self {
-//        Waverr::SledErr(sled_err)
-//    }
-//}
-
-impl<T: ToString> From<T> for Waverr {
-    #[inline]
-    fn from(gen_err: T) -> Self {
-        Waverr::GenericErr(gen_err.to_string())
-    }
-}

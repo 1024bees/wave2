@@ -61,7 +61,7 @@ impl WaveDB {
             Ok(())
         } else {
             //TODO: maybe make specific error for this?
-            Err(Waverr::SledError("Error loading config".into()))
+            Err(Waverr::WDBCfgErr("Error loading config".into()))
         }
     }
 
@@ -81,7 +81,7 @@ impl WaveDB {
             self.id_map = bincode::deserialize(rawbytes.as_ref())?;
             Ok(())
         } else {
-            Err(Waverr::SledError("Error loading config from DB"))
+            Err(Waverr::WDBCfgErr("Error loading config from DB"))
         }
     }
 

@@ -3446,6 +3446,7 @@ dependencies = [
  "serde",
  "sled",
  "tempfile",
+ "thiserror",
  "tokio",
  "toml",
  "vcd",

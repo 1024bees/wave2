@@ -247,13 +247,13 @@ impl Application for Wave2 {
                     Message::LoadWDB(payload) => {
                         match payload {
                             Ok(wdb_api) => {
-                                
-                            }
-                            Err(waverr) => {
-                                warn!("Failing loading vcd file due to some error. this will be updated")
+                                state.wdb_api = Some(wdb_api);
+                                state.set_file_pending(false);
+                            } Err(waverr) => {
+                                state.set_file_pending(false);
+                                warn!("{}",format!("VCD not loaded! err is {:?}",waverr))
                             }
                         }
-                        
                     }
                     _ => {}
                 }
