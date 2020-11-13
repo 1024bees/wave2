@@ -1,8 +1,8 @@
 use crate::components::display_wave::{DisplayedWave, WaveDisplayOptions};
 use crate::components::wavewindow;
 use iced::{
-    button, scrollable, text_input, Align, Column, Container, Element, Row, pane_grid,
-    Scrollable, TextInput, PaneGrid
+    button, pane_grid, scrollable, text_input, Align, Column, Container, Element, PaneGrid, Row,
+    Scrollable, TextInput,
 };
 use std::sync::Arc;
 use wave2_custom_widgets::widget::cell_list;
@@ -84,13 +84,7 @@ impl SigViewer {
         }
     }
     pub fn view(&mut self) -> Element<Message> {
-        let SigViewer {
-            waves_state,
-            wavewindow,
-            live_waves,
-            cursor,
-            scroll_x,
-        } = self;
+        let SigViewer { waves_state, wavewindow, live_waves, cursor, scroll_x } = self;
 
         //TODO: move message logic out of wavewindow
         let ww = wavewindow
@@ -124,12 +118,6 @@ impl SigViewer {
             .padding(20)
             .spacing(20);
 
-        Container::new(
-            Row::new()
-                .push(pick_list)
-                .push(wave_view)
-                .height(iced::Length::Fill),
-        )
-        .into()
+        Container::new(Row::new().push(pick_list).push(wave_view).height(iced::Length::Fill)).into()
     }
 }

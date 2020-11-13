@@ -1,6 +1,6 @@
 use iced::{
-    button, scrollable, text_input, Align, Button, Column, Container, Element,
-    Length, Row, Scrollable, Text, TextInput,
+    button, scrollable, text_input, Align, Button, Column, Container, Element, Length, Row,
+    Scrollable, Text, TextInput,
 };
 use log::error;
 use std::sync::{Arc, Mutex};
@@ -51,39 +51,19 @@ where
 
     pub fn view<M>(&mut self) -> Element<Message<M>>
     where
-        M: 'static + Clone + ToString + Fn(T)->M,
+        M: 'static + Clone + ToString + Fn(T) -> M,
     {
-        let TreeNode {
-            children,
-            ui_state,
-            expanded_button,
-            expanded,
-            payload,
-            options,
-        } = self;
+        let TreeNode { children, ui_state, expanded_button, expanded, payload, options } = self;
 
+        let expander = Button::new(expanded_button, Text::new(if *expanded { "↓" } else { "←" }))
+            .on_press(Message::Toggle);
 
-
-
-        let expander = Button::new(
-            expanded_button,
-            Text::new(if *expanded { "↓" } else { "←" }),
-        ).on_press(Message::Toggle);
-
-        let root_cell =
-            Cell::new(ui_state, *payload, *options, |T| Message::Placeholder);
+        let root_cell = Cell::new(ui_state, *payload, *options, |T| Message::Placeholder);
 
         let top_row = if payload.has_children() {
-            Row::new()
-                .push(expander)
-                .push(root_cell)
-                .width(Length::Fill)
-                .height(Length::Shrink)
+            Row::new().push(expander).push(root_cell).width(Length::Fill).height(Length::Shrink)
         } else {
-            Row::new()
-                .push(root_cell)
-                .width(Length::Fill)
-                .height(Length::Shrink)
+            Row::new().push(root_cell).width(Length::Fill).height(Length::Shrink)
         };
 
         if *expanded {

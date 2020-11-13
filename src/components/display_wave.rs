@@ -40,10 +40,7 @@ impl DisplayedWave {
 
 impl From<Arc<InMemWave>> for DisplayedWave {
     fn from(imw: Arc<InMemWave>) -> Self {
-        DisplayedWave {
-            wave_content: imw,
-            display_conf: Option::default(),
-        }
+        DisplayedWave { wave_content: imw, display_conf: Option::default() }
     }
 }
 
@@ -54,8 +51,7 @@ impl std::fmt::Display for DisplayedWave {
 }
 
 impl WaveColors {
-    pub const ALL: [WaveColors; 3] =
-        [WaveColors::Green, WaveColors::Red, WaveColors::Blue];
+    pub const ALL: [WaveColors; 3] = [WaveColors::Green, WaveColors::Red, WaveColors::Blue];
 }
 
 impl std::fmt::Display for WaveColors {

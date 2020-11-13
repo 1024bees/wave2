@@ -1,8 +1,8 @@
 use iced_native::{
     keyboard, layout, mouse, overlay,
     overlay::menu::{self, Menu},
-    scrollable, text, Clipboard, Element, Event, Hasher, Layout, Length, Point,
-    Rectangle, Size, Widget,
+    scrollable, text, Clipboard, Element, Event, Hasher, Layout, Length, Point, Rectangle, Size,
+    Widget,
 };
 
 use log::info;
@@ -62,8 +62,7 @@ impl<O> Default for State<O> {
     }
 }
 
-impl<'a, T: 'a, O: 'a, Message, Renderer: self::Renderer>
-    Cell<'a, T, O, Message, Renderer>
+impl<'a, T: 'a, O: 'a, Message, Renderer: self::Renderer> Cell<'a, T, O, Message, Renderer>
 where
     T: ToString + Clone,
     O: ToString + Clone + 'static,
@@ -144,10 +143,7 @@ where
     /// Sets the style of the [`Cell`].
     ///
     /// [`Cell`]: struct.Cell.html
-    pub fn style(
-        mut self,
-        style: impl Into<<Renderer as self::Renderer>::Style>,
-    ) -> Self {
+    pub fn style(mut self, style: impl Into<<Renderer as self::Renderer>::Style>) -> Self {
         self.style = style.into();
         self
     }
@@ -169,19 +165,14 @@ where
         Length::Shrink
     }
 
-    fn layout(
-        &self,
-        renderer: &Renderer,
-        limits: &layout::Limits,
-    ) -> layout::Node {
+    fn layout(&self, renderer: &Renderer, limits: &layout::Limits) -> layout::Node {
         use std::f32;
 
         let limits = limits.width(Length::Fill).height(Length::Shrink);
         let text_size = self.text_size.unwrap_or(renderer.default_size());
 
         let size = {
-            let intrinsic =
-                Size::new(0.0, f32::from(text_size + self.padding * 2));
+            let intrinsic = Size::new(0.0, f32::from(text_size + self.padding * 2));
 
             limits.resolve(intrinsic)
         };
@@ -245,8 +236,7 @@ where
                 }
             }
             Event::Mouse(mouse::Event::CursorMoved { .. }) => {
-                let text_size =
-                    self.text_size.unwrap_or(renderer.default_size());
+                let text_size = self.text_size.unwrap_or(renderer.default_size());
 
                 let bounds = layout.bounds();
 
@@ -280,10 +270,7 @@ where
         )
     }
 
-    fn overlay(
-        &mut self,
-        layout: Layout<'_>,
-    ) -> Option<overlay::Element<'_, Message, Renderer>> {
+    fn overlay(&mut self, layout: Layout<'_>) -> Option<overlay::Element<'_, Message, Renderer>> {
         if *self.menu_open {
             let bounds = layout.bounds();
 
@@ -334,9 +321,7 @@ pub trait Renderer: text::Renderer + menu::Renderer {
     ///
     /// [`Menu`]: ../../overlay/menu/struct.Menu.html
     /// [`Cell`]: struct.Cell.html
-    fn menu_style(
-        style: &<Self as Renderer>::Style,
-    ) -> <Self as menu::Renderer>::Style;
+    fn menu_style(style: &<Self as Renderer>::Style) -> <Self as menu::Renderer>::Style;
 
     /// Draws a [`Cell`].
     ///

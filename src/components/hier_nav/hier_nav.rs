@@ -1,6 +1,7 @@
+use crate::components::hier_nav::hier_node::{HierNode, HierRoot};
 use iced::{
-    button, scrollable, text_input, Align, Column, Container, Element, Length,
-    Row, Scrollable, TextInput,
+    button, scrollable, text_input, Align, Column, Container, Element, Length, Row, Scrollable,
+    TextInput,
 };
 use log::error;
 use std::sync::Arc;
@@ -8,9 +9,7 @@ use strum::IntoEnumIterator;
 use strum_macros;
 use wave2_custom_widgets::widget::cell_list;
 use wave2_custom_widgets::widget::cell_list::CellList;
-use wave2_wavedb::hier_map::{MobileHierMap, HierMap, SignalItem};
-use crate::components::hier_nav::hier_node::{HierNode, HierRoot};
-
+use wave2_wavedb::hier_map::{HierMap, MobileHierMap, SignalItem};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, strum_macros::Display)]
 pub enum HierOptions {
@@ -29,7 +28,6 @@ pub struct HierNav {
     hier_root: HierRoot,
 }
 
-
 #[derive(Debug, Clone)]
 pub enum Message {
     SetHier(Arc<MobileHierMap>),
@@ -45,11 +43,11 @@ impl HierNav {
             Message::SetHier(payload) => {
                 self.live_hier = HierMap::from(Arc::try_unwrap(payload).unwrap());
                 self.hier_root = HierRoot::from(&self.live_hier);
-            },
+            }
             Message::Toggle(idx) => {
                 let map_ref = &self.live_hier;
                 self.hier_root.expand_module(map_ref.idx_to_path(idx));
-            },
+            }
 
             _ => {
                 error!("Not implimented yet!");
@@ -57,28 +55,11 @@ impl HierNav {
         }
     }
     pub fn view(&mut self) -> Element<Message> {
-        let HierNav {
-            live_hier,
-            scroll_x,
-            hier_root,
-        } = self;
+        let HierNav { live_hier, scroll_x, hier_root } = self;
 
+        let content =
+            Container::new(hier_root.view()).padding(20).max_height(400).max_width(200).center_x();
 
-        let content = Container::new(hier_root.view())
-            .padding(20)
-            .max_height(400)
-            .max_width(200)
-            .center_x();
-
-    
-        Scrollable::new(scroll_x)
-            .push(content)
-            .max_height(400)
-            .max_width(200)
-            .into()
-
+        Scrollable::new(scroll_x).push(content).max_height(400).max_width(200).into()
     }
-
-
-
 }

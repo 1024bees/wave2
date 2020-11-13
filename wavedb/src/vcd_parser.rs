@@ -16,7 +16,7 @@ pub struct WaveParser<R: io::Read> {
 
 ///Flat map from path -> IdCode.
 /// In practice, not really useful, going to be depricated
-#[derive(Default,Debug)]
+#[derive(Default, Debug)]
 pub struct IDMap(HashMap<String, IdCode>);
 
 impl Serialize for IDMap {
@@ -38,10 +38,7 @@ pub struct IDMVisitor {}
 impl<'de> serde::de::Visitor<'de> for IDMVisitor {
     type Value = IDMap;
 
-    fn expecting(
-        &self,
-        formatter: &mut std::fmt::Formatter,
-    ) -> std::fmt::Result {
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(formatter, "a map from strings to uint32s")
     }
 
@@ -122,9 +119,7 @@ impl From<&vcd::Header> for IDMap {
 
 impl WaveParser<io::BufReader<File>> {
     //TODO: move from option to waverr
-    pub fn new(
-        file_path: PathBuf,
-    ) -> Result<WaveParser<io::BufReader<File>>, errors::Waverr> {
+    pub fn new(file_path: PathBuf) -> Result<WaveParser<io::BufReader<File>>, errors::Waverr> {
         if let Ok(f) = File::open(&file_path) {
             let mut rv = WaveParser {
                 vcd_parser: Parser::new(io::BufReader::new(f)),
@@ -247,7 +242,6 @@ mod tests {
             assert!(fm_map.contains_key(key));
         }
         let idmap_clone: IDMap =
-            bincode::deserialize(&bincode::serialize(&idmap).unwrap()[..])
-                .unwrap();
+            bincode::deserialize(&bincode::serialize(&idmap).unwrap()[..]).unwrap();
     }
 }

@@ -1,6 +1,5 @@
 use iced::{
-    scrollable, Align, Container, Element, Length, Sandbox, Scrollable,
-    Settings, Space, Text,
+    scrollable, Align, Container, Element, Length, Sandbox, Scrollable, Settings, Space, Text,
 };
 
 use iced::{pick_list, PickList};

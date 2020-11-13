@@ -1,7 +1,6 @@
 use iced::{
     canvas::{self, Canvas, Cursor, Event, Frame, Geometry, Path, Stroke},
-    mouse, Button, Color, Element, HorizontalAlignment, Length, Point,
-    Rectangle, Text,
+    mouse, Button, Color, Element, HorizontalAlignment, Length, Point, Rectangle, Text,
 };
 
 use crate::components::display_wave::{DisplayedWave, WaveDisplayOptions};
@@ -22,19 +21,11 @@ pub const TS_FONT_SIZE: f32 = 8.0;
 /// it clips the black bounding box of the wave window and looks bad
 const TS_CLIP_RANGE: f32 = 5.0;
 
-const BLUE: Color = Color::from_rgba(
-    0x1b as f32 / 255.0,
-    0x0a as f32 / 255.0,
-    0x73 as f32 / 255.0,
-    0.25,
-);
+const BLUE: Color =
+    Color::from_rgba(0x1b as f32 / 255.0, 0x0a as f32 / 255.0, 0x73 as f32 / 255.0, 0.25);
 const GREEN: Color = Color::from_rgb(0.0, 1.0, 0.0);
-const ORANGE: Color = Color::from_rgba(
-    0xf5 as f32 / 255.0,
-    0xc1 as f32 / 255.0,
-    0x87 as f32 / 255.0,
-    0.4,
-);
+const ORANGE: Color =
+    Color::from_rgba(0xf5 as f32 / 255.0, 0xc1 as f32 / 255.0, 0x87 as f32 / 255.0, 0.4);
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -64,10 +55,7 @@ pub struct CursorState {
 
 impl Default for CursorState {
     fn default() -> Self {
-        CursorState {
-            cursor_location: 10,
-            view_range: (0, 800),
-        }
+        CursorState { cursor_location: 10, view_range: (0, 800) }
     }
 }
 
@@ -77,14 +65,10 @@ impl WaveWindowState {
         signals: &'a [DisplayedWave],
         cur_state: CursorState,
     ) -> Element<'a, Message> {
-        Canvas::new(WaveWindow {
-            signals: signals,
-            state: self,
-            cur_state: cur_state,
-        })
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .into()
+        Canvas::new(WaveWindow { signals: signals, state: self, cur_state: cur_state })
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
     }
 
     pub fn request_redraw(&mut self) {
@@ -98,11 +82,9 @@ impl WaveWindowState {
 
 impl<'a> WaveWindow<'a> {
     fn get_timestamp(&self, bounds: Rectangle, xcoord: f32) -> u32 {
-        let ts_width =
-            (self.cur_state.view_range.1 - self.cur_state.view_range.0) as f32;
+        let ts_width = (self.cur_state.view_range.1 - self.cur_state.view_range.0) as f32;
         println!("ts_width is {}", ts_width);
-        self.cur_state.view_range.0
-            + (ts_width * ((xcoord - bounds.x) / bounds.width)) as u32
+        self.cur_state.view_range.0 + (ts_width * ((xcoord - bounds.x) / bounds.width)) as u32
     }
 
     fn end_window_time(&self) -> u32 {
@@ -113,8 +95,7 @@ impl<'a> WaveWindow<'a> {
     }
 
     fn x_abs(&self, ts: u32, bounds: &Rectangle) -> f32 {
-        let ts_width =
-            (self.cur_state.view_range.1 - self.cur_state.view_range.0) as f32;
+        let ts_width = (self.cur_state.view_range.1 - self.cur_state.view_range.0) as f32;
         ((ts) as f32 / ts_width) * bounds.width
     }
 
@@ -124,33 +105,22 @@ impl<'a> WaveWindow<'a> {
 
     /// Util for finding the x offset in the wave window where a wave should change values
     /// Used in the context of streaming through a container of "changed value" instances
-    fn xdelt_from_prev(
-        &self,
-        ts: u32,
-        prev_ts: u32,
-        bounds: &Rectangle,
-    ) -> f32 {
-        let ts_width =
-            (self.cur_state.view_range.1 - self.cur_state.view_range.0) as f32;
+    fn xdelt_from_prev(&self, ts: u32, prev_ts: u32, bounds: &Rectangle) -> f32 {
+        let ts_width = (self.cur_state.view_range.1 - self.cur_state.view_range.0) as f32;
         ((ts - prev_ts) as f32 / ts_width) * bounds.width
     }
 
     fn draw_header(&self, frame: &mut Frame, bounds: &Rectangle) {
-        let mut window_width =
-            self.cur_state.view_range.1 - self.cur_state.view_range.0;
+        let mut window_width = self.cur_state.view_range.1 - self.cur_state.view_range.0;
         let mut ts_width: u32 = 1;
         while window_width >= MAX_NUM_TEXT_HEADERS {
             window_width /= 10;
             ts_width *= 10;
         }
-        let starting_ts: u32 = self.cur_state.view_range.0
-            + self.cur_state.view_range.0 % ts_width;
+        let starting_ts: u32 = self.cur_state.view_range.0 + self.cur_state.view_range.0 % ts_width;
         let mut prev_ts = self.cur_state.view_range.0;
         let mut xpos: f32 = 0.0;
-        let hdr_line = Point {
-            x: bounds.x,
-            y: bounds.y + TS_FONT_SIZE,
-        };
+        let hdr_line = Point { x: bounds.x, y: bounds.y + TS_FONT_SIZE };
         let boundary_line = Path::new(|p| {
             p.move_to(hdr_line);
             p.line_to([hdr_line.x + bounds.width, hdr_line.y].into());
@@ -159,17 +129,12 @@ impl<'a> WaveWindow<'a> {
         let bg_stroke = Stroke::default().with_width(1.0).with_color(BLUE);
         frame.stroke(&boundary_line, bg_stroke);
 
-        for ts in (starting_ts..self.cur_state.view_range.1)
-            .step_by(ts_width as usize)
-        {
+        for ts in (starting_ts..self.cur_state.view_range.1).step_by(ts_width as usize) {
             xpos += self.xdelt_from_prev(ts, prev_ts, bounds);
             if xpos > TS_CLIP_RANGE {
                 frame.fill_text(canvas::Text {
                     content: format!("{}ns", ts),
-                    position: Point {
-                        x: xpos,
-                        y: bounds.y,
-                    },
+                    position: Point { x: xpos, y: bounds.y },
                     color: GREEN,
                     size: TS_FONT_SIZE,
                     horizontal_alignment: HorizontalAlignment::Right,
@@ -186,19 +151,12 @@ impl<'a> WaveWindow<'a> {
     }
 
     fn draw_cursor(&self, frame: &mut Frame, bounds: Rectangle) {
-        let cur_pos: Point =
-            [self.x_abs_cursor(&bounds), bounds.y + TS_FONT_SIZE].into();
+        let cur_pos: Point = [self.x_abs_cursor(&bounds), bounds.y + TS_FONT_SIZE].into();
         let cursor_line = Path::new(|p| {
             p.move_to(cur_pos);
-            p.line_to(Point {
-                y: bounds.y + bounds.height,
-                ..cur_pos
-            });
+            p.line_to(Point { y: bounds.y + bounds.height, ..cur_pos });
         });
-        frame.stroke(
-            &cursor_line,
-            Stroke::default().with_width(1.0).with_color(ORANGE),
-        );
+        frame.stroke(&cursor_line, Stroke::default().with_width(1.0).with_color(ORANGE));
     }
 
     //TODO: only redraw "dirty" signals
@@ -225,11 +183,7 @@ impl<'a> WaveWindow<'a> {
                     match wave.sig_type {
                         SigType::Bit => {
                             for (time, sig_payload) in wave.changes() {
-                                working_pt.x += self.xdelt_from_prev(
-                                    *time,
-                                    prev_xcoord,
-                                    &bounds,
-                                );
+                                working_pt.x += self.xdelt_from_prev(*time, prev_xcoord, &bounds);
                                 p.line_to(working_pt);
                                 p.move_to(working_pt);
                                 //TODO: handle z/x case
@@ -241,30 +195,21 @@ impl<'a> WaveWindow<'a> {
                                 p.line_to(working_pt);
                                 p.move_to(working_pt);
                             }
-                            let fin_x_delt = self.xdelt_from_prev(
-                                self.end_window_time(),
-                                prev_xcoord,
-                                &bounds,
-                            );
+                            let fin_x_delt =
+                                self.xdelt_from_prev(self.end_window_time(), prev_xcoord, &bounds);
                             working_pt.x += fin_x_delt;
                             p.line_to(working_pt);
                         }
                         SigType::Vector(width) => {
-                            let working_pt_top = Point {
-                                y: working_pt.y - WAVEHEIGHT,
-                                ..working_pt
-                            };
+                            let working_pt_top =
+                                Point { y: working_pt.y - WAVEHEIGHT, ..working_pt };
                             let mut working_pts = [working_pt_top, working_pt];
                             for (time, sig_payload) in wave.changes() {
-                                let x_delt = self.xdelt_from_prev(
-                                    *time,
-                                    prev_xcoord,
-                                    &bounds,
-                                ) - VEC_SHIFT_WIDTH / 2.0;
+                                let x_delt = self.xdelt_from_prev(*time, prev_xcoord, &bounds)
+                                    - VEC_SHIFT_WIDTH / 2.0;
 
-                                for (point, direction) in working_pts
-                                    .iter_mut()
-                                    .zip([1.0, -1.0].iter())
+                                for (point, direction) in
+                                    working_pts.iter_mut().zip([1.0, -1.0].iter())
                                 {
                                     p.move_to(*point);
                                     point.x += x_delt;
@@ -279,11 +224,8 @@ impl<'a> WaveWindow<'a> {
                                 }
                                 prev_xcoord = *time
                             }
-                            let fin_x_delt = self.xdelt_from_prev(
-                                self.end_window_time(),
-                                prev_xcoord,
-                                &bounds,
-                            );
+                            let fin_x_delt =
+                                self.xdelt_from_prev(self.end_window_time(), prev_xcoord, &bounds);
                             for point in working_pts.iter_mut() {
                                 p.move_to(*point);
                                 point.x += fin_x_delt;
@@ -299,10 +241,7 @@ impl<'a> WaveWindow<'a> {
         //TODO: cache wavelist in the case of append only?
 
         for waves in wave_list {
-            frame.stroke(
-                &waves,
-                Stroke::default().with_width(1.0).with_color(GREEN),
-            );
+            frame.stroke(&waves, Stroke::default().with_width(1.0).with_color(GREEN));
         }
     }
 }
@@ -318,23 +257,14 @@ impl Default for WaveWindowState {
 }
 
 impl<'a> canvas::Program<Message> for WaveWindow<'a> {
-    fn update(
-        &mut self,
-        event: Event,
-        bounds: Rectangle,
-        cursor: Cursor,
-    ) -> Option<Message> {
+    fn update(&mut self, event: Event, bounds: Rectangle, cursor: Cursor) -> Option<Message> {
         let cursor_position = cursor.position_in(&bounds)?;
 
         match event {
             Event::Mouse(mouse_event) => match mouse_event {
                 mouse::Event::ButtonReleased(mouse::Button::Left) => {
-                    self.cur_state.cursor_location =
-                        self.get_timestamp(bounds, cursor_position.x);
-                    info!(
-                        "Cursors pos x : {} y: {}",
-                        cursor_position.x, cursor_position.y
-                    );
+                    self.cur_state.cursor_location = self.get_timestamp(bounds, cursor_position.x);
+                    info!("Cursors pos x : {} y: {}", cursor_position.x, cursor_position.y);
                     Some(Message::UpdateCursor(self.cur_state.clone()))
                 }
                 _ => None,
@@ -344,17 +274,13 @@ impl<'a> canvas::Program<Message> for WaveWindow<'a> {
     }
 
     fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
-        let content =
-            self.state.cache.draw(bounds.size(), |frame: &mut Frame| {
-                self.draw_all(frame, bounds);
-            });
+        let content = self.state.cache.draw(bounds.size(), |frame: &mut Frame| {
+            self.draw_all(frame, bounds);
+        });
 
-        let cursors =
-            self.state
-                .cursor_cache
-                .draw(bounds.size(), |frame: &mut Frame| {
-                    self.draw_cursor(frame, bounds);
-                });
+        let cursors = self.state.cursor_cache.draw(bounds.size(), |frame: &mut Frame| {
+            self.draw_cursor(frame, bounds);
+        });
 
         vec![content, cursors]
     }
