@@ -95,7 +95,7 @@ impl WaveDB {
     //TODO: parallelize this
     //TODO: move filepath from String to &str!!!
     pub fn from_vcd(vcd_file_path: PathBuf, wdb_path: &Path) -> Result<WaveDB, Waverr> {
-        let parser = WaveParser::new(vcd_file_path.clone())?;
+        let mut parser = WaveParser::new(vcd_file_path.clone())?;
         let wdb_name = {
             if let Some(vcd_file) = vcd_file_path.file_stem() {
                 vcd_file.to_str().unwrap().to_string()
@@ -107,7 +107,7 @@ impl WaveDB {
         let mut global_time: u32 = 0;
         let mut current_range = (global_time, global_time + DEFAULT_SLIZE_SIZE);
         let mut bucket_mapper: HashMap<vcd::IdCode, Bucket> = HashMap::new();
-        wdb.id_map = parser.create_idmap();
+        wdb.hier_map = parser.create_hiermap()?;
         for item in parser {
             match item {
                 Ok(Command::Timestamp(time)) => {
