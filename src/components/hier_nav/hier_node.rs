@@ -5,6 +5,8 @@ use iced::{
 };
 use log::error;
 use std::cell::Cell;
+use std::rc::Rc;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use wave2_custom_widgets::widget::cell;
 use wave2_custom_widgets::widget::cell::Cell as VizCell;
@@ -33,18 +35,21 @@ pub struct HierNode {
     children: Vec<HierNode>,
     ui_state: cell::State<HierOptions>,
     expanded_button: button::State,
-    expanded: Cell<bool>,
+    expanded: Rc<Cell<bool>>,
     payload: ModuleWrapper,
 }
 
 #[derive(Debug, Default)]
-pub struct HierRoot(Vec<HierNode>);
+pub struct HierRoot{
+    root_vec : Vec<HierNode>,
+    flat_expander_map : HashMap<usize, Rc<Cell<bool>>>,
+}
 
 impl HierRoot {
     pub fn expand_module<S: Into<String>>(&self, in_path: S) -> Result<(), &'static str> {
         let path = in_path.into();
         let scope_list: Vec<&str> = path.split(".").collect();
-        let mut hierarchy_ptr: &Vec<HierNode> = &self.0;
+        let mut hierarchy_ptr: &Vec<HierNode> = &self.root_vec;
         let mut mutator: Option<&HierNode> = None;
         for scope in scope_list {
             mutator = None;
@@ -63,8 +68,19 @@ impl HierRoot {
             Err("Trying to expand nonexistent path; TODO: refactor this error")
         }
     }
+    pub fn update_expander(&mut self, module_idx : usize) -> Result<(), &'static str>  {
+        let exp = self.flat_expander_map.get(&module_idx);
+        if let Some(real_expander) = exp {
+            let state = real_expander.get();
+            real_expander.set(!state);
+            Ok(())
+        } else {
+            Err("Fuck me right!")
+        }
+    }
+
     pub fn view(&mut self) -> Element<Message> {
-        let elements = self.0.iter_mut().map(|x| x.view()).collect();
+        let elements = self.root_vec.iter_mut().map(|x| x.view()).collect();
 
         //elements.extend(child_refs.iter())
         Column::with_children(elements).into()
@@ -73,17 +89,20 @@ impl HierRoot {
 
 impl From<&HierMap> for HierRoot {
     fn from(map: &HierMap) -> HierRoot {
+        let mut flat_expander_map : HashMap<usize,Rc<Cell<bool>>> = HashMap::new();
         let rootlist: Vec<HierNode> =
-            map.get_roots().iter().cloned().map(|x| HierNode::from_hmap(x, map)).collect();
-        HierRoot(rootlist)
+            map.get_roots().iter().cloned().map(|x| HierNode::from_hmap(x, map,&mut flat_expander_map)).collect();
+        HierRoot{root_vec : rootlist, flat_expander_map : flat_expander_map}
     }
 }
 
 impl HierNode {
-    fn from_hmap(live_idx: usize, map: &HierMap) -> HierNode {
+    fn from_hmap(live_idx: usize, map: &HierMap, flat_expander_map : &mut HashMap<usize, Rc<Cell<bool>>>) -> HierNode {
         let module = &map.module_list[live_idx];
         let payload = ModuleWrapper::from(module);
         if !module.submodules.is_empty() {
+            let expanded = Rc::new(Cell::new(false));
+            flat_expander_map.insert(payload.hier_idx,expanded.clone());
             HierNode {
                 payload,
                 // Look. I get it. It's ugly. You hate this
@@ -95,17 +114,18 @@ impl HierNode {
                     .submodules
                     .iter()
                     .cloned()
-                    .map(|x| HierNode::from_hmap(x, map))
+                    .map(|x| HierNode::from_hmap(x, map, flat_expander_map))
                     .collect(),
+                expanded : expanded.clone(),
                 ..HierNode::default()
             }
         } else {
-            HierNode { payload, ..HierNode::default() }
+            HierNode { payload,  expanded : Rc::new(Cell::new(false)), ..HierNode::default() }
         }
     }
 
     pub fn view(&mut self) -> Element<Message> {
-        let HierNode { children, ui_state, expanded_button, expanded, payload } = self;
+        let HierNode { children, ui_state, expanded_button, expanded, payload} = self;
 
         let expanded_val = expanded.get();
 
