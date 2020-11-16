@@ -7,34 +7,8 @@ use vcd::{IdCode, Scope, ScopeItem};
 pub struct HierMap {
     pub module_list: Vec<ModuleItem>,
     top_indices: Vec<usize>,
-    live_module: Cell<usize>,
 }
 
-/// A subset of HierMap that is movable across threads. We send this as a message to set state
-/// in HierNav
-#[derive(Debug)]
-pub struct MobileHierMap {
-    module_list: Vec<ModuleItem>,
-    top_indices: Vec<usize>,
-}
-
-impl From<HierMap> for MobileHierMap {
-    fn from(in_map: HierMap) -> MobileHierMap {
-        MobileHierMap { module_list: in_map.module_list, top_indices: in_map.top_indices }
-    }
-}
-
-impl From<MobileHierMap> for HierMap {
-    fn from(mobile_map: MobileHierMap) -> HierMap {
-        // is there a cleaner way to do this?
-        let dv = mobile_map.top_indices.first().unwrap().clone();
-        HierMap {
-            module_list: mobile_map.module_list,
-            top_indices: mobile_map.top_indices,
-            live_module: Cell::new(dv),
-        }
-    }
-}
 
 impl HierMap {
     pub fn get_roots(&self) -> &[usize] {
@@ -70,13 +44,12 @@ impl HierMap {
             }
             return Err(Waverr::HierMapError("Cannot find module in abs path"));
         }
-        self.live_module.set(idx);
         Ok(idx)
     }
 
-    pub fn set_path_relative<S: Into<String>>(&self, in_path: S) -> Result<usize, Waverr> {
+    pub fn set_path_relative<S: Into<String>>(&self, in_path: S, starting_idx :usize) -> Result<usize, Waverr> {
         let rel_path: String = in_path.into();
-        let mut idx = self.live_module.get();
+        let mut idx = starting_idx;
         let module_list: Vec<&str> = rel_path.split(".").collect();
 
         for mod_name in module_list.iter() {
@@ -88,18 +61,17 @@ impl HierMap {
                 continue;
             }
         }
-        if idx == self.live_module.get() {
+        if idx == starting_idx {
             Err(Waverr::HierMapError("Cannot find module in abs path"))
         } else {
-            self.live_module.set(idx);
             Ok(idx)
         }
     }
 
     /// Get the submodules of the "live" module. This is exposed to wave2 app
     /// for filling in the module navigator
-    pub fn get_module_children(&self) -> Vec<&ModuleItem> {
-        self.module_list[self.live_module.get()]
+    pub fn get_module_children(&self,live_module: usize) -> Vec<&ModuleItem> {
+        self.module_list[live_module]
             .submodules
             .iter()
             .cloned()
@@ -109,29 +81,25 @@ impl HierMap {
 
     /// Get the signals of the "live" module. This is exposed to wave2 app
     /// for filling in the signal navigator
-    pub fn get_module_signals(&self) -> &[SignalItem] {
-        self.module_list[self.live_module.get()].signals.as_slice()
+    pub fn get_module_signals(&self, live_module: usize) -> &[SignalItem] {
+        self.module_list[live_module].signals.as_slice()
     }
 
     /// Map absolute path -> signal id
     /// This is to support the older API of an ID map, where raw paths can map directly
     /// to signal ids
     pub fn path_to_id(&self, abs_path: &str) -> Result<u32, Waverr> {
-        let live_starting = self.live_module.get();
         if let Some(base_path_idx) = abs_path.rfind('.') {
-            self.set_path_abs(&abs_path[..base_path_idx])?;
+            let module_idx = self.set_path_abs(&abs_path[..base_path_idx])?;
             let sig_name = &abs_path[base_path_idx + 1..];
             let rv = self
-                .get_module_signals()
+                .get_module_signals(module_idx)
                 .iter()
                 .find(|signal| signal.name() == sig_name)
                 .map_or(Err(Waverr::HierMapError("Malformed path passed in")), |signal| {
                     Ok(signal.id())
                 });
 
-            //would really prefer this function to have no side effectsn
-            //set live module idx back to what it was before we modified anything
-            self.live_module.set(live_starting);
             rv
         } else {
             Err(Waverr::HierMapError("Malformed path passed in"))
@@ -150,12 +118,6 @@ impl HierMap {
             }
         }
         path
-    }
-
-    /// Return string of "current path"
-    pub fn get_current_path(&self) -> String {
-        let mut idx = self.live_module.get();
-        self.idx_to_path(idx)
     }
 }
 
@@ -203,7 +165,7 @@ impl From<vcd::Header> for HierMap {
 
         recurse_parse(&mut HierMapVec, &mut TopMods, header.items, livemod_ref, None);
 
-        HierMap { module_list: HierMapVec, top_indices: TopMods, live_module: Cell::default() }
+        HierMap { module_list: HierMapVec, top_indices: TopMods}
     }
 }
 
@@ -287,9 +249,9 @@ mod tests {
         let mut wp = vcd_parser::WaveParser::new(pb).unwrap();
 
         let hm = wp.create_hiermap().unwrap();
-        let offset = hm.set_path_abs("logic").unwrap();
-        assert_eq!(offset, 0);
-        let signals = hm.get_module_signals();
+        let live_module = hm.set_path_abs("logic").unwrap();
+        assert_eq!(live_module, 0);
+        let signals = hm.get_module_signals(live_module);
         let ref_set =
             set!["logic", "data", "data_valid", "en", "rx_en", "tx_en", "empty", "underrun"];
 
@@ -297,10 +259,10 @@ mod tests {
             assert!(ref_set.contains(signal.name()))
         }
 
-        let submodules = hm.get_module_children();
+        let submodules = hm.get_module_children(live_module);
         assert!(submodules.is_empty());
 
-        let path = hm.get_current_path();
+        let path = hm.idx_to_path(live_module);
         assert_eq!(path, "logic");
     }
 
@@ -309,16 +271,17 @@ mod tests {
         let pb = vcd_test_path("test_vcds/vga.vcd");
         let mut wp = vcd_parser::WaveParser::new(pb).unwrap();
         let hm = wp.create_hiermap().unwrap();
-        hm.set_path_abs("TOP").unwrap();
-        let submodules = hm.get_module_children();
+        let live_module = hm.set_path_abs("TOP").unwrap();
+        let submodules = hm.get_module_children(live_module);
         assert!(!submodules.is_empty());
 
-        let fail = hm.set_path_relative("does not exist");
+        let fail = hm.set_path_relative("does not exist",live_module);
         assert!(fail.is_err(), "Path exists!");
 
-        let success = hm.set_path_relative("vga");
-        assert!(success.is_ok(), "Path exists!");
-        let num_children = hm.get_module_signals().len();
+        let new_live_module = hm.set_path_relative("vga",live_module);
+        assert!(new_live_module.is_ok(), "Path exists!");
+
+        let num_children = hm.get_module_signals(new_live_module.unwrap()).len();
         assert_eq!(num_children, 30);
     }
 }
