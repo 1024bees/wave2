@@ -1,4 +1,5 @@
 use crate::components::hier_nav::hier_node::{HierNode, HierRoot};
+use std::cell::Cell;
 use iced::{
     button, scrollable, text_input, Align, Column, Container, Element, Length, Row, Scrollable,
     TextInput,
@@ -9,7 +10,7 @@ use strum::IntoEnumIterator;
 use strum_macros;
 use wave2_custom_widgets::widget::cell_list;
 use wave2_custom_widgets::widget::cell_list::CellList;
-use wave2_wavedb::hier_map::{HierMap, MobileHierMap, SignalItem};
+use wave2_wavedb::hier_map::{HierMap,  SignalItem};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, strum_macros::Display)]
 pub enum HierOptions {
@@ -23,16 +24,17 @@ impl HierOptions {
 
 #[derive(Default)]
 pub struct HierNav {
-    live_hier: HierMap,
+    live_module: Cell<usize>,
     scroll_x: scrollable::State,
     hier_root: HierRoot,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    SetHier(Arc<MobileHierMap>),
+    SetHier(Arc<HierMap>),
     UpdateModNav(Arc<Vec<SignalItem>>),
     Toggle(usize),
+    TogglePath(String),
     SendModule(usize),
     Placeholder,
 }
@@ -41,12 +43,10 @@ impl HierNav {
     pub fn update(&mut self, message: Message) {
         match message {
             Message::SetHier(payload) => {
-                self.live_hier = HierMap::from(Arc::try_unwrap(payload).unwrap());
-                self.hier_root = HierRoot::from(&self.live_hier);
+                self.hier_root = HierRoot::from(payload.as_ref());
             }
-            Message::Toggle(idx) => {
-                let map_ref = &self.live_hier;
-                self.hier_root.expand_module(map_ref.idx_to_path(idx));
+            Message::TogglePath(path) => {
+                //self.hier_root.expand_module(path);
             }
 
             _ => {
@@ -55,7 +55,7 @@ impl HierNav {
         }
     }
     pub fn view(&mut self) -> Element<Message> {
-        let HierNav { live_hier, scroll_x, hier_root } = self;
+        let HierNav { live_module, scroll_x, hier_root } = self;
 
         let content =
             Container::new(hier_root.view()).padding(20).max_height(400).max_width(200).center_x();

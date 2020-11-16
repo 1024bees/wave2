@@ -4,6 +4,7 @@ use iced::{
     Scrollable, Text, TextInput,
 };
 use log::error;
+use std::slice::IterMut;
 use std::cell::Cell;
 use std::sync::{Arc, Mutex};
 use wave2_custom_widgets::widget::cell;
@@ -22,6 +23,18 @@ impl ToString for ModuleWrapper {
     }
 }
 
+impl From<&ModuleItem> for HierNode {
+    fn from(module: &ModuleItem) -> HierNode {
+        HierNode{
+            children : module.submodules.clone(),
+            payload : ModuleWrapper::from(module),
+            ..HierNode::default()
+        }
+    }
+
+
+}
+
 impl From<&ModuleItem> for ModuleWrapper {
     fn from(module: &ModuleItem) -> ModuleWrapper {
         ModuleWrapper { hier_idx: module.self_idx, name: module.name.clone() }
@@ -30,41 +43,33 @@ impl From<&ModuleItem> for ModuleWrapper {
 
 #[derive(Debug, Clone, Default)]
 pub struct HierNode {
-    children: Vec<HierNode>,
     ui_state: cell::State<HierOptions>,
     expanded_button: button::State,
     expanded: Cell<bool>,
     payload: ModuleWrapper,
+    children: Vec<usize>,
 }
 
 #[derive(Debug, Default)]
-pub struct HierRoot(Vec<HierNode>);
+pub struct HierRoot{
+    viz_module_list: Vec<HierNode>,
+    root_nodes: Vec<usize>,
+}
 
 impl HierRoot {
-    pub fn expand_module<S: Into<String>>(&self, in_path: S) -> Result<(), &'static str> {
-        let path = in_path.into();
-        let scope_list: Vec<&str> = path.split(".").collect();
-        let mut hierarchy_ptr: &Vec<HierNode> = &self.0;
-        let mut mutator: Option<&HierNode> = None;
-        for scope in scope_list {
-            mutator = None;
-            for node in hierarchy_ptr {
-                if scope == node.payload.name {
-                    hierarchy_ptr = &node.children;
-                    mutator = Some(node);
-                    break;
-                }
-            }
+    pub fn view (&mut self) -> Element<Message> {
+        let viz_mod_slice = self.viz_module_list.as_mut_slice();
+        //let elements = self.root_nodes
+        //    .iter()
+        //    .cloned()
+        //    .map(|x| viz_mod_slice[x].view(viz_mod_slice))
+        //    .collect();
+        let mut elements : Vec<Element<Message>> = Vec::new();
+        let mut itermut2 = viz_mod_slice.iter_mut();
+        let mut starting = 0;
+        for val in self.root_nodes.iter().cloned() {
+            elements.push(itermut2.nth(val).unwrap().view(viz_mod_slice.iter_mut()));
         }
-        if let Some(expandee) = mutator {
-            expandee.expanded.set(!expandee.expanded.get());
-            Ok(())
-        } else {
-            Err("Trying to expand nonexistent path; TODO: refactor this error")
-        }
-    }
-    pub fn view(&mut self) -> Element<Message> {
-        let elements = self.0.iter_mut().map(|x| x.view()).collect();
 
         //elements.extend(child_refs.iter())
         Column::with_children(elements).into()
@@ -73,38 +78,21 @@ impl HierRoot {
 
 impl From<&HierMap> for HierRoot {
     fn from(map: &HierMap) -> HierRoot {
-        let rootlist: Vec<HierNode> =
-            map.get_roots().iter().cloned().map(|x| HierNode::from_hmap(x, map)).collect();
-        HierRoot(rootlist)
+        let viz_module_list : Vec<HierNode> = map.module_list
+            .iter()
+            .map(|x| HierNode::from(x))
+            .collect();
+        HierRoot{
+            viz_module_list,
+            root_nodes : map.get_roots().into()
+        }
     }
 }
 
-impl HierNode {
-    fn from_hmap(live_idx: usize, map: &HierMap) -> HierNode {
-        let module = &map.module_list[live_idx];
-        let payload = ModuleWrapper::from(module);
-        if !module.submodules.is_empty() {
-            HierNode {
-                payload,
-                // Look. I get it. It's ugly. You hate this
-                // But this is what peak peformance looks like.
-                // ... Right?
-                // Unsure how expensive a move of a recursive DS like this is. I'd like to avoid it
-                // if possible
-                children: module
-                    .submodules
-                    .iter()
-                    .cloned()
-                    .map(|x| HierNode::from_hmap(x, map))
-                    .collect(),
-                ..HierNode::default()
-            }
-        } else {
-            HierNode { payload, ..HierNode::default() }
-        }
-    }
 
-    pub fn view(&mut self) -> Element<Message> {
+
+impl HierNode {
+    pub fn view<'a> (&'a mut self, itermut :  IterMut<HierNode>) -> Element<'a, Message> {
         let HierNode { children, ui_state, expanded_button, expanded, payload } = self;
 
         let expanded_val = expanded.get();
@@ -126,7 +114,9 @@ impl HierNode {
 
         if expanded_val {
             let mut elements = vec![top_row.into()];
-            elements.extend(children.iter_mut().map(|x| x.view()));
+            //elements.extend(children.iter().cloned().
+             //   map(|x| (trunk_state.viz_module_list[x]).view(trunk_state)));
+
 
             //elements.extend(child_refs.iter())
             Column::with_children(elements).into()
