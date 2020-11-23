@@ -118,6 +118,11 @@ impl WaveDB {
             }
         };
         let mut wdb = WaveDB::new(wdb_name, Some(wdb_path));
+        if wdb.was_recovered() {
+            wdb.load_config()?;
+            wdb.load_idmap()?;
+            return Ok(wdb);
+        }
         let mut global_time: u32 = 0;
         let mut current_range = (global_time, global_time + DEFAULT_SLIZE_SIZE);
         let mut bucket_mapper: HashMap<vcd::IdCode, Bucket> = HashMap::new();
