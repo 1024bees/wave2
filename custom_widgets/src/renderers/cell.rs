@@ -2,14 +2,17 @@
 use crate::widget::cell;
 use iced_graphics::backend::{self, Backend};
 use iced_graphics::{Primitive, Renderer};
-use iced_native::{mouse, Color, HorizontalAlignment, Point, Rectangle, VerticalAlignment};
+use iced_native::{
+    mouse, Color, HorizontalAlignment, Point, Rectangle, VerticalAlignment,
+};
 
 use iced_style::menu::Style as MenuStyle;
 
 use crate::styles::cell_list::StyleSheet;
 
 /// A widget allowing the selection of a single value from a list of options.
-pub type Cell<'a, T, O, Message, Backend> = cell::Cell<'a, T, O, Message, Renderer<Backend>>;
+pub type Cell<'a, T, O, Message, Backend> =
+    cell::Cell<'a, T, O, Message, Renderer<Backend>>;
 
 impl<B> cell::Renderer for Renderer<B>
 where
@@ -36,7 +39,11 @@ where
     ) -> Self::Output {
         let is_mouse_over = bounds.contains(cursor_position);
 
-        let style = if is_mouse_over { style.hovered() } else { style.active() };
+        let style = if is_mouse_over {
+            style.hovered()
+        } else {
+            style.active()
+        };
 
         let bg = Primitive::Quad {
             bounds,
@@ -90,14 +97,22 @@ where
             },
             size: f32::from(text_size),
             font,
-            color: if selected { style.selected_text_color } else { style.text_color },
+            color: if selected {
+                style.selected_text_color
+            } else {
+                style.text_color
+            },
             horizontal_alignment: HorizontalAlignment::Left,
             vertical_alignment: VerticalAlignment::Center,
         });
 
         (
             Primitive::Group { primitives },
-            if is_mouse_over { mouse::Interaction::Pointer } else { mouse::Interaction::default() },
+            if is_mouse_over {
+                mouse::Interaction::Pointer
+            } else {
+                mouse::Interaction::default()
+            },
         )
     }
 }

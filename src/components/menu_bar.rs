@@ -1,6 +1,6 @@
 use iced::{
-    button, scrollable, text_input, Align, Button, Column, Container, Element, Length, Row,
-    Scrollable, Text, TextInput,
+    button, scrollable, text_input, Align, Button, Column, Container, Element,
+    Length, Row, Scrollable, Text, TextInput,
 };
 
 use log::error;
@@ -28,6 +28,8 @@ impl MenuBar {
     }
 
     pub fn view(&mut self) -> Element<Message> {
-        Button::new(&mut self.open_file, Text::new("Open File")).on_press(Message::OpenFile).into()
+        Button::new(&mut self.open_file, Text::new("Open File"))
+            .on_press(Message::OpenFile)
+            .into()
     }
 }

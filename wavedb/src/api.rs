@@ -1,6 +1,8 @@
 use crate::errors::Waverr;
+use crate::hier_map::HierMap;
 use crate::wavedb::WaveDB;
 use crate::InMemWave;
+
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::path::Path;
@@ -31,7 +33,16 @@ impl From<WaveDB> for WdbAPI {
 impl WdbAPI {
     pub fn open_from_vcd(path_to_vcd: &str) -> Result<WdbAPI, Waverr> {
         let wdb_path = format!("/tmp/wavedb/{}/wdb", quick_hash(&path_to_vcd));
-        Ok(WdbAPI { wdb: WaveDB::from_vcd(path_to_vcd.into(), Path::new(wdb_path.as_str()))? })
+        Ok(WdbAPI {
+            wdb: WaveDB::from_vcd(
+                path_to_vcd.into(),
+                Path::new(wdb_path.as_str()),
+            )?,
+        })
+    }
+
+    pub fn get_hier_map(&self) -> Arc<HierMap> {
+        self.wdb.get_hier_map().clone()
     }
 
     /// Get the signal content associated with this path

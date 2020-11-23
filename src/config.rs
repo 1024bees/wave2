@@ -4,7 +4,10 @@ use wave2_wavedb::inout::wave_loader::load_vcd;
 use crate::{Message, State, Wave2};
 use iced::Command;
 
-pub fn menu_update(app_state: &mut State, menu_message: MenuMessage) -> Command<Message> {
+pub fn menu_update(
+    app_state: &mut State,
+    menu_message: MenuMessage,
+) -> Command<Message> {
     match menu_message {
         MenuMessage::OpenFile => {
             if app_state.open_file_pending() {

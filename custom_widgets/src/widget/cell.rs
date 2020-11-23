@@ -1,8 +1,8 @@
 use iced_native::{
     keyboard, layout, mouse, overlay,
     overlay::menu::{self, Menu},
-    scrollable, text, Clipboard, Element, Event, Hasher, Layout, Length, Point, Rectangle, Size,
-    Widget,
+    scrollable, text, Clipboard, Element, Event, Hasher, Layout, Length, Point,
+    Rectangle, Size, Widget,
 };
 
 use log::info;
@@ -24,7 +24,9 @@ where
     last_selection: &'a mut bool,
     menu_hovered_option: &'a mut Option<usize>,
     menu_last_selection: &'a mut Option<O>,
-    on_selected: Box<dyn Fn(T) -> Message>,
+    last_click: &'a mut Option<mouse::Click>,
+    on_click: Option<Box<dyn Fn(&T) -> Message>>,
+    on_double_click: Option<Box<dyn Fn(&T) -> Message>>,
     item: &'a T,
     options: &'static [O],
     width: Length,
@@ -45,6 +47,7 @@ pub struct State<O> {
     hovered_option: bool,
     last_selection: bool,
     menu_hovered_option: Option<usize>,
+    last_click: Option<mouse::Click>,
     menu_last_selection: Option<O>,
 }
 
@@ -56,13 +59,15 @@ impl<O> Default for State<O> {
             menu_point: Point::default(),
             hovered_option: bool::default(),
             last_selection: bool::default(),
+            last_click: Option::default(),
             menu_hovered_option: Option::default(),
             menu_last_selection: Option::default(),
         }
     }
 }
 
-impl<'a, T: 'a, O: 'a, Message, Renderer: self::Renderer> Cell<'a, T, O, Message, Renderer>
+impl<'a, T: 'a, O: 'a, Message, Renderer: self::Renderer>
+    Cell<'a, T, O, Message, Renderer>
 where
     T: ToString + Clone,
     O: ToString + Clone + 'static,
@@ -77,7 +82,6 @@ where
         state: &'a mut State<O>,
         item: &'a T,
         menu_options: &'static [O],
-        on_selected: impl Fn(T) -> Message + 'static,
     ) -> Self {
         let State {
             menu,
@@ -87,6 +91,7 @@ where
             last_selection,
             menu_hovered_option,
             menu_last_selection,
+            last_click,
         } = state;
 
         Self {
@@ -99,8 +104,10 @@ where
             options: menu_options,
             menu_hovered_option,
             menu_last_selection,
-            on_selected: Box::new(on_selected),
             width: Length::Shrink,
+            last_click,
+            on_click: None,
+            on_double_click: None,
             text_size: None,
             padding: Renderer::DEFAULT_PADDING,
             font: Default::default(),
@@ -143,8 +150,32 @@ where
     /// Sets the style of the [`Cell`].
     ///
     /// [`Cell`]: struct.Cell.html
-    pub fn style(mut self, style: impl Into<<Renderer as self::Renderer>::Style>) -> Self {
+    pub fn style(
+        mut self,
+        style: impl Into<<Renderer as self::Renderer>::Style>,
+    ) -> Self {
         self.style = style.into();
+        self
+    }
+    /// Closure to generate the message when the Cell is left clicked
+    ///
+    /// [`Cell`]: struct.Cell.html
+    pub fn on_click(
+        mut self,
+        on_click: impl Fn(&T) -> Message + 'static,
+    ) -> Self {
+        self.on_click = Some(Box::new(on_click));
+        self
+    }
+
+    /// Closure to generate the message when the Cell is left clicked
+    ///
+    /// [`Cell`]: struct.Cell.html
+    pub fn on_double_click(
+        mut self,
+        dbl_click: impl Fn(&T) -> Message + 'static,
+    ) -> Self {
+        self.on_double_click = Some(Box::new(dbl_click));
         self
     }
 }
@@ -165,14 +196,19 @@ where
         Length::Shrink
     }
 
-    fn layout(&self, renderer: &Renderer, limits: &layout::Limits) -> layout::Node {
+    fn layout(
+        &self,
+        renderer: &Renderer,
+        limits: &layout::Limits,
+    ) -> layout::Node {
         use std::f32;
 
         let limits = limits.width(Length::Fill).height(Length::Shrink);
         let text_size = self.text_size.unwrap_or(renderer.default_size());
 
         let size = {
-            let intrinsic = Size::new(0.0, f32::from(text_size + self.padding * 2));
+            let intrinsic =
+                Size::new(0.0, f32::from(text_size + self.padding * 2));
 
             limits.resolve(intrinsic)
         };
@@ -215,6 +251,25 @@ where
                         *self.menu_last_selection = None;
                     }
                 } else if bounds.contains(cursor_position) {
+                    let click =
+                        mouse::Click::new(cursor_position, *self.last_click);
+
+                    match click.kind() {
+                        mouse::click::Kind::Single => {
+                            if let Some(ref click_generator) = self.on_click {
+                                messages.push(click_generator(self.item));
+                            }
+                        }
+                        mouse::click::Kind::Double
+                        | mouse::click::Kind::Triple => {
+                            if let Some(ref dbl_click_gen) =
+                                self.on_double_click
+                            {
+                                messages.push(dbl_click_gen(self.item));
+                            }
+                        }
+                    }
+
                     if *self.hovered_option {
                         *self.last_selection = !*self.last_selection;
                     }
@@ -236,7 +291,8 @@ where
                 }
             }
             Event::Mouse(mouse::Event::CursorMoved { .. }) => {
-                let text_size = self.text_size.unwrap_or(renderer.default_size());
+                let text_size =
+                    self.text_size.unwrap_or(renderer.default_size());
 
                 let bounds = layout.bounds();
 
@@ -270,7 +326,10 @@ where
         )
     }
 
-    fn overlay(&mut self, layout: Layout<'_>) -> Option<overlay::Element<'_, Message, Renderer>> {
+    fn overlay(
+        &mut self,
+        layout: Layout<'_>,
+    ) -> Option<overlay::Element<'_, Message, Renderer>> {
         if *self.menu_open {
             let bounds = layout.bounds();
 
@@ -321,7 +380,9 @@ pub trait Renderer: text::Renderer + menu::Renderer {
     ///
     /// [`Menu`]: ../../overlay/menu/struct.Menu.html
     /// [`Cell`]: struct.Cell.html
-    fn menu_style(style: &<Self as Renderer>::Style) -> <Self as menu::Renderer>::Style;
+    fn menu_style(
+        style: &<Self as Renderer>::Style,
+    ) -> <Self as menu::Renderer>::Style;
 
     /// Draws a [`Cell`].
     ///

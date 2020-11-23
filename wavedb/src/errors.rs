@@ -4,11 +4,19 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum Waverr {
     //Parse errors
-    #[error("VCDError found, issue is `{0}`. TODO: make a better error enum here!")]
+    #[error(
+        "VCDError found, issue is `{0}`. TODO: make a better error enum here!"
+    )]
     VCDErr(&'static str),
     #[error("Wdb Bucket error for bucket id : {id:?}, ts : {ts:?}. context: {context:?}")]
-    BucketErr { id: u32, ts: u32, context: &'static str },
-    #[error("MissingID found, payload is `{0}` TODO: make a better error type!")]
+    BucketErr {
+        id: u32,
+        ts: u32,
+        context: &'static str,
+    },
+    #[error(
+        "MissingID found, payload is `{0}` TODO: make a better error type!"
+    )]
     SledError(#[from] sled::Error),
     #[error("Payload Serialization (non-config) fail; from  bincode: `{0}`")]
     DataCorrupt(#[from] Box<bincode::ErrorKind>),
@@ -16,7 +24,9 @@ pub enum Waverr {
     SerConfig(#[from] toml::ser::Error),
     #[error("Config deserialization failed; issue is `{0}`")]
     DeserConfig(#[from] toml::de::Error),
-    #[error("MissingID found, payload is `{0}` TODO: make a better error type!")]
+    #[error(
+        "MissingID found, payload is `{0}` TODO: make a better error type!"
+    )]
     HierMapError(&'static str),
     #[error("Some IOErr `{0}`")]
     IOError(io::Error),

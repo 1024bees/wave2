@@ -1,8 +1,8 @@
 use iced_native::{
     keyboard, layout, mouse, overlay,
     overlay::menu::{self, Menu},
-    scrollable, text, Clipboard, Element, Event, Hasher, Layout, Length, Point, Rectangle, Size,
-    Widget,
+    scrollable, text, Clipboard, Element, Event, Hasher, Layout, Length, Point,
+    Rectangle, Size, Widget,
 };
 
 use log::info;
@@ -78,7 +78,8 @@ impl<O> Default for State<O> {
     }
 }
 
-impl<'a, T: 'a, O: 'a, Message, Renderer: self::Renderer> CellList<'a, T, O, Message, Renderer>
+impl<'a, T: 'a, O: 'a, Message, Renderer: self::Renderer>
+    CellList<'a, T, O, Message, Renderer>
 where
     T: ToString + Clone,
     O: ToString + Clone,
@@ -185,7 +186,10 @@ where
     /// Sets the style of the [`CellList`].
     ///
     /// [`CellList`]: struct.CellList.html
-    pub fn style(mut self, style: impl Into<<Renderer as self::Renderer>::Style>) -> Self {
+    pub fn style(
+        mut self,
+        style: impl Into<<Renderer as self::Renderer>::Style>,
+    ) -> Self {
         self.style = style.into();
         self
     }
@@ -207,15 +211,22 @@ where
         Length::Shrink
     }
 
-    fn layout(&self, renderer: &Renderer, limits: &layout::Limits) -> layout::Node {
+    fn layout(
+        &self,
+        renderer: &Renderer,
+        limits: &layout::Limits,
+    ) -> layout::Node {
         use std::f32;
 
         let limits = limits.width(Length::Fill).height(Length::Fill);
         let text_size = self.text_size.unwrap_or(renderer.default_size());
 
         let size = {
-            let intrinsic =
-                Size::new(0.0, f32::from(text_size + self.padding * 2) * self.items.len() as f32);
+            let intrinsic = Size::new(
+                0.0,
+                f32::from(text_size + self.padding * 2)
+                    * self.items.len() as f32,
+            );
 
             limits.resolve(intrinsic)
         };
@@ -228,7 +239,10 @@ where
 
         match self.width {
             Length::Shrink => {
-                self.items.iter().map(ToString::to_string).for_each(|label| label.hash(state));
+                self.items
+                    .iter()
+                    .map(ToString::to_string)
+                    .for_each(|label| label.hash(state));
             }
             _ => {
                 self.width.hash(state);
@@ -265,18 +279,24 @@ where
                             match (*self.ctrl_select, *self.bulk_select) {
                                 (true, _) => {
                                     if self.last_selection.contains(&index) {
-                                        self.last_selection.retain(|x| *x != index);
+                                        self.last_selection
+                                            .retain(|x| *x != index);
                                     } else {
                                         self.last_selection.push(index);
                                     }
                                 }
                                 (false, true) => {
-                                    let starting_val = *self.last_selection.first().unwrap_or(&0);
+                                    let starting_val = *self
+                                        .last_selection
+                                        .first()
+                                        .unwrap_or(&0);
                                     self.last_selection.clear();
                                     if starting_val > index {
-                                        self.last_selection.extend(index..starting_val);
+                                        self.last_selection
+                                            .extend(index..starting_val);
                                     } else {
-                                        self.last_selection.extend(starting_val..index);
+                                        self.last_selection
+                                            .extend(starting_val..index);
                                     }
                                 }
                                 (false, false) => {
@@ -293,7 +313,9 @@ where
             }
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right)) => {
                 if bounds.contains(cursor_position) {
-                    if *self.cursor_held == false && !self.last_selection.is_empty() {
+                    if *self.cursor_held == false
+                        && !self.last_selection.is_empty()
+                    {
                         *self.menu_open = !*self.menu_open;
                         *self.menu_point = cursor_position;
                         info!(
@@ -310,12 +332,15 @@ where
                 *self.bulk_select = mod_state.shift;
             }
             Event::Mouse(mouse::Event::CursorMoved { .. }) => {
-                let text_size = self.text_size.unwrap_or(renderer.default_size());
+                let text_size =
+                    self.text_size.unwrap_or(renderer.default_size());
 
                 let bounds = if let Some(_) = self.heading {
                     let mut tbounds = layout.bounds();
-                    tbounds.y +=
-                        f32::from(self.heading_size.unwrap_or(text_size) + self.padding * 2);
+                    tbounds.y += f32::from(
+                        self.heading_size.unwrap_or(text_size)
+                            + self.padding * 2,
+                    );
                     tbounds
                 } else {
                     layout.bounds()
@@ -323,7 +348,8 @@ where
 
                 if bounds.contains(cursor_position) {
                     *self.hovered_option = Some(
-                        ((cursor_position.y - bounds.y) / f32::from(text_size + self.padding * 2))
+                        ((cursor_position.y - bounds.y)
+                            / f32::from(text_size + self.padding * 2))
                             as usize,
                     );
                 }
@@ -357,7 +383,10 @@ where
         )
     }
 
-    fn overlay(&mut self, layout: Layout<'_>) -> Option<overlay::Element<'_, Message, Renderer>> {
+    fn overlay(
+        &mut self,
+        layout: Layout<'_>,
+    ) -> Option<overlay::Element<'_, Message, Renderer>> {
         if *self.menu_open {
             let bounds = layout.bounds();
 
@@ -408,7 +437,9 @@ pub trait Renderer: text::Renderer + menu::Renderer {
     ///
     /// [`Menu`]: ../../overlay/menu/struct.Menu.html
     /// [`CellList`]: struct.CellList.html
-    fn menu_style(style: &<Self as Renderer>::Style) -> <Self as menu::Renderer>::Style;
+    fn menu_style(
+        style: &<Self as Renderer>::Style,
+    ) -> <Self as menu::Renderer>::Style;
 
     /// Draws a [`CellList`].
     ///

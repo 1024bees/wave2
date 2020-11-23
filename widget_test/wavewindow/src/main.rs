@@ -1,5 +1,6 @@
 use iced::{
-    scrollable, Align, Column, Container, Element, Length, Sandbox, Scrollable, Settings, Text,
+    scrollable, Align, Column, Container, Element, Length, Sandbox, Scrollable,
+    Settings, Text,
 };
 use wave2::frontend::wavewindow;
 use wave2::frontend::wavewindow::*;
@@ -70,7 +71,11 @@ impl Sandbox for Example {
             .spacing(20)
             .align_items(Align::Center)
             .max_height(1000)
-            .push(Text::new("Wavewindow example").width(Length::Shrink).size(50))
+            .push(
+                Text::new("Wavewindow example")
+                    .width(Length::Shrink)
+                    .size(50),
+            )
             .push(
                 self.wavewindow
                     .view(&self.Signals, self.GlobalCursorState)
@@ -88,9 +93,12 @@ impl Sandbox for Example {
                     .on_press(Message::AddDummyVec),
             )
             .push(
-                Text::new(format!("Cursor pos: {}", self.GlobalCursorState.cursor_location))
-                    .width(Length::Shrink)
-                    .size(50),
+                Text::new(format!(
+                    "Cursor pos: {}",
+                    self.GlobalCursorState.cursor_location
+                ))
+                .width(Length::Shrink)
+                .size(50),
             )
             .into()
     }

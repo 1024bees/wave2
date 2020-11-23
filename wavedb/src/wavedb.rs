@@ -1,12 +1,13 @@
 use crate::errors::Waverr;
 use crate::hier_map::HierMap;
-use crate::vcd_parser::{IDMap, WaveParser};
+use crate::vcd_parser::WaveParser;
 use crate::{Bucket, InMemWave, DEFAULT_SLIZE_SIZE};
 use bincode;
 use serde::{Deserialize, Serialize};
 use sled::Db;
 use std::collections::HashMap;
 use std::path::*;
+use std::sync::Arc;
 use toml;
 use vcd::Command;
 
@@ -25,15 +26,18 @@ pub struct WaveDB {
     db: Db,
     //TODO: think about what should be wanted from a cfg file
     config: WDBConfig,
-    hier_map: HierMap,
+    hier_map: Arc<HierMap>,
 }
 
 impl WaveDB {
     fn new(db_name: String, db_path: Option<&Path>) -> WaveDB {
         WaveDB {
             db: sled::open(db_path.unwrap_or(db_name.as_ref())).unwrap(),
-            hier_map: HierMap::default(),
-            config: WDBConfig { db_name: db_name.clone(), ..WDBConfig::default() },
+            hier_map: Arc::default(),
+            config: WDBConfig {
+                db_name: db_name.clone(),
+                ..WDBConfig::default()
+            },
         }
     }
 
@@ -43,7 +47,8 @@ impl WaveDB {
 
     fn get_time_slices(&self) -> std::iter::StepBy<std::ops::Range<u32>> {
         ((self.config.time_range.0 / DEFAULT_SLIZE_SIZE) * DEFAULT_SLIZE_SIZE
-            ..(self.config.time_range.1 / DEFAULT_SLIZE_SIZE + 2) * DEFAULT_SLIZE_SIZE)
+            ..(self.config.time_range.1 / DEFAULT_SLIZE_SIZE + 2)
+                * DEFAULT_SLIZE_SIZE)
             .step_by(DEFAULT_SLIZE_SIZE as usize)
     }
 
@@ -63,18 +68,20 @@ impl WaveDB {
     }
 
     fn dump_config(&self) -> Result<(), Waverr> {
-        self.db.insert("config", toml::to_string(&self.config)?.as_str())?;
+        self.db
+            .insert("config", toml::to_string(&self.config)?.as_str())?;
         Ok(())
     }
 
     fn save_idmap(&self) -> Result<(), Waverr> {
-        self.db.insert("id_map", bincode::serialize(&self.hier_map)?);
+        self.db
+            .insert("id_map", bincode::serialize(self.hier_map.as_ref())?)?;
         Ok(())
     }
 
     fn load_idmap(&mut self) -> Result<(), Waverr> {
         if let Ok(Some(rawbytes)) = self.db.get("hier_map") {
-            self.hier_map = bincode::deserialize(rawbytes.as_ref())?;
+            self.hier_map = Arc::new(bincode::deserialize(rawbytes.as_ref())?);
             Ok(())
         } else {
             Err(Waverr::WDBCfgErr("Error loading config from DB"))
@@ -92,9 +99,16 @@ impl WaveDB {
         Ok(wdb)
     }
 
+    pub fn get_hier_map(&self) -> Arc<HierMap> {
+        self.hier_map.clone()
+    }
+
     //TODO: parallelize this
     //TODO: move filepath from String to &str!!!
-    pub fn from_vcd(vcd_file_path: PathBuf, wdb_path: &Path) -> Result<WaveDB, Waverr> {
+    pub fn from_vcd(
+        vcd_file_path: PathBuf,
+        wdb_path: &Path,
+    ) -> Result<WaveDB, Waverr> {
         let mut parser = WaveParser::new(vcd_file_path.clone())?;
         let wdb_name = {
             if let Some(vcd_file) = vcd_file_path.file_stem() {
@@ -107,32 +121,41 @@ impl WaveDB {
         let mut global_time: u32 = 0;
         let mut current_range = (global_time, global_time + DEFAULT_SLIZE_SIZE);
         let mut bucket_mapper: HashMap<vcd::IdCode, Bucket> = HashMap::new();
-        wdb.hier_map = parser.create_hiermap()?;
+        wdb.hier_map = Arc::new(parser.create_hiermap()?);
         for item in parser {
             match item {
                 Ok(Command::Timestamp(time)) => {
                     let time = time as u32;
-                    if time % DEFAULT_SLIZE_SIZE < global_time % DEFAULT_SLIZE_SIZE {
+                    if time % DEFAULT_SLIZE_SIZE
+                        < global_time % DEFAULT_SLIZE_SIZE
+                    {
                         for (_, bucket) in bucket_mapper.iter() {
                             wdb.insert_bucket(bucket)?;
                         }
                         bucket_mapper.clear();
                         let rounded_time = time - (time % DEFAULT_SLIZE_SIZE);
-                        current_range = (rounded_time, rounded_time + DEFAULT_SLIZE_SIZE)
+                        current_range =
+                            (rounded_time, rounded_time + DEFAULT_SLIZE_SIZE)
                     }
                     global_time = time;
                 }
                 //TODO: collapse these arms if possible? good way to share this code?
                 Ok(Command::ChangeVector(code, vvalue)) => {
                     if !bucket_mapper.contains_key(&code) {
-                        bucket_mapper.insert(code, Bucket::new(code.0 as u32, current_range));
+                        bucket_mapper.insert(
+                            code,
+                            Bucket::new(code.0 as u32, current_range),
+                        );
                     }
                     let bucket = bucket_mapper.get_mut(&code).unwrap();
                     bucket.add_new_signal(global_time, vvalue);
                 }
                 Ok(Command::ChangeScalar(code, value)) => {
                     if !bucket_mapper.contains_key(&code) {
-                        bucket_mapper.insert(code, Bucket::new(code.0 as u32, current_range));
+                        bucket_mapper.insert(
+                            code,
+                            Bucket::new(code.0 as u32, current_range),
+                        );
                     }
                     let bucket = bucket_mapper.get_mut(&code).unwrap();
                     bucket.add_new_signal(global_time, vec![value]);
@@ -165,13 +188,21 @@ impl WaveDB {
         Ok(())
     }
 
-    fn retrieve_bucket(&self, id: u32, ts_start: u32) -> Result<Bucket, Waverr> {
+    fn retrieve_bucket(
+        &self,
+        id: u32,
+        ts_start: u32,
+    ) -> Result<Bucket, Waverr> {
         let tree = self.db.open_tree(WaveDB::ts2key(ts_start))?;
         if let Some(bucket) = tree.get(id.to_be_bytes())? {
             let bucket: Bucket = bincode::deserialize(bucket.as_ref())?;
             return Ok(bucket);
         }
-        Err(Waverr::BucketErr { id, ts: ts_start, context: "failed to retrieve bucket" })
+        Err(Waverr::BucketErr {
+            id,
+            ts: ts_start,
+            context: "failed to retrieve bucket",
+        })
     }
 
     pub fn get_imw(&self, sig: &str) -> Result<InMemWave, Waverr> {

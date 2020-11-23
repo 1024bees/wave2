@@ -49,7 +49,10 @@ impl StyleSheet for Default {
     }
 
     fn hovered(&self) -> Style {
-        Style { border_color: Color::BLACK, ..self.active() }
+        Style {
+            border_color: Color::BLACK,
+            ..self.active()
+        }
     }
 }
 

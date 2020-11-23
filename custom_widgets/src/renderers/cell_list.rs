@@ -2,7 +2,9 @@
 use crate::widget::cell_list;
 use iced_graphics::backend::{self, Backend};
 use iced_graphics::{Primitive, Renderer};
-use iced_native::{mouse, Color, HorizontalAlignment, Point, Rectangle, VerticalAlignment};
+use iced_native::{
+    mouse, Color, HorizontalAlignment, Point, Rectangle, VerticalAlignment,
+};
 
 use iced_style::menu::Style as MenuStyle;
 
@@ -40,7 +42,11 @@ where
     ) -> Self::Output {
         let is_mouse_over = bounds.contains(cursor_position);
 
-        let style = if is_mouse_over { style.hovered() } else { style.active() };
+        let style = if is_mouse_over {
+            style.hovered()
+        } else {
+            style.active()
+        };
 
         let bg = Primitive::Quad {
             bounds,
@@ -92,7 +98,8 @@ where
             let bounds = Rectangle {
                 x: bounds.x,
                 y: bounds.y
-                    + ((text_size as usize + padding as usize * 2) * (i) + header_offset) as f32,
+                    + ((text_size as usize + padding as usize * 2) * (i)
+                        + header_offset) as f32,
                 width: bounds.width,
                 height: f32::from(text_size + padding * 2),
             };
@@ -130,7 +137,11 @@ where
                 },
                 size: f32::from(text_size),
                 font,
-                color: if is_selected { style.selected_text_color } else { style.text_color },
+                color: if is_selected {
+                    style.selected_text_color
+                } else {
+                    style.text_color
+                },
                 horizontal_alignment: HorizontalAlignment::Left,
                 vertical_alignment: VerticalAlignment::Center,
             });

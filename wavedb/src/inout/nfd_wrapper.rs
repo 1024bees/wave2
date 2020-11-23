@@ -24,7 +24,10 @@ pub async fn open() -> Result<PathBuf, io::Error> {
             ))
         }
         Response::Cancel => {
-            return Err(io::Error::new(io::ErrorKind::Interrupted, "User cancelled file open"))
+            return Err(io::Error::new(
+                io::ErrorKind::Interrupted,
+                "User cancelled file open",
+            ))
         }
     };
 
@@ -34,6 +37,9 @@ pub async fn open() -> Result<PathBuf, io::Error> {
     if result.exists() {
         return Ok(result);
     } else {
-        return Err(io::Error::new(io::ErrorKind::NotFound, "File does not exist"));
+        return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "File does not exist",
+        ));
     }
 }

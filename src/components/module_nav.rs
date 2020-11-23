@@ -1,6 +1,6 @@
 use iced::{
-    button, scrollable, text_input, Align, Column, Container, Element, Length, Row, Scrollable,
-    TextInput,
+    button, scrollable, text_input, Align, Column, Container, Element, Length,
+    Row, Scrollable, TextInput,
 };
 use log::error;
 use std::sync::Arc;
@@ -47,15 +47,28 @@ impl ModNavigator {
         }
     }
     pub fn view(&mut self) -> Element<Message> {
-        let ModNavigator { signals, scroll_x, sig_state } = self;
+        let ModNavigator {
+            signals,
+            scroll_x,
+            sig_state,
+        } = self;
 
-        let ts = CellList::new(sig_state, &signals[..], &SigOptions::ALL, Message::AddSig)
-            .text_size(12)
-            .heading("Signals".into())
-            .heading_size(10);
+        let ts = CellList::new(
+            sig_state,
+            &signals[..],
+            &SigOptions::ALL,
+            Message::AddSig,
+        )
+        .text_size(12)
+        .heading("Signals".into())
+        .heading_size(10);
 
-        let scrollable = Scrollable::new(scroll_x)
-            .push(Container::new(ts).height(Length::Fill).width(Length::Fill).center_x());
+        let scrollable = Scrollable::new(scroll_x).push(
+            Container::new(ts)
+                .height(Length::Fill)
+                .width(Length::Fill)
+                .center_x(),
+        );
 
         Container::new(scrollable)
             .height(Length::Fill)
