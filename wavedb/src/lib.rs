@@ -228,23 +228,19 @@ impl Bucket {
 #[cfg(test)]
 mod tests {
     use crate::*;
-    use bit_vec::BitVec;
     use std::path::Path;
     use std::path::*;
     use wavedb::WaveDB;
-    #[test]
-    fn hello_test() {
-        let mut bv = BitVec::from_elem(9, true);
-        assert_eq!(true, true)
-    }
+    use std::mem::drop;
+
 
     #[test]
     fn wdb_from_wikivcd() {
         let mut path_to_wikivcd = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path_to_wikivcd.push("test_vcds/wikipedia.vcd");
-        //a little naughty but hey... is what it is
+        //bad but hey... is what it is
         std::fs::remove_dir_all("/tmp/rng");
-        let wdb = WaveDB::from_vcd(path_to_wikivcd, Path::new("/tmp/rng"));
+        let wdb = WaveDB::from_vcd(path_to_wikivcd.clone(), Path::new("/tmp/rng"));
         let actualdb = match wdb {
             Ok(wdb) => wdb,
             Err(errors::Waverr::VCDErr(vcdmess)) => {
@@ -257,5 +253,43 @@ mod tests {
         };
         let var = actualdb.get_imw("logic.data").unwrap();
         assert_eq!(var.sig_type, SigType::Vector(8));
+        drop(actualdb);
+
+        // we need to test what happens when we're loading wdb from disk
+        let wdb2 = WaveDB::from_vcd(path_to_wikivcd, Path::new("/tmp/rng"));
+        let actualdb = match wdb2 {
+            Ok(wdb2) => wdb2,
+            Err(errors::Waverr::VCDErr(vcdmess)) => {
+                panic!("{} is the vcd error message", vcdmess)
+            }
+            Err(Waverr::GenericErr(message)) => {
+                panic!("Unhandled error case: {} ", message)
+            }
+            Err(_) => panic!("Unhandled error case"),
+        };
+        let var = actualdb.get_imw("logic.data").unwrap();
+        assert_eq!(var.sig_type, SigType::Vector(8));
     }
+
+
+    #[test]
+    fn wdb_from_vgavcd() {
+        let mut path_to_wikivcd = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        path_to_wikivcd.push("test_vcds/vga.vcd");
+        //bad but hey... is what it is
+        std::fs::remove_dir_all("/tmp/vcddb");
+        let wdb = WaveDB::from_vcd(path_to_wikivcd, Path::new("/tmp/vcddb"));
+        let actualdb = match wdb {
+            Ok(wdb) => wdb,
+            Err(errors::Waverr::VCDErr(vcdmess)) => {
+                panic!("{} is the vcd error message", vcdmess)
+            }
+            Err(Waverr::GenericErr(message)) => {
+                panic!("Unhandled error case: {} ", message)
+            }
+            Err(_) => panic!("Unhandled error case"),
+        };
+        std::fs::remove_dir_all("/tmp/vcddb");
+    }
+
 }

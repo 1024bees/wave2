@@ -89,11 +89,16 @@ impl HierMap {
             .collect()
     }
 
-    /// Get the signals of the "live" module. This is exposed to wave2 app
-    /// for filling in the signal navigator
-    pub fn get_module_signals(&self, live_module: usize) -> &[SignalItem] {
+    fn get_module_signals(&self, live_module: usize) -> &[SignalItem] {
         self.module_list[live_module].signals.as_slice()
     }
+
+    /// Get the signals of the "live" module. This is exposed to wave2 app
+    /// for filling in the signal navigator
+    pub fn get_module_signals_vec(&self, live_module: usize) -> Vec<SignalItem> {
+        self.module_list[live_module].signals.clone()
+    }
+
 
     /// Map absolute path -> signal id
     /// This is to support the older API of an ID map, where raw paths can map directly

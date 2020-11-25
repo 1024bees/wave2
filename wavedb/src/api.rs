@@ -1,5 +1,4 @@
 use crate::errors::Waverr;
-use crate::hier_map::HierMap;
 use crate::wavedb::WaveDB;
 use crate::InMemWave;
 
@@ -7,6 +6,10 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::path::Path;
 use std::sync::Arc;
+use crate::hier_map::{HierMap, ModuleItem, SignalItem};
+
+
+
 
 /// Interface provided to wave2 for querying signal hierarchy
 #[derive(Debug)]
@@ -51,9 +54,15 @@ impl WdbAPI {
     }
 
     /// Get the names of all signals that exist within this module (that are visible to wavedb)
-    pub fn get_signal_names(&self, module_path: String) -> &[String] {
-        unimplemented!()
+    ///
+    pub async fn get_module_signals(api: Arc<WdbAPI>, module_idx: usize) -> Arc<Vec<SignalItem>> {
+        Arc::new(api.as_ref().wdb.hier_map
+            .get_module_signals_vec(module_idx))
     }
+
+    
+
+
 
     /// Get module names underneath module_path
     /// TODO: encode if there is a submodule here

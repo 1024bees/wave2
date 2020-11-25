@@ -32,7 +32,6 @@ pub struct HierNav {
 #[derive(Debug, Clone)]
 pub enum Message {
     SetHier(Arc<HierMap>),
-    UpdateModNav(Arc<Vec<SignalItem>>),
     Toggle(usize),
     SendModule(usize),
     Placeholder,

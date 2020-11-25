@@ -166,10 +166,8 @@ impl HierNode {
         .on_press(Message::Toggle(payload.hier_idx));
 
         //TODO: fixme, placeholder message closure
-        let root_cell = VizCell::new(ui_state, payload, &HierOptions::ALL);
-        //|module| {
-        //    Message::SendModule(module.hier_idx)
-        //});
+        let root_cell = VizCell::new(ui_state, payload, &HierOptions::ALL)
+            .on_click(|module| Message::SendModule(module.hier_idx));
 
         let top_row = if !children.is_empty() {
             Row::new()

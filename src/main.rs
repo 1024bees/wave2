@@ -18,6 +18,7 @@ use wave2_wavedb::errors::Waverr;
 use wave2_wavedb::inout::wave_loader::load_vcd;
 use wave2_wavedb::wavedb::WaveDB;
 
+
 #[derive(Clap, Default)]
 #[clap(version = "0.0", author = "Jimmy C <jimmy@1024bees.com>")]
 #[cfg(not(target_arch = "wasm32"))]
@@ -144,6 +145,30 @@ impl Content {
     }
 }
 
+fn process__message(state: &mut State, message: Message) {
+    match message {
+        Message::SVMessage(_) => state
+            .panes
+            .get_mut(&state.sv_pane)
+            .unwrap()
+            .update(message),
+        Message::HNMessage(_) => state
+            .panes
+            .get_mut(&state.hn_pane)
+            .unwrap()
+            .update(message),
+        Message::MNMessage(_) => state
+            .panes
+            .get_mut(&state.mn_pane)
+            .unwrap()
+            .update(message),
+        _ => {}
+    }
+
+}
+
+
+
 impl Application for Wave2 {
     type Executor = iced::executor::Default;
     type Message = Message;
@@ -159,6 +184,8 @@ impl Application for Wave2 {
     fn title(&self) -> String {
         String::from("Wave2")
     }
+
+    
 
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match self {
@@ -212,17 +239,35 @@ impl Application for Wave2 {
                         .get_mut(&state.sv_pane)
                         .unwrap()
                         .update(message),
-                    Message::HNMessage(_) => state
-                        .panes
-                        .get_mut(&state.hn_pane)
-                        .unwrap()
-                        .update(message),
+                    Message::HNMessage(hn_message) => {
+                        match hn_message {
+                            hier_nav::Message::SendModule(module_idx) => {
+                                let big_block = async {
+                                    println!("hello");
+                                };
+                                let consumed_api = state.wdb_api.as_ref().unwrap().clone();
+                                //FIXME: this work should definitely be done in a command
+                                return Command::perform(WdbAPI::get_module_signals(consumed_api,module_idx) ,
+                                    move |vector| Message::MNMessage(module_nav::Message::SignalUpdate(vector)));
+                            
+
+                            },
+                            _ => {
+                                state
+                                    .panes
+                                    .get_mut(&state.hn_pane)
+                                    .unwrap()
+                                    .update(Message::HNMessage(hn_message))
+
+                            }
+
+                        }
+                    },
                     Message::MNMessage(_) => state
                         .panes
                         .get_mut(&state.mn_pane)
                         .unwrap()
                         .update(message),
-
                     Message::LoadWDB(payload) => match payload {
                         Ok(wdb_api) => {
                             state.wdb_api = Some(wdb_api);

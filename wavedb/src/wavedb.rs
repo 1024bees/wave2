@@ -14,7 +14,6 @@ use vcd::Command;
 #[derive(Serialize, Deserialize, Debug, Default)]
 struct WDBConfig {
     db_name: String,
-    populated: bool,
     time_range: (u32, u32),
 }
 
@@ -26,7 +25,7 @@ pub struct WaveDB {
     db: Db,
     //TODO: think about what should be wanted from a cfg file
     config: WDBConfig,
-    hier_map: Arc<HierMap>,
+    pub hier_map: Arc<HierMap>,
 }
 
 impl WaveDB {
@@ -80,7 +79,7 @@ impl WaveDB {
     }
 
     fn load_idmap(&mut self) -> Result<(), Waverr> {
-        if let Ok(Some(rawbytes)) = self.db.get("hier_map") {
+        if let Ok(Some(rawbytes)) = self.db.get("id_map") {
             self.hier_map = Arc::new(bincode::deserialize(rawbytes.as_ref())?);
             Ok(())
         } else {
@@ -176,7 +175,8 @@ impl WaveDB {
         }
 
         wdb.set_time_range((0, global_time));
-
+        wdb.dump_config()?;
+        wdb.save_idmap()?;
         Ok(wdb)
     }
 
