@@ -227,6 +227,7 @@ impl Application for Wave2 {
                         Ok(wdb_api) => {
                             state.wdb_api = Some(wdb_api);
                             state.set_file_pending(false);
+                            info!("Loaded message successfully");
                             state
                                 .panes
                                 .get_mut(&state.hn_pane)
