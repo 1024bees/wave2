@@ -242,14 +242,10 @@ impl Application for Wave2 {
                     Message::HNMessage(hn_message) => {
                         match hn_message {
                             hier_nav::Message::SendModule(module_idx) => {
-                                let big_block = async {
-                                    println!("hello");
-                                };
                                 let consumed_api = state.wdb_api.as_ref().unwrap().clone();
                                 //FIXME: this work should definitely be done in a command
                                 return Command::perform(WdbAPI::get_module_signals(consumed_api,module_idx) ,
                                     move |vector| Message::MNMessage(module_nav::Message::SignalUpdate(vector)));
-                            
 
                             },
                             _ => {

@@ -2,7 +2,7 @@ use iced::{
     button, scrollable, text_input, Align, Column, Container, Element, Length,
     Row, Scrollable, TextInput,
 };
-use log::error;
+use log::{error,info};
 use std::sync::Arc;
 use strum::IntoEnumIterator;
 use strum_macros;
@@ -39,7 +39,12 @@ impl ModNavigator {
     pub fn update(&mut self, message: Message) {
         match message {
             Message::SignalUpdate(payload) => {
-                self.signals = Arc::try_unwrap(payload).unwrap();
+                self.signals = Arc::try_unwrap(payload).map_or_else(
+                    |e| {
+                        info!("Number of ref counts is {}",Arc::strong_count(&e));
+                        e.as_ref().clone()
+                    },
+                    |o| o);
             }
             _ => {
                 error!("Not implimented yet!");
