@@ -43,10 +43,19 @@ pub struct HierNode {
 }
 
 
-#[derive(Default,Debug,Clone)]
+#[derive(Default,Debug)]
 struct SharedNodeState {
     pub expanded: Rc<Cell<bool>>,
     pub selected: Rc<Cell<bool>>,
+}
+
+impl Clone for SharedNodeState {
+    fn clone(&self) -> Self {
+        SharedNodeState {
+            expanded : self.expanded.clone(),
+            selected : self.selected.clone(),
+        }
+    }
 }
 
 
@@ -181,6 +190,7 @@ impl HierNode {
         } = self;
 
         let expanded_val = shared_state.expanded.get();
+        warn!("SC for expanded is {}",Rc::strong_count(&shared_state.expanded));
 
         let expander = Button::new(
             expanded_button,
