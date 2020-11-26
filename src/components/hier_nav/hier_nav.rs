@@ -24,17 +24,27 @@ impl HierOptions {
 
 #[derive(Default)]
 pub struct HierNav {
-    live_module: Cell<usize>,
+    live_module: Option<usize>,
     scroll_x: scrollable::State,
     hier_root: HierRoot,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
+    ///Message that is sent when initializing wave2; sets the hierarchy state
     SetHier(Arc<HierMap>),
+    ///Toggles if a module's hierarchy is expanded or not 
     Toggle(usize),
+    /// Toggles if a module is "selected" or not.
+    ///
+    /// This messsage is stateful. If the module index wrapped by this message does
+    /// NOT equal HierNav.live_module, then we send this module's signals to the 
+    /// ModuleNav pane, which will display its signals. This happens when an end user selects 
+    /// a new module to inspect
+    ///
+    /// If the module index wrapped by this message equals HierNav.live_module, we clear out the 
+    /// ModuleNav pane. This happens when a user toggles an already selected module
     SendModule(usize),
-    Placeholder,
 }
 
 impl HierNav {
@@ -45,7 +55,22 @@ impl HierNav {
             }
             Message::Toggle(module_idx) => {
                 self.hier_root.update_expander(module_idx);
-            }
+            },
+            Message::SendModule(module_idx) => {
+                let old_mod = self.live_module;
+                self.live_module = if let Some(index) = self.live_module {
+                    if index == module_idx {
+                        None
+                    } else {
+                        Some(module_idx)
+                    }
+                } else {
+                    Some(module_idx)
+                };
+                if let Some(old_val) = old_mod {
+                }
+
+            },
             _ => {
                 error!("Not implimented yet!");
             }

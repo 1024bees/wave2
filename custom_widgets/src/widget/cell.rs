@@ -51,6 +51,13 @@ pub struct State<O> {
     menu_last_selection: Option<O>,
 }
 
+
+impl<O> State<O> {
+    pub fn set_selected(&mut self, select_val: bool) {
+        self.selected = select_val;
+    }
+}
+
 impl<O> Default for State<O> {
     fn default() -> Self {
         Self {
@@ -249,7 +256,6 @@ where
                     } else {
                         *self.menu_open = false;
                         *self.menu_last_selection = None;
-                        *self.selected = false;
                     }
                 } else if bounds.contains(cursor_position) {
                     let click =
@@ -273,6 +279,8 @@ where
 
                     if *self.hovered_option {
                         *self.selected = !*self.selected;
+                    } else {
+                        *self.selected = false;
                     }
                 }
             }

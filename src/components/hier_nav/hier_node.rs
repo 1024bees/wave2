@@ -74,6 +74,7 @@ impl HierRoot {
             Err("Trying to expand nonexistent path; TODO: refactor this error")
         }
     }
+
     pub fn update_expander(&mut self, module_idx: usize) {
         let exp = self.flat_expander_map.get(&module_idx);
         if let Some(real_expander) = exp {
@@ -161,7 +162,7 @@ impl HierNode {
 
         let expander = Button::new(
             expanded_button,
-            Text::new(if expanded_val { "↓" } else { "←" }),
+            Text::new(if expanded_val { "-" } else { "+" }),
         )
         .on_press(Message::Toggle(payload.hier_idx));
 
