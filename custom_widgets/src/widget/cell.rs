@@ -27,6 +27,7 @@ where
     last_click: &'a mut Option<mouse::Click>,
     on_click: Option<Box<dyn Fn(&T) -> Message>>,
     on_double_click: Option<Box<dyn Fn(&T) -> Message>>,
+    overriden_selected: Option<bool>,
     item: &'a T,
     options: &'static [O],
     width: Length,
@@ -116,6 +117,7 @@ where
             on_click: None,
             on_double_click: None,
             text_size: None,
+            overriden_selected: None,
             padding: Renderer::DEFAULT_PADDING,
             font: Default::default(),
             style: Default::default(),
@@ -164,6 +166,22 @@ where
         self.style = style.into();
         self
     }
+
+    /// Switch to allow the select logic to be overriden at the application level
+    ///
+    /// Useful when you have a collection of Cells, where select logic should be mutually exclusive
+    ///
+    /// [`Cell`]: struct.Cell.html
+    pub fn override_selected(
+        mut self,
+        override_select: bool
+    ) -> Self {
+        self.overriden_selected = Some(override_select);
+        self
+    }
+
+
+
     /// Closure to generate the message when the Cell is left clicked
     ///
     /// [`Cell`]: struct.Cell.html
@@ -185,6 +203,9 @@ where
         self.on_double_click = Some(Box::new(dbl_click));
         self
     }
+
+
+
 }
 
 impl<'a, T: 'a, O: 'a, Message, Renderer> Widget<Message, Renderer>
@@ -327,7 +348,7 @@ where
             layout.bounds(),
             cursor_position,
             self.item,
-            *self.selected,
+            self.overriden_selected.unwrap_or(*self.selected),
             self.padding,
             self.text_size.unwrap_or(renderer.default_size()),
             self.font,
