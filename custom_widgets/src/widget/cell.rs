@@ -21,7 +21,7 @@ where
     menu_open: &'a mut bool,
     menu_point: &'a mut Point,
     hovered_option: &'a mut bool,
-    last_selection: &'a mut bool,
+    selected: &'a mut bool,
     menu_hovered_option: &'a mut Option<usize>,
     menu_last_selection: &'a mut Option<O>,
     last_click: &'a mut Option<mouse::Click>,
@@ -45,7 +45,7 @@ pub struct State<O> {
     menu_open: bool,
     menu_point: Point,
     hovered_option: bool,
-    last_selection: bool,
+    selected: bool,
     menu_hovered_option: Option<usize>,
     last_click: Option<mouse::Click>,
     menu_last_selection: Option<O>,
@@ -58,7 +58,7 @@ impl<O> Default for State<O> {
             menu_open: bool::default(),
             menu_point: Point::default(),
             hovered_option: bool::default(),
-            last_selection: bool::default(),
+            selected: bool::default(),
             last_click: Option::default(),
             menu_hovered_option: Option::default(),
             menu_last_selection: Option::default(),
@@ -88,7 +88,7 @@ where
             menu_open,
             menu_point,
             hovered_option,
-            last_selection,
+            selected,
             menu_hovered_option,
             menu_last_selection,
             last_click,
@@ -99,7 +99,7 @@ where
             menu_open,
             menu_point,
             hovered_option,
-            last_selection,
+            selected,
             item: item,
             options: menu_options,
             menu_hovered_option,
@@ -249,6 +249,7 @@ where
                     } else {
                         *self.menu_open = false;
                         *self.menu_last_selection = None;
+                        *self.selected = false;
                     }
                 } else if bounds.contains(cursor_position) {
                     let click =
@@ -271,14 +272,14 @@ where
                     }
 
                     if *self.hovered_option {
-                        *self.last_selection = !*self.last_selection;
+                        *self.selected = !*self.selected;
                     }
                 }
             }
 
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right)) => {
                 if bounds.contains(cursor_position) {
-                    if *self.last_selection {
+                    if *self.selected {
                         *self.menu_open = !*self.menu_open;
                         *self.menu_point = cursor_position;
                         info!(
@@ -318,7 +319,7 @@ where
             layout.bounds(),
             cursor_position,
             self.item,
-            *self.last_selection,
+            *self.selected,
             self.padding,
             self.text_size.unwrap_or(renderer.default_size()),
             self.font,
