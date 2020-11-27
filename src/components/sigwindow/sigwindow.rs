@@ -1,9 +1,10 @@
-use crate::components::display_wave::{DisplayedWave, WaveDisplayOptions};
-use crate::components::wavewindow;
+use super::display_wave::{DisplayedWave, WaveDisplayOptions};
+use super::wavewindow;
 use iced::{
     button, pane_grid, scrollable, text_input, Align, Column, Container,
     Element, PaneGrid, Row, Scrollable, TextInput,
 };
+use log::info;
 use std::sync::Arc;
 use wave2_custom_widgets::widget::cell_list;
 use wave2_custom_widgets::widget::cell_list::CellList;
@@ -35,7 +36,7 @@ pub enum Message {
     AddWave(Arc<InMemWave>),
     RemoveWave(usize),
     SetOpts(u32, WaveDisplayOptions),
-    UpdateCursor(wavewindow::Message),
+    WWMessage(wavewindow::Message),
     ClearWaves,
     CellListPlaceholder(DisplayedWave),
 }
@@ -44,7 +45,6 @@ pub struct SigViewer {
     waves_state: cell_list::State<WaveOptions>,
     wavewindow: wavewindow::WaveWindowState,
     live_waves: Vec<DisplayedWave>,
-    cursor: wavewindow::CursorState,
     scroll_x: scrollable::State,
 }
 
@@ -53,8 +53,7 @@ impl Default for SigViewer {
         SigViewer {
             waves_state: cell_list::State::default(),
             wavewindow: wavewindow::WaveWindowState::default(),
-            live_waves: vec![DisplayedWave::default()],
-            cursor: wavewindow::CursorState::default(),
+            live_waves: vec![DisplayedWave::default(),DisplayedWave::default()],
             scroll_x: scrollable::State::default(),
         }
     }
@@ -78,8 +77,11 @@ impl SigViewer {
             Message::CellListPlaceholder(_) => {
                 println!("Cell list interaction, impl me");
             }
+            Message::WWMessage(ww_message) => {
+                self.wavewindow.update(ww_message);
+            }
             _ => {
-                println!("Not yet impl'd");
+                info!("Not yet impl'd");
             }
         }
     }
@@ -88,14 +90,13 @@ impl SigViewer {
             waves_state,
             wavewindow,
             live_waves,
-            cursor,
             scroll_x,
         } = self;
 
         //TODO: move message logic out of wavewindow
         let ww = wavewindow
-            .view(&live_waves[..], *cursor)
-            .map(move |message| Message::UpdateCursor(message));
+            .view(&live_waves[..])
+            .map(move |message| Message::WWMessage(message));
 
         let wave_view = Column::new()
             .padding(20)

@@ -3442,6 +3442,8 @@ dependencies = [
  "cached",
  "clap",
  "env",
+ "env_logger",
+ "log",
  "nfd",
  "serde",
  "sled",

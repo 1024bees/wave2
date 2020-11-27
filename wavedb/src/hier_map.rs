@@ -225,6 +225,7 @@ impl ModuleItem {
         ModuleItem {
             name,
             parent,
+            self_idx,
             ..ModuleItem::default()
         }
     }

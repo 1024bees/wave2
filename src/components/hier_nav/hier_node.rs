@@ -43,20 +43,12 @@ pub struct HierNode {
 }
 
 
-#[derive(Default,Debug)]
+#[derive(Default,Debug,Clone)]
 struct SharedNodeState {
     pub expanded: Rc<Cell<bool>>,
     pub selected: Rc<Cell<bool>>,
 }
 
-impl Clone for SharedNodeState {
-    fn clone(&self) -> Self {
-        SharedNodeState {
-            expanded : self.expanded.clone(),
-            selected : self.selected.clone(),
-        }
-    }
-}
 
 
 #[derive(Debug, Default)]
@@ -112,7 +104,7 @@ impl HierRoot {
             real_selector.selected.set(!state);
         } else {
             warn!(
-                "Trying to expand {}; this index should not have children",
+                "Trying to select {}; this index should not exist",
                 module_idx
             );
         }
@@ -153,8 +145,7 @@ impl HierNode {
         let module = &map.module_list[live_idx];
         let payload = ModuleWrapper::from(module);
         let shared_state = SharedNodeState::default();
-        flat_expander_map.insert(payload.hier_idx,shared_state.clone());
-        if !module.submodules.is_empty() {
+        let rv = if !module.submodules.is_empty() {
             HierNode {
                 payload,
                 // Look. I get it. It's ugly. You hate this
@@ -168,16 +159,19 @@ impl HierNode {
                     .cloned()
                     .map(|x| HierNode::from_hmap(x, map, flat_expander_map))
                     .collect(),
-                shared_state: shared_state.clone(),
+                shared_state: shared_state,
                 ..HierNode::default()
             }
         } else {
             HierNode {
                 payload,
-                shared_state: shared_state.clone(),
+                shared_state: shared_state,
                 ..HierNode::default()
             }
-        }
+        };
+        flat_expander_map.insert(rv.payload.hier_idx,rv.shared_state.clone());
+        rv
+
     }
 
     pub fn view(&mut self) -> Element<Message> {
@@ -190,7 +184,7 @@ impl HierNode {
         } = self;
 
         let expanded_val = shared_state.expanded.get();
-        warn!("SC for expanded is {}",Rc::strong_count(&shared_state.expanded));
+        
 
         let expander = Button::new(
             expanded_button,
@@ -200,7 +194,8 @@ impl HierNode {
 
         //TODO: fixme, placeholder message closure
         let root_cell = VizCell::new(ui_state, payload, &HierOptions::ALL)
-            .on_click(|module| Message::SendModule(module.hier_idx));
+            .on_click(|module| Message::SendModule(module.hier_idx))
+            .override_selected(shared_state.selected.get());
 
         let top_row = if !children.is_empty() {
             Row::new()

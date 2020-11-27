@@ -222,7 +222,6 @@ impl Bucket {
         self.sig_dumps.push((timestamp, ParsedVec::from(val_vec)));
     }
 
-    // fn add_dump(&mut self, timestamp: u32,  {
 }
 
 #[cfg(test)]

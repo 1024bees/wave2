@@ -4,12 +4,12 @@ use iced::{
     Rectangle, Text,
 };
 
-use crate::components::display_wave::{DisplayedWave, WaveDisplayOptions};
+use super::display_wave::{DisplayedWave, WaveDisplayOptions};
 use iced::{button, scrollable, text_input, Align, Column, TextInput};
-use log::{info, warn};
-use std::sync::Arc;
+use log::info;
 
-use wave2_wavedb::{InMemWave, SigType, Wave};
+
+use wave2_wavedb::{SigType};
 
 pub const BUFFER_PX: f32 = 4.0;
 pub const WAVEHEIGHT: f32 = 19.0;
@@ -38,9 +38,6 @@ const ORANGE: Color = Color::from_rgba(
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    ClearWaves,
-    AddDummy,
-    AddDummyVec,
     UpdateCursor(CursorState),
 }
 
@@ -53,6 +50,7 @@ pub struct WaveWindow<'a> {
 pub struct WaveWindowState {
     cache: canvas::Cache,
     cursor_cache: canvas::Cache,
+    cursor_state: CursorState,
     end_sim_time: u32,
 }
 
@@ -75,17 +73,30 @@ impl WaveWindowState {
     pub fn view<'a>(
         &'a mut self,
         signals: &'a [DisplayedWave],
-        cur_state: CursorState,
     ) -> Element<'a, Message> {
         Canvas::new(WaveWindow {
             signals: signals,
             state: self,
-            cur_state: cur_state,
+            // FIXME: This is Disgusting and needs to be refactored 
+            cur_state: self.cursor_state.clone(),
         })
         .width(Length::Fill)
         .height(Length::Fill)
         .into()
     }
+
+    pub fn update(&mut self, message : Message) {
+        match message {
+            Message::UpdateCursor(cursor_state) => {
+                self.cursor_state = cursor_state;
+                info!("received click location is {}",self.cursor_state.cursor_location);
+                self.redraw_cursor();
+                info!("Drawing cursor");
+
+            }
+        }
+    }
+
 
     pub fn request_redraw(&mut self) {
         self.cache.clear()
@@ -100,9 +111,9 @@ impl<'a> WaveWindow<'a> {
     fn get_timestamp(&self, bounds: Rectangle, xcoord: f32) -> u32 {
         let ts_width =
             (self.cur_state.view_range.1 - self.cur_state.view_range.0) as f32;
-        println!("ts_width is {}", ts_width);
+        info!("xcoord location is {}",xcoord);
         self.cur_state.view_range.0
-            + (ts_width * ((xcoord - bounds.x) / bounds.width)) as u32
+            + (ts_width * ((xcoord) / bounds.width)) as u32
     }
 
     fn end_window_time(&self) -> u32 {
@@ -119,6 +130,7 @@ impl<'a> WaveWindow<'a> {
     }
 
     fn x_abs_cursor(&self, bounds: &Rectangle) -> f32 {
+
         self.x_abs(self.cur_state.cursor_location, bounds)
     }
 
@@ -149,7 +161,7 @@ impl<'a> WaveWindow<'a> {
         let mut xpos: f32 = 0.0;
         let hdr_line = Point {
             x: bounds.x,
-            y: bounds.y + TS_FONT_SIZE,
+            y: TS_FONT_SIZE,//+ bounds.y ,
         };
         let boundary_line = Path::new(|p| {
             p.move_to(hdr_line);
@@ -168,7 +180,7 @@ impl<'a> WaveWindow<'a> {
                     content: format!("{}ns", ts),
                     position: Point {
                         x: xpos,
-                        y: bounds.y,
+                        y: 0.0,//bounds.y,
                     },
                     color: GREEN,
                     size: TS_FONT_SIZE,
@@ -177,7 +189,7 @@ impl<'a> WaveWindow<'a> {
                 });
             }
             let vert_path = Path::new(|p| {
-                p.move_to([xpos, bounds.y + TS_FONT_SIZE].into());
+                p.move_to([xpos, TS_FONT_SIZE].into());
                 p.line_to([xpos, bounds.y + bounds.height].into());
             });
             frame.stroke(&vert_path, bg_stroke);
@@ -187,17 +199,18 @@ impl<'a> WaveWindow<'a> {
 
     fn draw_cursor(&self, frame: &mut Frame, bounds: Rectangle) {
         let cur_pos: Point =
-            [self.x_abs_cursor(&bounds), bounds.y + TS_FONT_SIZE].into();
+            [self.x_abs_cursor(&bounds), TS_FONT_SIZE].into();
         let cursor_line = Path::new(|p| {
             p.move_to(cur_pos);
             p.line_to(Point {
-                y: bounds.y + bounds.height,
+                y: bounds.height,
                 ..cur_pos
             });
         });
+        info!("actually drawing cursor a x : {}", cur_pos.x);
         frame.stroke(
             &cursor_line,
-            Stroke::default().with_width(1.0).with_color(ORANGE),
+            Stroke::default().with_width(2.0).with_color(ORANGE),
         );
     }
 
@@ -205,12 +218,7 @@ impl<'a> WaveWindow<'a> {
     fn draw_all(&self, frame: &mut Frame, bounds: Rectangle) {
         let mut leftmost_pt = Point::default();
         leftmost_pt.y += 1.5 * WAVEHEIGHT + BUFFER_PX;
-        let mut bgpt = bounds.position();
         let background = Path::rectangle(Point::default(), bounds.size());
-        info!(
-            "Bounds are x : {} y: {}, width: {}, height: {}",
-            bounds.x, bounds.y, bounds.width, bounds.height
-        );
         frame.fill(&background, Color::BLACK);
         self.draw_header(frame, &bounds);
         let wave_list: Vec<Path> = self
@@ -312,6 +320,7 @@ impl Default for WaveWindowState {
         WaveWindowState {
             cache: canvas::Cache::default(),
             cursor_cache: canvas::Cache::default(),
+            cursor_state: CursorState::default(),
             end_sim_time: 600,
         }
     }
@@ -331,10 +340,7 @@ impl<'a> canvas::Program<Message> for WaveWindow<'a> {
                 mouse::Event::ButtonReleased(mouse::Button::Left) => {
                     self.cur_state.cursor_location =
                         self.get_timestamp(bounds, cursor_position.x);
-                    info!(
-                        "Cursors pos x : {} y: {}",
-                        cursor_position.x, cursor_position.y
-                    );
+                    info!("click location is {}",self.cur_state.cursor_location);
                     Some(Message::UpdateCursor(self.cur_state.clone()))
                 }
                 _ => None,

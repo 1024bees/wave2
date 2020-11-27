@@ -3,7 +3,7 @@ use iced::{
     button, scrollable, text_input, Align, Column, Container, Element, Length,
     Row, Scrollable, TextInput,
 };
-use log::error;
+use log::{error,warn};
 use std::cell::Cell;
 use std::sync::Arc;
 use strum::IntoEnumIterator;
@@ -71,8 +71,9 @@ impl HierNav {
                     // toggle the old value off, if it exists
                     self.hier_root.toggle_selected(old_val);
                 }
-                //toggle the new value on
-                self.hier_root.toggle_selected(module_idx);
+                if self.live_module.is_some() {
+                    self.hier_root.toggle_selected(module_idx);
+                }
             },
             _ => {
                 error!("Not implimented yet!");

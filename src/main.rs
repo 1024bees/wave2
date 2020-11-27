@@ -8,7 +8,7 @@ use std::sync::Arc;
 pub mod components;
 mod config;
 use components::hier_nav::hier_nav;
-use components::{menu_bar, module_nav, sigwindow};
+use components::{menu_bar, module_nav, sigwindow::sigwindow};
 use config::menu_update;
 use env_logger;
 use log::{info, warn};
@@ -145,27 +145,6 @@ impl Content {
     }
 }
 
-fn process__message(state: &mut State, message: Message) {
-    match message {
-        Message::SVMessage(_) => state
-            .panes
-            .get_mut(&state.sv_pane)
-            .unwrap()
-            .update(message),
-        Message::HNMessage(_) => state
-            .panes
-            .get_mut(&state.hn_pane)
-            .unwrap()
-            .update(message),
-        Message::MNMessage(_) => state
-            .panes
-            .get_mut(&state.mn_pane)
-            .unwrap()
-            .update(message),
-        _ => {}
-    }
-
-}
 
 
 
@@ -242,6 +221,13 @@ impl Application for Wave2 {
                     Message::HNMessage(hn_message) => {
                         match hn_message {
                             hier_nav::Message::SendModule(module_idx) => {
+                                // we have to process this message within HierNav
+                                state
+                                    .panes
+                                    .get_mut(&state.hn_pane)
+                                    .unwrap()
+                                    .update(Message::HNMessage(hn_message.clone()));
+
                                 let consumed_api = state.wdb_api.as_ref().unwrap().clone();
                                 //FIXME: this work should definitely be done in a command
                                 return Command::perform(WdbAPI::get_module_signals(consumed_api,module_idx) ,

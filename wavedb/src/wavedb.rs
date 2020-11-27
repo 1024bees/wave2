@@ -5,6 +5,7 @@ use crate::{Bucket, InMemWave, DEFAULT_SLIZE_SIZE};
 use bincode;
 use serde::{Deserialize, Serialize};
 use sled::Db;
+use log::warn;
 use std::collections::HashMap;
 use std::path::*;
 use std::sync::Arc;
@@ -56,13 +57,21 @@ impl WaveDB {
     }
 
     fn load_config(&mut self) -> Result<(), Waverr> {
+        //for key in  self.db.iter() {
+        //    if let Ok(kv) = key {
+        //        let key = std::str::from_utf8(kv.0.as_ref()).unwrap(); 
+        //        let value = std::str::from_utf8(kv.1.as_ref()).unwrap(); 
+        //        warn!("key is {}, value is {}",key,value);
+        //    } 
+        //}
+        //warn!("we tried i guess");
         if let Ok(Some(rawbytes)) = self.db.get("config") {
             let config: WDBConfig = toml::from_slice(rawbytes.as_ref())?;
             self.config = config;
             Ok(())
         } else {
             //TODO: maybe make specific error for this?
-            Err(Waverr::WDBCfgErr("Error loading config".into()))
+            Err(Waverr::WDBCfgErr("Config not found in WaveDB".into()))
         }
     }
 
@@ -83,7 +92,7 @@ impl WaveDB {
             self.hier_map = Arc::new(bincode::deserialize(rawbytes.as_ref())?);
             Ok(())
         } else {
-            Err(Waverr::WDBCfgErr("Error loading config from DB"))
+            Err(Waverr::WDBCfgErr("HierMap not found in WaveDB"))
         }
     }
 
@@ -103,7 +112,6 @@ impl WaveDB {
     }
 
     //TODO: parallelize this
-    //TODO: move filepath from String to &str!!!
     pub fn from_vcd(
         vcd_file_path: PathBuf,
         wdb_path: &Path,
@@ -177,6 +185,7 @@ impl WaveDB {
         wdb.set_time_range((0, global_time));
         wdb.dump_config()?;
         wdb.save_idmap()?;
+        wdb.db.flush()?;
         Ok(wdb)
     }
 
