@@ -115,7 +115,7 @@ impl SigViewer {
             waves_state,
             &live_waves[..],
             &WaveOptions::ALL,
-            Message::CellListPlaceholder,
+//            Message::CellListPlaceholder,
         )
         .text_size(12)
         .heading("Time".into())

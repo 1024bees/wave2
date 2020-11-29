@@ -250,6 +250,9 @@ impl SignalItem {
     pub fn id(&self) -> u32 {
         self.1
     }
+    pub fn destructure(item : SignalItem) -> (String, u32) {
+        (item.0, item.1)
+    }
 }
 
 impl ToString for SignalItem {

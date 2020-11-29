@@ -8,6 +8,10 @@ use strum::IntoEnumIterator;
 use strum_macros;
 use wave2_custom_widgets::widget::cell_list;
 use wave2_custom_widgets::widget::cell_list::CellList;
+
+use wave2_custom_widgets::widget::cell;
+use wave2_custom_widgets::widget::cell::Cell as VizCell;
+
 use wave2_wavedb::hier_map::SignalItem;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, strum_macros::Display)]
@@ -62,9 +66,10 @@ impl ModNavigator {
             sig_state,
             &signals[..],
             &SigOptions::ALL,
-            Message::AddSig,
+            //Message::AddSig,
         )
         .text_size(12)
+        .on_double_click(|sig_item| {info!("hello!"); Message::AddSig(sig_item.clone())})
         .heading("Signals".into())
         .heading_size(10);
 

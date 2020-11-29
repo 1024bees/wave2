@@ -72,6 +72,10 @@ impl State {
     fn open_file_pending(&mut self) -> bool {
         self.menu_bar.get_pending_file()
     }
+
+    fn get_api(&self) -> Arc<WdbAPI> {
+        self.wdb_api.as_ref().unwrap().clone()
+    }
 }
 
 // This may be bad design, but I've resigned for the pane_grid::State
@@ -228,9 +232,9 @@ impl Application for Wave2 {
                                     .unwrap()
                                     .update(Message::HNMessage(hn_message.clone()));
 
-                                let consumed_api = state.wdb_api.as_ref().unwrap().clone();
+                                let consumed_api = 
                                 //FIXME: this work should definitely be done in a command
-                                return Command::perform(WdbAPI::get_module_signals(consumed_api,module_idx) ,
+                                return Command::perform(WdbAPI::get_module_signals(state.get_api(),module_idx) ,
                                     move |vector| Message::MNMessage(module_nav::Message::SignalUpdate(vector)));
 
                             },
@@ -248,8 +252,8 @@ impl Application for Wave2 {
                     Message::MNMessage(mn_message) => {
                         match mn_message {
                             module_nav::Message::AddSig(signal_item) => {
-
-
+                                return Command::perform(WdbAPI::get_signals(state.get_api(),signal_item),
+                                    move |wave| Message::SVMessage(sigwindow::Message::AddWave(wave)));
 
                             }
 

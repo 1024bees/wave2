@@ -28,8 +28,10 @@ where
     last_selection: &'a mut Vec<usize>,
     menu_hovered_option: &'a mut Option<usize>,
     menu_last_selection: &'a mut Option<O>,
+    last_click: &'a mut Option<mouse::Click>,
     //on_right_click: Box<dyn Fn(&'a [T]) -> Message>,
-    on_selected: Box<dyn Fn(T) -> Message>,
+    on_click: Option<Box<dyn Fn(&T) -> Message>>,
+    on_double_click: Option<Box<dyn Fn(&T) -> Message>>,
     heading: Option<String>,
     items: &'a [T],
     options: &'a [O],
@@ -58,6 +60,8 @@ pub struct State<O> {
     last_selection: Vec<usize>,
     menu_hovered_option: Option<usize>,
     menu_last_selection: Option<O>,
+    last_click: Option<mouse::Click>,
+
 }
 
 impl<O> Default for State<O> {
@@ -74,6 +78,7 @@ impl<O> Default for State<O> {
             last_selection: Vec::new(),
             menu_hovered_option: Option::default(),
             menu_last_selection: Option::default(),
+            last_click : Option::default(),
         }
     }
 }
@@ -93,8 +98,7 @@ where
     pub fn new(
         state: &'a mut State<O>,
         items: &'a [T],
-        menu_options: &'a [O],
-        on_selected: impl Fn(T) -> Message + 'static,
+        menu_options: &'a [O]
     ) -> Self {
         let State {
             menu,
@@ -108,6 +112,7 @@ where
             last_selection,
             menu_hovered_option,
             menu_last_selection,
+            last_click,
         } = state;
 
         Self {
@@ -125,7 +130,9 @@ where
             options: menu_options,
             menu_hovered_option,
             menu_last_selection,
-            on_selected: Box::new(on_selected),
+            last_click,
+            on_click: None,
+            on_double_click : None,
             width: Length::Shrink,
             text_size: None,
             heading_size: None,
@@ -182,6 +189,30 @@ where
         self.font = font;
         self
     }
+
+    /// Sets the Message sent when a cell in the the [`CellList`] is clicked.
+    ///
+    /// [`CellList`]: struct.CellList.html
+    pub fn on_click(
+        mut self,
+        on_click: impl Fn(&T) -> Message + 'static,
+    ) -> Self {
+        self.on_click = Some(Box::new(on_click));
+        self
+    }
+
+    /// Sets the Message sent when a cell in the the [`CellList`] is clicked.
+    ///
+    /// [`CellList`]: struct.CellList.html
+    pub fn on_double_click(
+        mut self,
+        dbl_click: impl Fn(&T) -> Message + 'static,
+    ) -> Self {
+        self.on_double_click = Some(Box::new(dbl_click));
+        self
+    }
+
+
 
     /// Sets the style of the [`CellList`].
     ///
@@ -302,6 +333,30 @@ where
                                 (false, false) => {
                                     self.last_selection.clear();
                                     self.last_selection.push(index);
+                                    let click =
+                                    mouse::Click::new(cursor_position, *self.last_click);
+
+                                    match click.kind() {
+                                        mouse::click::Kind::Single => {
+                                            if let Some(ref click_generator) = self.on_click {
+                                                messages.push(click_generator(&self.items[index]));
+                                            }
+                                        }
+                                        mouse::click::Kind::Double
+                                        | mouse::click::Kind::Triple => {
+                                            if let Some(ref dbl_click_gen) =
+                                                self.on_double_click
+                                            {
+                                                messages.push(dbl_click_gen(&self.items[index]));
+                                            }
+                                        }
+                                    }
+
+
+
+
+
+
                                 }
                             }
                         }
