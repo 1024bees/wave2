@@ -9,6 +9,7 @@ use std::sync::Arc;
 use wave2_custom_widgets::widget::cell_list;
 use wave2_custom_widgets::widget::cell_list::CellList;
 use wave2_wavedb::InMemWave;
+use wave2_wavedb::errors::Waverr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 //TODO: add options, move to its own module?
@@ -31,9 +32,9 @@ impl std::fmt::Display for WaveOptions {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug,Clone)]
 pub enum Message {
-    AddWave(Arc<InMemWave>),
+    AddWave(Result<Arc<InMemWave>,Arc<Waverr>>),
     RemoveWave(usize),
     SetOpts(u32, WaveDisplayOptions),
     WWMessage(wavewindow::Message),
@@ -62,9 +63,13 @@ impl Default for SigViewer {
 impl SigViewer {
     pub fn update(&mut self, message: Message) {
         match message {
-            Message::AddWave(imw) => {
-                self.live_waves.push(DisplayedWave::from(imw));
-                self.wavewindow.request_redraw();
+            Message::AddWave(imw_res) => {
+                if let Ok(imw) = imw_res {
+                    self.live_waves.push(DisplayedWave::from(imw));
+                    self.wavewindow.request_redraw();
+                } else {
+                    info!("Cannot create InMemWave");
+                }
             }
             Message::ClearWaves => {
                 self.live_waves.clear();

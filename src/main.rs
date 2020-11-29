@@ -245,11 +245,24 @@ impl Application for Wave2 {
 
                         }
                     },
-                    Message::MNMessage(_) => state
-                        .panes
-                        .get_mut(&state.mn_pane)
-                        .unwrap()
-                        .update(message),
+                    Message::MNMessage(mn_message) => {
+                        match mn_message {
+                            module_nav::Message::AddSig(signal_item) => {
+
+
+
+                            }
+
+
+                            _ => {
+                                state
+                                    .panes
+                                    .get_mut(&state.mn_pane)
+                                    .unwrap()
+                                    .update(Message::MNMessage(mn_message))
+                            }
+                    }
+                    }
                     Message::LoadWDB(payload) => match payload {
                         Ok(wdb_api) => {
                             state.wdb_api = Some(wdb_api);

@@ -219,14 +219,21 @@ impl WaveDB {
         })
     }
 
-    pub fn get_imw(&self, sig: &str) -> Result<InMemWave, Waverr> {
-        let id = self.get_id(sig)?;
+    pub fn get_imw_id(&self, sig_name: String, sig_id : u32) -> Result<Arc<InMemWave>, Arc<Waverr>> {
         let buckets: Vec<Result<Bucket, Waverr>> = self
             .get_time_slices()
-            .map(|start_slice| self.retrieve_bucket(id, start_slice))
+            .map(|start_slice| self.retrieve_bucket(sig_id, start_slice))
             .collect();
 
-        InMemWave::new(sig, buckets)
+        InMemWave::new_arc(sig_name, buckets)
+
+
+    }
+
+
+    pub fn get_imw(&self, sig: String) -> Result<Arc<InMemWave>, Arc<Waverr>> {
+        let id = self.get_id(sig.as_str())?;
+        self.get_imw_id(sig,id)
     }
 
     #[inline]

@@ -53,6 +53,11 @@ impl WdbAPI {
         unimplemented!()
     }
 
+    pub async fn get_signals(&self, sig_name: String, sig_id : u32) -> Result<Arc<InMemWave>, Arc<Waverr>> {
+        self.wdb.get_imw_id(sig_name, sig_id)
+    }
+
+
     /// Get the names of all signals that exist within this module (that are visible to wavedb)
     ///
     pub async fn get_module_signals(api: Arc<WdbAPI>, module_idx: usize) -> Arc<Vec<SignalItem>> {

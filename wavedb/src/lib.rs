@@ -7,6 +7,7 @@ pub mod hier_map;
 pub mod inout;
 mod vcd_parser;
 pub mod wavedb;
+use std::sync::Arc;
 use errors::Waverr;
 const DEFAULT_SLIZE_SIZE: u32 = 10000;
 
@@ -103,7 +104,7 @@ impl InMemWave {
     }
 
     fn new(
-        name_str: &str,
+        name_str: String,
         buckets: Vec<Result<Bucket, Waverr>>,
     ) -> Result<InMemWave, Waverr> {
         let mut signal_content = Vec::new();
@@ -123,6 +124,35 @@ impl InMemWave {
             sig_type: st,
         })
     }
+
+
+    ///This is a clone of new, but returns an Arc.
+    ///I'm doing this because I don't know how expensive amove of an InMemWave is 
+    ///This will be depricated, hopefully
+    fn new_arc(
+        name_str: String,
+        buckets: Vec<Result<Bucket, Waverr>>,
+    ) -> Result<Arc<InMemWave>, Arc<Waverr>> {
+        let mut signal_content = Vec::new();
+        //TODO: can parallelize
+        for bucket in buckets {
+            match bucket {
+                Ok(mut bucket) => signal_content.append(&mut bucket.sig_dumps),
+                Err(Waverr::BucketErr { .. }) => (),
+                Err(bucket_err) => return Err(Arc::new(bucket_err)),
+            }
+        }
+
+        let st = SigType::from_width(signal_content.first().unwrap().1.len());
+        Ok(Arc::new(InMemWave {
+            name: name_str.into(),
+            signal_content: signal_content,
+            sig_type: st,
+        }))
+    }
+
+
+
 }
 
 ///Chunk of a signal that is stored in wave2 db; on disk signal data structure
