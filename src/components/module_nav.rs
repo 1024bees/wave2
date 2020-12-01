@@ -25,19 +25,58 @@ impl SigOptions {
     const ALL: [SigOptions; 1] = [SigOptions::Add];
 }
 
-///This is for navigating signals within a module
-#[derive(Default)]
-pub struct ModNavigator {
-    signals: Vec<SignalItem>,
-    scroll_x: scrollable::State,
-    sig_state: cell_list::State<SigOptions>,
-}
-
 #[derive(Debug, Clone)]
 pub enum Message {
     SignalUpdate(Arc<Vec<SignalItem>>),
     AddSig(SignalItem),
+    ClickedItem(usize)
 }
+
+
+#[derive(Debug, Clone, Default)]
+pub struct SignalNode {
+    ui_state: cell::State<SigOptions>,
+    payload: SignalItem,
+    offset: usize,
+    selected: bool
+}
+
+impl SignalNode {
+    fn new(payload : SignalItem, offset: usize) -> Self {
+        SignalNode {
+            payload,
+            offset,
+            ..SignalNode::default()
+        }
+    }
+    fn view(&mut self) -> Element<Message> {
+        let SignalNode {
+            ui_state,
+            payload,
+            offset,
+            selected
+        } = self;
+        let local_offset = offset.clone();
+        let sig_cell = VizCell::new(ui_state, payload, &SigOptions::ALL)
+            .on_double_click(|signal| Message::AddSig(signal.clone()))
+            .on_click(move |_| { Message::ClickedItem(local_offset)})
+            .override_selected(selected.clone());
+
+        sig_cell.into()
+
+
+    }
+}
+
+///This is for navigating signals within a module
+#[derive(Default)]
+pub struct ModNavigator {
+    signals: Vec<SignalNode>,
+    selected_offset: Option<usize>,
+    scroll_x: scrollable::State,
+    sig_state: cell_list::State<SigOptions>,
+}
+
 
 impl ModNavigator {
     pub fn update(&mut self, message: Message) {
@@ -45,10 +84,19 @@ impl ModNavigator {
             Message::SignalUpdate(payload) => {
                 self.signals = Arc::try_unwrap(payload).map_or_else(
                     |e| {
-                        info!("Number of ref counts is {}",Arc::strong_count(&e));
-                        e.as_ref().clone()
+                        e.as_ref().iter().cloned().enumerate().map(|(idx,payload)| SignalNode::new(payload,idx)).collect()
                     },
-                    |o| o);
+                    |o| o.into_iter().enumerate().map(|(idx,payload)| SignalNode::new(payload,idx)).collect());
+                
+                self.selected_offset = None;
+            }
+
+            Message::ClickedItem(offset) => {
+                if let Some(prev_offset) = self.selected_offset {
+                    self.signals[prev_offset].selected = false;
+                }
+                self.signals[offset].selected = true;
+                self.selected_offset = Some(offset);
             }
             _ => {
                 error!("Not implimented yet!");
@@ -60,21 +108,12 @@ impl ModNavigator {
             signals,
             scroll_x,
             sig_state,
+            ..
         } = self;
-
-        let ts = CellList::new(
-            sig_state,
-            &signals[..],
-            &SigOptions::ALL,
-            //Message::AddSig,
-        )
-        .text_size(12)
-        .on_double_click(|sig_item| {info!("hello!"); Message::AddSig(sig_item.clone())})
-        .heading("Signals".into())
-        .heading_size(10);
-
+        let viewed_signals =  Column::with_children(signals.iter_mut().map(|x| x.view()).collect());
+        
         let scrollable = Scrollable::new(scroll_x).push(
-            Container::new(ts)
+            Container::new(viewed_signals)
                 .height(Length::Fill)
                 .width(Length::Fill)
                 .center_x(),

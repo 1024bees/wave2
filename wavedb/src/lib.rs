@@ -1,6 +1,7 @@
 use bit_vec::BitVec;
 use serde::{Deserialize, Serialize};
 use vcd::Value;
+use log::info;
 pub mod api;
 pub mod errors;
 pub mod hier_map;

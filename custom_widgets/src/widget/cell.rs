@@ -281,15 +281,17 @@ where
                 } else if bounds.contains(cursor_position) {
                     let click =
                         mouse::Click::new(cursor_position, *self.last_click);
-
                     match click.kind() {
                         mouse::click::Kind::Single => {
+                            info!("Single click event");
                             if let Some(ref click_generator) = self.on_click {
                                 messages.push(click_generator(self.item));
                             }
                         }
                         mouse::click::Kind::Double
                         | mouse::click::Kind::Triple => {
+                            info!("Double+ click event");
+
                             if let Some(ref dbl_click_gen) =
                                 self.on_double_click
                             {
@@ -303,7 +305,9 @@ where
                     } else {
                         *self.selected = false;
                     }
+                    *self.last_click = Some(click);
                 }
+                
             }
 
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right)) => {

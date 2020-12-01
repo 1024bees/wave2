@@ -54,7 +54,7 @@ impl Default for SigViewer {
         SigViewer {
             waves_state: cell_list::State::default(),
             wavewindow: wavewindow::WaveWindowState::default(),
-            live_waves: vec![DisplayedWave::default(),DisplayedWave::default()],
+            live_waves: Vec::default(),
             scroll_x: scrollable::State::default(),
         }
     }
@@ -65,6 +65,8 @@ impl SigViewer {
         match message {
             Message::AddWave(imw_res) => {
                 if let Ok(imw) = imw_res {
+                    info!("Ay booboo");
+
                     self.live_waves.push(DisplayedWave::from(imw));
                     self.wavewindow.request_redraw();
                 } else {

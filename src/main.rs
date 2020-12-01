@@ -232,7 +232,7 @@ impl Application for Wave2 {
                                     .unwrap()
                                     .update(Message::HNMessage(hn_message.clone()));
 
-                                let consumed_api = 
+
                                 //FIXME: this work should definitely be done in a command
                                 return Command::perform(WdbAPI::get_module_signals(state.get_api(),module_idx) ,
                                     move |vector| Message::MNMessage(module_nav::Message::SignalUpdate(vector)));
