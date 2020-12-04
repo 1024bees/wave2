@@ -1,4 +1,4 @@
-use bit_vec::BitVec;
+use bitvec::prelude::*;
 use serde::{Deserialize, Serialize};
 use vcd::Value;
 use log::info;
@@ -27,40 +27,6 @@ impl SigType {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Wave {
-    name: String,
-    pub signal_content: Vec<(u32, u32)>,
-    pub sig_type: SigType,
-}
-
-//TODO: move to backend, make inmemory wave
-impl Default for Wave {
-    fn default() -> Self {
-        Wave {
-            name: String::from("PlaceholderWave"),
-            signal_content: vec![
-                (0, 1),
-                (10, 0),
-                (20, 1),
-                (30, 0),
-                (50, 1),
-                (500, 0),
-            ],
-            sig_type: SigType::Bit,
-        }
-    }
-}
-
-//TODO: move from Wave -> InMemoryWave... should there be a transform there even?
-impl Wave {
-    pub fn default_vec() -> Self {
-        Wave {
-            sig_type: SigType::Vector(4),
-            ..Wave::default()
-        }
-    }
-}
 
 #[derive(Debug)]
 pub struct InMemWave {
@@ -189,50 +155,135 @@ impl Default for Bucket {
 /// 01 -> 1
 /// 10 -> Z
 /// 11 -> X
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-pub struct ParsedVec(BitVec, Option<BitVec>);
+#[derive(Debug, Serialize,Deserialize)]
+pub enum ParsedVec {
+    SingleBit(FourStateBitArr),
+    WordVec(FourStateBitArr),
+    WideVec(FourStateBitVec),
+}
+
+
+#[derive(Default, Debug, Serialize,Deserialize)]
+struct FourStateBitArr {
+    value_bits : BitArray<LocalBits, [usize; 1]>,
+    zx_bits: Option<BitArray<LocalBits, [usize; 1]>>,
+}
+
+#[derive(Default, Serialize,Deserialize)]
+struct FourStateBitVec {
+    value_bits : BitVec<LocalBits>,
+    zx_bits : Option<BitVec<LocalBits>>,
+}
+
+macro_rules! from_vcd_vec {
+    ($([$t:ident,$ut:ident]),*) => {
+        $(impl From<Vec<Value>> for $t {
+
+
+            fn from(vec_val : Vec<Value>) -> $t {
+                let mut rv = $t::default();
+                let mut vb  = $ut::default();
+                let mut zx = None;
+
+                for (bidx, bit) in vec_val.iter().enumerate() {
+                    match bit {
+                        Value::V1 => vb.set(bidx, true),
+                        Value::X => {
+                            vb.set(bidx, true);
+                            if zx == Option::None {
+                                zx =
+                                    Some($ut::default());
+                            }
+                            zx.as_mut().unwrap().set(bidx, true);
+                        }
+                        Value::Z => {
+                            if zx == Option::None {
+                                zx =
+                                    Some($ut::default());
+                            }
+                            zx.as_mut().unwrap().set(bidx, true);
+                        }
+                        Value::V0 => (),
+                    }
+                }
+            $t { value_bits : vb, zx_bits: zx}
+            }
+        })*
+    };
+}
+
+from_vcd_vec!([FourStateBitArr,BitArray],[FourStateBitVec,BitVec]);
+
+
+//impl From<Vec<Value>> for FourStateBitArr {
+//    fn from(vec_val : Vec<Value>) -> FourStateBitArr {
+//        let mut rv = FourStateBitArr::default();
+//        let mut vb  = BitArray::default();
+//        let mut zx = None;
+//
+//        for (bidx, bit) in vec_val.iter().enumerate() {
+//            match bit {
+//                Value::V1 => vb.set(bidx, true),
+//                Value::X => {
+//                    vb.set(bidx, true);
+//                    if zx == Option::None {
+//                        zx =
+//                            Some(BitArray::default());
+//                    }
+//                    zx.as_mut().unwrap().set(bidx, true);
+//                }
+//                Value::Z => {
+//                    if zx == Option::None {
+//                        zx =
+//                            Some(BitArray::default());
+//                    }
+//                    zx.as_mut().unwrap().set(bidx, true);
+//                }
+//                Value::V0 => (),
+//            }
+//        }
+//
+//    FourStateBitArr{ value_bits : vb, zx_bits: zx}
+//    }
+//}
+
 impl ParsedVec {
-    fn len(&self) -> u32 {
-        self.0.len() as u32
-    }
-    pub fn get_bv(&self) -> bool {
-        self.0.get(7).unwrap()
+    fn get_bv(&self) -> Option<bool> {
+        match self {
+            ParsedVec::SingleBit(payload) => {
+                let FourStateBitArr { value_bits, zx_bits} = payload;
+                if let Some(err_value) = zx_bits {
+                    None
+                } else {
+                    Some(value_bits.get(0).unwrap().clone())
+                }
+            }
+            _ => {
+                None
+            }
+        }
+
     }
 }
 
 impl From<u8> for ParsedVec {
     fn from(vec_val: u8) -> ParsedVec {
-        ParsedVec(BitVec::from_bytes(&[vec_val]), None)
+        let mut fbv = FourStateBitArr::default();
+        fbv.value_bits = [vec_val as usize].into();
+        ParsedVec::SingleBit(fbv)
     }
 }
 
+
+
+
 impl From<Vec<Value>> for ParsedVec {
     fn from(vec_val: Vec<Value>) -> ParsedVec {
-        let mut parsed_vec =
-            ParsedVec(BitVec::from_elem(vec_val.len(), false), Option::None);
-        let ref mut option_vec = parsed_vec.1;
-        for (bidx, bit) in vec_val.iter().enumerate() {
-            match bit {
-                Value::V1 => parsed_vec.0.set(bidx, true),
-                Value::X => {
-                    parsed_vec.0.set(bidx, true);
-                    if *option_vec == Option::None {
-                        *option_vec =
-                            Some(BitVec::from_elem(vec_val.len(), false));
-                    }
-                    option_vec.as_mut().unwrap().set(bidx, true);
-                }
-                Value::Z => {
-                    if *option_vec == Option::None {
-                        *option_vec =
-                            Some(BitVec::from_elem(vec_val.len(), false));
-                    }
-                    option_vec.as_mut().unwrap().set(bidx, true);
-                }
-                Value::V0 => (),
-            }
+        match vec_val.len() {
+            1 =>  ParsedVec::SingleBit(FourStateBitArr::from(vec_val)),
+            2..=32 => ParsedVec::WordVec(FourStateBitArr::from(vec_val)),
+            _ =>  ParsedVec::WideVec(FourStateBitVec::from(vec_val)),
         }
-        parsed_vec
     }
 }
 
