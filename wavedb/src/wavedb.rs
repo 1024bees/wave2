@@ -156,7 +156,7 @@ impl WaveDB {
                     if !bucket_mapper.contains_key(&code) {
                         bucket_mapper.insert(
                             code,
-                            Bucket::new(code.0 as u32, current_range),
+                            Bucket::new(code.0 as u32, vvalue.len(), current_range),
                         );
                     }
                     let bucket = bucket_mapper.get_mut(&code).unwrap();
@@ -166,7 +166,7 @@ impl WaveDB {
                     if !bucket_mapper.contains_key(&code) {
                         bucket_mapper.insert(
                             code,
-                            Bucket::new(code.0 as u32, current_range),
+                            Bucket::new(code.0 as u32,1, current_range),
                         );
                     }
                     let bucket = bucket_mapper.get_mut(&code).unwrap();
@@ -192,11 +192,14 @@ impl WaveDB {
     fn insert_bucket(&self, bucket: &Bucket) -> Result<(), Waverr> {
         let tree: sled::Tree = self.db.open_tree(bucket.get_db_idx())?;
         let serialized = bincode::serialize(&bucket)?;
+        
         if let Ok(Some(_)) = tree.insert(bucket.id.to_be_bytes(), serialized) {
+            // This is problematic; implies that this value was previously set and we are
+            // overwriting it
             return Err(Waverr::BucketErr {
                 id: bucket.id,
                 ts: bucket.timestamp_range.0,
-                context: "failed insert into Wavedb",
+                context: "We are overwriting a value for this bucket!",
             });
         }
         Ok(())
@@ -225,8 +228,9 @@ impl WaveDB {
             .map(|start_slice| self.retrieve_bucket(sig_id, start_slice))
             .collect();
 
-        InMemWave::new_arc(sig_name, buckets)
-
+        InMemWave::new(sig_name, buckets)
+            .map_err(|err| Arc::new(err))
+            .map(|imw| Arc::new(imw))
 
     }
 
@@ -248,17 +252,34 @@ mod tests {
     use crate::wavedb::*;
     use bit_vec::BitVec;
     use std::path::*;
+
+    #[test]
+    fn bucket_serde() {
+        let mut in_bucket = Bucket::default();
+        let serialized = bincode::serialize(&in_bucket).unwrap();
+
+        let out_bucket : Bucket = bincode::deserialize(serialized.as_ref()).unwrap();
+    }
+
+
     #[test]
     fn insert_sanity() {
+        std::fs::remove_dir_all("TestDB");
         let mut tdb = WaveDB::new("TestDB".into(), None);
-        tdb.insert_bucket(&Bucket::default());
-        let bucket = tdb.retrieve_bucket(0, 0);
+        let mut in_bucket = Bucket::default();
+        in_bucket.id = 1;
+        match tdb.insert_bucket(&in_bucket) {
+            Ok(()) => (),
+            Err(err) => panic!("Inserting bucket sanity errored with {}",err)
+        }
+
+        let bucket = tdb.retrieve_bucket(1, 0);
         match bucket {
             Ok(payload) => {
-                assert_eq!(payload, Bucket::default());
+                ()
             }
-            Err(_) => {
-                panic!("Bucket not found-- fail");
+            Err(err) => {
+                panic!("Retrieving buccket fails with {}",err);
             }
         }
     }

@@ -242,7 +242,7 @@ impl<'a> WaveWindow<'a> {
                                 p.move_to(working_pt);
                                 //TODO: handle z/x case
                                 match sig_payload.get_bv() {
-                                    false => working_pt.y += WAVEHEIGHT,
+                                    Some(false) => working_pt.y += WAVEHEIGHT,
                                     _ => working_pt.y -= WAVEHEIGHT,
                                 }
                                 prev_xcoord = *time;

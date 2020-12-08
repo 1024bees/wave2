@@ -12,19 +12,21 @@ use std::sync::Arc;
 use errors::Waverr;
 const DEFAULT_SLIZE_SIZE: u32 = 10000;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
 pub enum SigType {
     Bit,
-    Vector(u32),
+    Vector(usize),
 }
 
 impl SigType {
-    fn from_width(width: u32) -> SigType {
+    fn from_width(width: usize) -> SigType {
         match width {
             1 => SigType::Bit,
             bw => SigType::Vector(bw),
         }
     }
+
+
 }
 
 
@@ -76,57 +78,36 @@ impl InMemWave {
     ) -> Result<InMemWave, Waverr> {
         let mut signal_content = Vec::new();
         //TODO: can parallelize
+        let mut st = None;
         for bucket in buckets {
             match bucket {
-                Ok(mut bucket) => signal_content.append(&mut bucket.sig_dumps),
+                Ok(mut bucket) => { 
+                    signal_content.append(&mut bucket.sig_dumps);
+                    if st.is_none() {
+                        st = Some(bucket.sig_type)
+                    }
+                },
                 Err(Waverr::BucketErr { .. }) => (),
-                Err(bucket_err) => return Err(bucket_err),
+                Err(bucket_err) => (),
             }
         }
 
-        let st = SigType::from_width(signal_content.first().unwrap().1.len());
+        
         Ok(InMemWave {
             name: name_str.into(),
             signal_content: signal_content,
-            sig_type: st,
+            sig_type: st.unwrap(),
         })
     }
-
-
-    ///This is a clone of new, but returns an Arc.
-    ///I'm doing this because I don't know how expensive amove of an InMemWave is 
-    ///This will be depricated, hopefully
-    fn new_arc(
-        name_str: String,
-        buckets: Vec<Result<Bucket, Waverr>>,
-    ) -> Result<Arc<InMemWave>, Arc<Waverr>> {
-        let mut signal_content = Vec::new();
-        //TODO: can parallelize
-        for bucket in buckets {
-            match bucket {
-                Ok(mut bucket) => signal_content.append(&mut bucket.sig_dumps),
-                Err(Waverr::BucketErr { .. }) => (),
-                Err(bucket_err) => return Err(Arc::new(bucket_err)),
-            }
-        }
-
-        let st = SigType::from_width(signal_content.first().unwrap().1.len());
-        Ok(Arc::new(InMemWave {
-            name: name_str.into(),
-            signal_content: signal_content,
-            sig_type: st,
-        }))
-    }
-
-
 
 }
 
 ///Chunk of a signal that is stored in wave2 db; on disk signal data structure
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize,  Debug)]
 struct Bucket {
     timestamp_range: (u32, u32),
     id: u32,
+    sig_type : SigType,
     sig_dumps: Vec<(u32, ParsedVec)>,
 }
 
@@ -135,7 +116,8 @@ impl Default for Bucket {
         Bucket {
             timestamp_range: (0, 10000),
             id: 0,
-            sig_dumps: Vec::new(),
+            sig_type : SigType::Vector(4),
+            sig_dumps: vec![(0,ParsedVec::from(7)), (4,ParsedVec::from(3))]
         }
     }
 }
@@ -157,20 +139,19 @@ impl Default for Bucket {
 /// 11 -> X
 #[derive(Debug, Serialize,Deserialize)]
 pub enum ParsedVec {
-    SingleBit(FourStateBitArr),
     WordVec(FourStateBitArr),
     WideVec(FourStateBitVec),
 }
 
 
 #[derive(Default, Debug, Serialize,Deserialize)]
-struct FourStateBitArr {
+pub struct FourStateBitArr {
     value_bits : BitArray<LocalBits, [usize; 1]>,
     zx_bits: Option<BitArray<LocalBits, [usize; 1]>>,
 }
 
-#[derive(Default, Serialize,Deserialize)]
-struct FourStateBitVec {
+#[derive(Default, Debug, Serialize,Deserialize)]
+pub struct FourStateBitVec {
     value_bits : BitVec<LocalBits>,
     zx_bits : Option<BitVec<LocalBits>>,
 }
@@ -179,9 +160,7 @@ macro_rules! from_vcd_vec {
     ($([$t:ident,$ut:ident]),*) => {
         $(impl From<Vec<Value>> for $t {
 
-
             fn from(vec_val : Vec<Value>) -> $t {
-                let mut rv = $t::default();
                 let mut vb  = $ut::default();
                 let mut zx = None;
 
@@ -248,9 +227,9 @@ from_vcd_vec!([FourStateBitArr,BitArray],[FourStateBitVec,BitVec]);
 //}
 
 impl ParsedVec {
-    fn get_bv(&self) -> Option<bool> {
+    pub fn get_bv(&self) -> Option<bool> {
         match self {
-            ParsedVec::SingleBit(payload) => {
+            ParsedVec::WordVec(payload) => {
                 let FourStateBitArr { value_bits, zx_bits} = payload;
                 if let Some(err_value) = zx_bits {
                     None
@@ -270,9 +249,10 @@ impl From<u8> for ParsedVec {
     fn from(vec_val: u8) -> ParsedVec {
         let mut fbv = FourStateBitArr::default();
         fbv.value_bits = [vec_val as usize].into();
-        ParsedVec::SingleBit(fbv)
+        ParsedVec::WordVec(fbv)
     }
 }
+
 
 
 
@@ -280,8 +260,7 @@ impl From<u8> for ParsedVec {
 impl From<Vec<Value>> for ParsedVec {
     fn from(vec_val: Vec<Value>) -> ParsedVec {
         match vec_val.len() {
-            1 =>  ParsedVec::SingleBit(FourStateBitArr::from(vec_val)),
-            2..=32 => ParsedVec::WordVec(FourStateBitArr::from(vec_val)),
+            1..=32 =>  ParsedVec::WordVec(FourStateBitArr::from(vec_val)),
             _ =>  ParsedVec::WideVec(FourStateBitVec::from(vec_val)),
         }
     }
@@ -292,10 +271,11 @@ impl Bucket {
         format!("{}-{}", self.timestamp_range.0, self.timestamp_range.1)
     }
 
-    fn new(id_: u32, stamps: (u32, u32)) -> Bucket {
+    fn new(id_: u32, width: usize, stamps: (u32, u32)) -> Bucket {
         Bucket {
             timestamp_range: stamps,
             id: id_,
+            sig_type: SigType::from_width(width),
             sig_dumps: Vec::new(),
         }
     }
@@ -316,6 +296,28 @@ mod tests {
 
 
     #[test]
+    fn serde_4bit_arr() {
+        let mut fbv = FourStateBitArr::default();
+        fbv.value_bits = [0xffff as usize].into();
+        let bytes = bincode::serialize(&fbv).unwrap();
+        match bincode::deserialize::<FourStateBitArr>(bytes.as_ref()) {
+            Ok(pv) => (),
+            Err(err) => panic!("err is {}, failed deserialize! bytes are {:#?}",err,bytes)
+        }
+    }
+
+    //#[test]
+    //fn serde_parsed_vec() {
+    //    let pv = ParsedVec::from(0xFF);
+    //    let bytes = bincode::serialize(&pv).unwrap();
+    //    match bincode::deserialize::<ParsedVec>(bytes.as_ref()) {
+    //        Ok(pv) => (),
+    //        Err(err) => panic!("err is {}, failed deserialize! bytes are {:#?}",err,bytes)
+    //    }
+    //}
+
+
+    #[test]
     fn wdb_from_wikivcd() {
         let mut path_to_wikivcd = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path_to_wikivcd.push("test_vcds/wikipedia.vcd");
@@ -332,7 +334,7 @@ mod tests {
             }
             Err(_) => panic!("Unhandled error case"),
         };
-        let var = actualdb.get_imw("logic.data").unwrap();
+        let var = actualdb.get_imw("logic.data".into()).unwrap();
         assert_eq!(var.sig_type, SigType::Vector(8));
         drop(actualdb);
 
@@ -348,8 +350,8 @@ mod tests {
             }
             Err(_) => panic!("Unhandled error case"),
         };
-        let var = actualdb.get_imw("logic.data").unwrap();
-        assert_eq!(var.sig_type, SigType::Vector(8));
+        let var = actualdb.get_imw("logic.en".into()).unwrap();
+        assert_eq!(var.as_ref().sig_type, SigType::Vector(8));
     }
 
 
@@ -370,6 +372,11 @@ mod tests {
             }
             Err(_) => panic!("Unhandled error case"),
         };
+        let var = actualdb.get_imw("TOP.vga_g_DAC".into()).unwrap();
+        assert_eq!(var.as_ref().sig_type, SigType::Vector(10));
+
+
+
         std::fs::remove_dir_all("/tmp/vcddb");
     }
 
