@@ -191,11 +191,11 @@ impl WaveDB {
 
     fn insert_bucket(&self, bucket: &Bucket) -> Result<(), Waverr> {
         let tree: sled::Tree = self.db.open_tree(bucket.get_db_idx())?;
-        let serialized = bincode::serialize(&bucket)?;
+        let serialized = serde_json::to_string(&bucket)?;
         
-        if let Ok(Some(_)) = tree.insert(bucket.id.to_be_bytes(), serialized) {
-            // This is problematic; implies that this value was previously set and we are
-            // overwriting it
+        if let Ok(Some(_)) = tree.insert(bucket.id.to_be_bytes(), serialized.as_str()) {
+            // is problematic; implies that this value was previously set and we are
+            // overwriting it. We should write only once per bucket
             return Err(Waverr::BucketErr {
                 id: bucket.id,
                 ts: bucket.timestamp_range.0,
@@ -212,7 +212,7 @@ impl WaveDB {
     ) -> Result<Bucket, Waverr> {
         let tree = self.db.open_tree(WaveDB::ts2key(ts_start))?;
         if let Some(bucket) = tree.get(id.to_be_bytes())? {
-            let bucket: Bucket = bincode::deserialize(bucket.as_ref())?;
+            let bucket: Bucket = serde_json::from_slice(bucket.as_ref())?;
             return Ok(bucket);
         }
         Err(Waverr::BucketErr {
@@ -250,15 +250,14 @@ impl WaveDB {
 #[cfg(test)]
 mod tests {
     use crate::wavedb::*;
-    use bit_vec::BitVec;
     use std::path::*;
 
     #[test]
     fn bucket_serde() {
         let mut in_bucket = Bucket::default();
-        let serialized = bincode::serialize(&in_bucket).unwrap();
+        let serialized = serde_json::to_string(&in_bucket).unwrap();
 
-        let out_bucket : Bucket = bincode::deserialize(serialized.as_ref()).unwrap();
+        let out_bucket : Bucket = serde_json::from_slice(serialized.as_ref()).unwrap();
     }
 
 

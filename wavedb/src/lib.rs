@@ -299,8 +299,8 @@ mod tests {
     fn serde_4bit_arr() {
         let mut fbv = FourStateBitArr::default();
         fbv.value_bits = [0xffff as usize].into();
-        let bytes = bincode::serialize(&fbv).unwrap();
-        match bincode::deserialize::<FourStateBitArr>(bytes.as_ref()) {
+        let bytes = serde_json::to_string(&fbv).unwrap();
+        match serde_json::from_str::<FourStateBitArr>(bytes.as_ref()) {
             Ok(pv) => (),
             Err(err) => panic!("err is {}, failed deserialize! bytes are {:#?}",err,bytes)
         }
@@ -351,7 +351,7 @@ mod tests {
             Err(_) => panic!("Unhandled error case"),
         };
         let var = actualdb.get_imw("logic.en".into()).unwrap();
-        assert_eq!(var.as_ref().sig_type, SigType::Vector(8));
+        assert_eq!(var.as_ref().sig_type, SigType::Bit);
     }
 
 

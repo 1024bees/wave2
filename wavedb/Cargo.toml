@@ -11,7 +11,8 @@ env = "*"
 bincode = "1.3.1"
 vcd = {git = "https://github.com/1024bees/rust-vcd", rev="48186f52f5cc5d6b012240e6c97f2cc7b9ddfb9f"}
 sled = "*"
-serde = "1.0.118"
+serde_json = "*"
+serde = { version= "1.0.118", features = ["derive"] }
 cached = "*"
 toml = "*"
 nfd = "*"
@@ -22,7 +23,6 @@ env_logger = "0.7.1"
 
 
 clap = "3.0.0-beta.1"
-bit-vec = { version = "0.6", features = ["serde"] }
 bitvec = {version = "0.19.4", features = ["alloc", "serde"] }
 
 [dev-dependencies]

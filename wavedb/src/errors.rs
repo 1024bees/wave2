@@ -18,6 +18,9 @@ pub enum Waverr {
         "MissingID found, payload is `{0}` TODO: make a better error type!"
     )]
     SledError(#[from] sled::Error),
+    #[error("Problem ser/deser bucket is {0}. TODO: Depricate this")]
+    BuckerSerdeErr(#[from] serde_json::Error),
+
     #[error("Payload Serialization (non-config) fail; from  bincode: `{0}`")]
     DataCorrupt(#[from] Box<bincode::ErrorKind>),
     #[error("Config Serialization  fail; from  toml: `{0}`")]
