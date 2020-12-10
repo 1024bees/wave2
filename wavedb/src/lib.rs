@@ -1,14 +1,12 @@
 use bitvec::prelude::*;
 use serde::{Deserialize, Serialize};
 use vcd::Value;
-use log::info;
 pub mod api;
 pub mod errors;
 pub mod hier_map;
 pub mod inout;
 mod vcd_parser;
 pub mod wavedb;
-use std::sync::Arc;
 use errors::Waverr;
 const DEFAULT_SLIZE_SIZE: u32 = 10000;
 
@@ -25,10 +23,7 @@ impl SigType {
             bw => SigType::Vector(bw),
         }
     }
-
-
 }
-
 
 #[derive(Debug)]
 pub struct InMemWave {
@@ -81,33 +76,31 @@ impl InMemWave {
         let mut st = None;
         for bucket in buckets {
             match bucket {
-                Ok(mut bucket) => { 
+                Ok(mut bucket) => {
                     signal_content.append(&mut bucket.sig_dumps);
                     if st.is_none() {
                         st = Some(bucket.sig_type)
                     }
-                },
+                }
                 Err(Waverr::BucketErr { .. }) => (),
-                Err(bucket_err) => (),
+                Err(bucket_err) => (return Err(bucket_err)),
             }
         }
 
-        
         Ok(InMemWave {
             name: name_str.into(),
             signal_content: signal_content,
             sig_type: st.unwrap(),
         })
     }
-
 }
 
 ///Chunk of a signal that is stored in wave2 db; on disk signal data structure
-#[derive(Serialize, Deserialize,  Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Bucket {
     timestamp_range: (u32, u32),
     id: u32,
-    sig_type : SigType,
+    sig_type: SigType,
     sig_dumps: Vec<(u32, ParsedVec)>,
 }
 
@@ -116,8 +109,8 @@ impl Default for Bucket {
         Bucket {
             timestamp_range: (0, 10000),
             id: 0,
-            sig_type : SigType::Vector(4),
-            sig_dumps: vec![(0,ParsedVec::from(7)), (4,ParsedVec::from(3))]
+            sig_type: SigType::Vector(4),
+            sig_dumps: vec![(0, ParsedVec::from(7)), (4, ParsedVec::from(3))],
         }
     }
 }
@@ -137,23 +130,22 @@ impl Default for Bucket {
 /// 01 -> 1
 /// 10 -> Z
 /// 11 -> X
-#[derive(Debug, Serialize,Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum ParsedVec {
     WordVec(FourStateBitArr),
     WideVec(FourStateBitVec),
 }
 
-
-#[derive(Default, Debug, Serialize,Deserialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct FourStateBitArr {
-    value_bits : BitArray<LocalBits, [usize; 1]>,
+    value_bits: BitArray<LocalBits, [usize; 1]>,
     zx_bits: Option<BitArray<LocalBits, [usize; 1]>>,
 }
 
-#[derive(Default, Debug, Serialize,Deserialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct FourStateBitVec {
-    value_bits : BitVec<LocalBits>,
-    zx_bits : Option<BitVec<LocalBits>>,
+    value_bits: BitVec<LocalBits>,
+    zx_bits: Option<BitVec<LocalBits>>,
 }
 
 macro_rules! from_vcd_vec {
@@ -191,8 +183,7 @@ macro_rules! from_vcd_vec {
     };
 }
 
-from_vcd_vec!([FourStateBitArr,BitArray],[FourStateBitVec,BitVec]);
-
+from_vcd_vec!([FourStateBitArr, BitArray], [FourStateBitVec, BitVec]);
 
 //impl From<Vec<Value>> for FourStateBitArr {
 //    fn from(vec_val : Vec<Value>) -> FourStateBitArr {
@@ -230,18 +221,18 @@ impl ParsedVec {
     pub fn get_bv(&self) -> Option<bool> {
         match self {
             ParsedVec::WordVec(payload) => {
-                let FourStateBitArr { value_bits, zx_bits} = payload;
-                if let Some(err_value) = zx_bits {
+                let FourStateBitArr {
+                    value_bits,
+                    zx_bits,
+                } = payload;
+                if let Some(_) = zx_bits {
                     None
                 } else {
                     Some(value_bits.get(0).unwrap().clone())
                 }
             }
-            _ => {
-                None
-            }
+            _ => None,
         }
-
     }
 }
 
@@ -253,15 +244,11 @@ impl From<u8> for ParsedVec {
     }
 }
 
-
-
-
-
 impl From<Vec<Value>> for ParsedVec {
     fn from(vec_val: Vec<Value>) -> ParsedVec {
         match vec_val.len() {
-            1..=32 =>  ParsedVec::WordVec(FourStateBitArr::from(vec_val)),
-            _ =>  ParsedVec::WideVec(FourStateBitVec::from(vec_val)),
+            1..=32 => ParsedVec::WordVec(FourStateBitArr::from(vec_val)),
+            _ => ParsedVec::WideVec(FourStateBitVec::from(vec_val)),
         }
     }
 }
@@ -283,27 +270,24 @@ impl Bucket {
     fn add_new_signal(&mut self, timestamp: u32, val_vec: Vec<Value>) {
         self.sig_dumps.push((timestamp, ParsedVec::from(val_vec)));
     }
-
 }
 
 #[cfg(test)]
 mod tests {
     use crate::*;
+    use std::mem::drop;
     use std::path::Path;
     use std::path::*;
     use wavedb::WaveDB;
-    use std::mem::drop;
-
 
     #[test]
     fn serde_4bit_arr() {
         let mut fbv = FourStateBitArr::default();
         fbv.value_bits = [0xffff as usize].into();
         let bytes = serde_json::to_string(&fbv).unwrap();
-        match serde_json::from_str::<FourStateBitArr>(bytes.as_ref()) {
-            Ok(pv) => (),
-            Err(err) => panic!("err is {}, failed deserialize! bytes are {:#?}",err,bytes)
-        }
+        serde_json::from_str::<FourStateBitArr>(bytes.as_ref()).expect(
+            format!("failed to deserialize, bytes are {:#?}", bytes).as_str(),
+        );
     }
 
     //#[test]
@@ -316,14 +300,15 @@ mod tests {
     //    }
     //}
 
-
     #[test]
+    #[allow(unused_must_use)]
     fn wdb_from_wikivcd() {
         let mut path_to_wikivcd = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path_to_wikivcd.push("test_vcds/wikipedia.vcd");
         //bad but hey... is what it is
-        std::fs::remove_dir_all("/tmp/rng");
-        let wdb = WaveDB::from_vcd(path_to_wikivcd.clone(), Path::new("/tmp/rng"));
+        std::fs::remove_dir_all("/tmp/rng").expect("could not clean wavedb");
+        let wdb =
+            WaveDB::from_vcd(path_to_wikivcd.clone(), Path::new("/tmp/rng"));
         let actualdb = match wdb {
             Ok(wdb) => wdb,
             Err(errors::Waverr::VCDErr(vcdmess)) => {
@@ -354,30 +339,20 @@ mod tests {
         assert_eq!(var.as_ref().sig_type, SigType::Bit);
     }
 
-
     #[test]
+    #[allow(unused_must_use)]
     fn wdb_from_vgavcd() {
         let mut path_to_wikivcd = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path_to_wikivcd.push("test_vcds/vga.vcd");
         //bad but hey... is what it is
-        std::fs::remove_dir_all("/tmp/vcddb");
-        let wdb = WaveDB::from_vcd(path_to_wikivcd, Path::new("/tmp/vcddb"));
-        let actualdb = match wdb {
-            Ok(wdb) => wdb,
-            Err(errors::Waverr::VCDErr(vcdmess)) => {
-                panic!("{} is the vcd error message", vcdmess)
-            }
-            Err(Waverr::GenericErr(message)) => {
-                panic!("Unhandled error case: {} ", message)
-            }
-            Err(_) => panic!("Unhandled error case"),
-        };
-        let var = actualdb.get_imw("TOP.vga_g_DAC".into()).unwrap();
+        std::fs::remove_dir_all("/tmp/vcddb")
+            .expect("could not clear old wavedb");
+        let wdb = WaveDB::from_vcd(path_to_wikivcd, Path::new("/tmp/vcddb"))
+            .expect("could not create wavedb");
+
+        let var = wdb.get_imw("TOP.vga_g_DAC".into()).unwrap();
         assert_eq!(var.as_ref().sig_type, SigType::Vector(10));
-
-
 
         std::fs::remove_dir_all("/tmp/vcddb");
     }
-
 }

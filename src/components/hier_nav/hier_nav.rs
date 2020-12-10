@@ -1,16 +1,8 @@
-use crate::components::hier_nav::hier_node::{HierNode, HierRoot};
-use iced::{
-    button, scrollable, text_input, Align, Column, Container, Element, Length,
-    Row, Scrollable, TextInput,
-};
-use log::{error,warn};
-use std::cell::Cell;
+use crate::components::hier_nav::hier_node::HierRoot;
+use iced::{scrollable, Container, Element, Scrollable};
 use std::sync::Arc;
-use strum::IntoEnumIterator;
 use strum_macros;
-use wave2_custom_widgets::widget::cell_list;
-use wave2_custom_widgets::widget::cell_list::CellList;
-use wave2_wavedb::hier_map::{HierMap, SignalItem};
+use wave2_wavedb::hier_map::HierMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, strum_macros::Display)]
 pub enum HierOptions {
@@ -33,16 +25,16 @@ pub struct HierNav {
 pub enum Message {
     ///Message that is sent when initializing wave2; sets the hierarchy state
     SetHier(Arc<HierMap>),
-    ///Toggles if a module's hierarchy is expanded or not 
+    ///Toggles if a module's hierarchy is expanded or not
     Toggle(usize),
     /// Toggles if a module is "selected" or not.
     ///
     /// This messsage is stateful. If the module index wrapped by this message does
-    /// NOT equal HierNav.live_module, then we send this module's signals to the 
-    /// ModuleNav pane, which will display its signals. This happens when an end user selects 
+    /// NOT equal HierNav.live_module, then we send this module's signals to the
+    /// ModuleNav pane, which will display its signals. This happens when an end user selects
     /// a new module to inspect
     ///
-    /// If the module index wrapped by this message equals HierNav.live_module, we clear out the 
+    /// If the module index wrapped by this message equals HierNav.live_module, we clear out the
     /// ModuleNav pane. This happens when a user toggles an already selected module
     SendModule(usize),
 }
@@ -55,7 +47,7 @@ impl HierNav {
             }
             Message::Toggle(module_idx) => {
                 self.hier_root.update_expander(module_idx);
-            },
+            }
             Message::SendModule(module_idx) => {
                 let old_mod = self.live_module;
                 self.live_module = if let Some(index) = self.live_module {
@@ -74,17 +66,14 @@ impl HierNav {
                 if self.live_module.is_some() {
                     self.hier_root.toggle_selected(module_idx);
                 }
-            },
-            _ => {
-                error!("Not implimented yet!");
             }
         }
     }
     pub fn view(&mut self) -> Element<Message> {
         let HierNav {
-            live_module,
             scroll_x,
             hier_root,
+            ..
         } = self;
 
         let content = Container::new(hier_root.view())

@@ -1,7 +1,7 @@
 use crate::components::menu_bar::Message as MenuMessage;
 use wave2_wavedb::inout::wave_loader::load_vcd;
 
-use crate::{Message, State, Wave2};
+use crate::{Message, State};
 use iced::Command;
 
 pub fn menu_update(

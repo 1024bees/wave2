@@ -55,8 +55,6 @@ where
 
         let mut primitives = vec![bg];
 
-        let mut header_offset: usize = 0;
-
         let bounds = Rectangle {
             x: bounds.x,
             y: bounds.y,

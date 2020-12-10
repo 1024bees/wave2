@@ -2,15 +2,11 @@ use crate::errors::Waverr;
 use crate::wavedb::WaveDB;
 use crate::InMemWave;
 
+use crate::hier_map::{HierMap, SignalItem};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::path::Path;
 use std::sync::Arc;
-use log::info;
-use crate::hier_map::{HierMap, ModuleItem, SignalItem};
-
-
-
 
 /// Interface provided to wave2 for querying signal hierarchy
 #[derive(Debug)]
@@ -35,8 +31,8 @@ impl From<WaveDB> for WdbAPI {
 
 ///External API to use when interacting with WaveDB instances
 impl WdbAPI {
-    /// We clone self when calling 
-    
+    /// We clone self when calling
+
     pub fn open_from_vcd(path_to_vcd: &str) -> Result<WdbAPI, Waverr> {
         let wdb_path = format!("/tmp/wavedb/{}/wdb", quick_hash(&path_to_vcd));
         Ok(WdbAPI {
@@ -52,30 +48,30 @@ impl WdbAPI {
     }
 
     /// Get the signal content associated with this path
-    pub fn get_signal_content(&self, sig_path: String) -> InMemWave {
+    pub fn get_signal_content(&self) -> InMemWave {
         unimplemented!()
     }
 
-    pub async fn get_signals(api : Arc<WdbAPI>, signal: SignalItem) -> Result<Arc<InMemWave>, Arc<Waverr>> {
+    pub async fn get_signals(
+        api: Arc<WdbAPI>,
+        signal: SignalItem,
+    ) -> Result<Arc<InMemWave>, Arc<Waverr>> {
         let (sig_name, sig_id) = SignalItem::destructure(signal);
         api.wdb.get_imw_id(sig_name, sig_id)
     }
 
-
     /// Get the names of all signals that exist within this module (that are visible to wavedb)
     ///
-    pub async fn get_module_signals(api: Arc<WdbAPI>, module_idx: usize) -> Arc<Vec<SignalItem>> {
-        Arc::new(api.as_ref().wdb.hier_map
-            .get_module_signals_vec(module_idx))
+    pub async fn get_module_signals(
+        api: Arc<WdbAPI>,
+        module_idx: usize,
+    ) -> Arc<Vec<SignalItem>> {
+        Arc::new(api.as_ref().wdb.hier_map.get_module_signals_vec(module_idx))
     }
-
-    
-
-
 
     /// Get module names underneath module_path
     /// TODO: encode if there is a submodule here
-    pub fn get_submodules(&self, module_path: String) -> &[String] {
+    pub fn get_submodules(&self) -> &[String] {
         unimplemented!()
     }
 }

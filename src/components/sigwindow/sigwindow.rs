@@ -1,15 +1,12 @@
 use super::display_wave::{DisplayedWave, WaveDisplayOptions};
 use super::wavewindow;
-use iced::{
-    button, pane_grid, scrollable, text_input, Align, Column, Container,
-    Element, PaneGrid, Row, Scrollable, TextInput,
-};
+use iced::{Column, Container, Element, Row};
 use log::info;
 use std::sync::Arc;
 use wave2_custom_widgets::widget::cell_list;
 use wave2_custom_widgets::widget::cell_list::CellList;
-use wave2_wavedb::InMemWave;
 use wave2_wavedb::errors::Waverr;
+use wave2_wavedb::InMemWave;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 //TODO: add options, move to its own module?
@@ -32,9 +29,9 @@ impl std::fmt::Display for WaveOptions {
     }
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub enum Message {
-    AddWave(Result<Arc<InMemWave>,Arc<Waverr>>),
+    AddWave(Result<Arc<InMemWave>, Arc<Waverr>>),
     RemoveWave(usize),
     SetOpts(u32, WaveDisplayOptions),
     WWMessage(wavewindow::Message),
@@ -46,7 +43,6 @@ pub struct SigViewer {
     waves_state: cell_list::State<WaveOptions>,
     wavewindow: wavewindow::WaveWindowState,
     live_waves: Vec<DisplayedWave>,
-    scroll_x: scrollable::State,
 }
 
 impl Default for SigViewer {
@@ -55,7 +51,6 @@ impl Default for SigViewer {
             waves_state: cell_list::State::default(),
             wavewindow: wavewindow::WaveWindowState::default(),
             live_waves: Vec::default(),
-            scroll_x: scrollable::State::default(),
         }
     }
 }
@@ -97,7 +92,6 @@ impl SigViewer {
             waves_state,
             wavewindow,
             live_waves,
-            scroll_x,
         } = self;
 
         //TODO: move message logic out of wavewindow
@@ -113,15 +107,10 @@ impl SigViewer {
             .max_height(800)
             .push(ww);
 
-        let cl = CellList::new(
-            waves_state,
-            &live_waves[..],
-            &WaveOptions::ALL,
-//            Message::CellListPlaceholder,
-        )
-        .text_size(12)
-        .heading("Time".into())
-        .heading_size(10);
+        let cl = CellList::new(waves_state, &live_waves[..], &WaveOptions::ALL)
+            .text_size(12)
+            .heading("Time".into())
+            .heading_size(10);
 
         let pick_list = Column::new()
             .push(cl)

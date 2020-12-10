@@ -1,5 +1,5 @@
 use iced_native::{
-    keyboard, layout, mouse, overlay,
+    layout, mouse, overlay,
     overlay::menu::{self, Menu},
     scrollable, text, Clipboard, Element, Event, Hasher, Layout, Length, Point,
     Rectangle, Size, Widget,
@@ -51,7 +51,6 @@ pub struct State<O> {
     last_click: Option<mouse::Click>,
     menu_last_selection: Option<O>,
 }
-
 
 impl<O> State<O> {
     pub fn set_selected(&mut self, select_val: bool) {
@@ -172,15 +171,10 @@ where
     /// Useful when you have a collection of Cells, where select logic should be mutually exclusive
     ///
     /// [`Cell`]: struct.Cell.html
-    pub fn override_selected(
-        mut self,
-        override_select: bool
-    ) -> Self {
+    pub fn override_selected(mut self, override_select: bool) -> Self {
         self.overriden_selected = Some(override_select);
         self
     }
-
-
 
     /// Closure to generate the message when the Cell is left clicked
     ///
@@ -203,9 +197,6 @@ where
         self.on_double_click = Some(Box::new(dbl_click));
         self
     }
-
-
-
 }
 
 impl<'a, T: 'a, O: 'a, Message, Renderer> Widget<Message, Renderer>
@@ -263,7 +254,7 @@ where
         layout: Layout<'_>,
         cursor_position: Point,
         messages: &mut Vec<Message>,
-        renderer: &Renderer,
+        _renderer: &Renderer,
         _clipboard: Option<&dyn Clipboard>,
     ) {
         let bounds = layout.bounds();
@@ -307,7 +298,6 @@ where
                     }
                     *self.last_click = Some(click);
                 }
-                
             }
 
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right)) => {
@@ -325,9 +315,6 @@ where
                 }
             }
             Event::Mouse(mouse::Event::CursorMoved { .. }) => {
-                let text_size =
-                    self.text_size.unwrap_or(renderer.default_size());
-
                 let bounds = layout.bounds();
 
                 if bounds.contains(cursor_position) {
@@ -383,7 +370,6 @@ where
             }
 
             //FIXME: this is some bullshit default; if we dont set text this is broken as hell
-            let text_size = self.text_size.unwrap_or(8);
             info!("Bounds height is {}", bounds.height);
             Some(menu.overlay(*self.menu_point, 0.0)) //(self.options.len() * ( 2 * self.padding + text_size ) as usize) as f32))
         } else {

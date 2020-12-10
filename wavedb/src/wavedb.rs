@@ -5,7 +5,6 @@ use crate::{Bucket, InMemWave, DEFAULT_SLIZE_SIZE};
 use bincode;
 use serde::{Deserialize, Serialize};
 use sled::Db;
-use log::warn;
 use std::collections::HashMap;
 use std::path::*;
 use std::sync::Arc;
@@ -57,14 +56,6 @@ impl WaveDB {
     }
 
     fn load_config(&mut self) -> Result<(), Waverr> {
-        //for key in  self.db.iter() {
-        //    if let Ok(kv) = key {
-        //        let key = std::str::from_utf8(kv.0.as_ref()).unwrap(); 
-        //        let value = std::str::from_utf8(kv.1.as_ref()).unwrap(); 
-        //        warn!("key is {}, value is {}",key,value);
-        //    } 
-        //}
-        //warn!("we tried i guess");
         if let Ok(Some(rawbytes)) = self.db.get("config") {
             let config: WDBConfig = toml::from_slice(rawbytes.as_ref())?;
             self.config = config;
@@ -156,7 +147,11 @@ impl WaveDB {
                     if !bucket_mapper.contains_key(&code) {
                         bucket_mapper.insert(
                             code,
-                            Bucket::new(code.0 as u32, vvalue.len(), current_range),
+                            Bucket::new(
+                                code.0 as u32,
+                                vvalue.len(),
+                                current_range,
+                            ),
                         );
                     }
                     let bucket = bucket_mapper.get_mut(&code).unwrap();
@@ -166,7 +161,7 @@ impl WaveDB {
                     if !bucket_mapper.contains_key(&code) {
                         bucket_mapper.insert(
                             code,
-                            Bucket::new(code.0 as u32,1, current_range),
+                            Bucket::new(code.0 as u32, 1, current_range),
                         );
                     }
                     let bucket = bucket_mapper.get_mut(&code).unwrap();
@@ -192,8 +187,10 @@ impl WaveDB {
     fn insert_bucket(&self, bucket: &Bucket) -> Result<(), Waverr> {
         let tree: sled::Tree = self.db.open_tree(bucket.get_db_idx())?;
         let serialized = serde_json::to_string(&bucket)?;
-        
-        if let Ok(Some(_)) = tree.insert(bucket.id.to_be_bytes(), serialized.as_str()) {
+
+        if let Ok(Some(_)) =
+            tree.insert(bucket.id.to_be_bytes(), serialized.as_str())
+        {
             // is problematic; implies that this value was previously set and we are
             // overwriting it. We should write only once per bucket
             return Err(Waverr::BucketErr {
@@ -222,7 +219,11 @@ impl WaveDB {
         })
     }
 
-    pub fn get_imw_id(&self, sig_name: String, sig_id : u32) -> Result<Arc<InMemWave>, Arc<Waverr>> {
+    pub fn get_imw_id(
+        &self,
+        sig_name: String,
+        sig_id: u32,
+    ) -> Result<Arc<InMemWave>, Arc<Waverr>> {
         let buckets: Vec<Result<Bucket, Waverr>> = self
             .get_time_slices()
             .map(|start_slice| self.retrieve_bucket(sig_id, start_slice))
@@ -231,13 +232,11 @@ impl WaveDB {
         InMemWave::new(sig_name, buckets)
             .map_err(|err| Arc::new(err))
             .map(|imw| Arc::new(imw))
-
     }
-
 
     pub fn get_imw(&self, sig: String) -> Result<Arc<InMemWave>, Arc<Waverr>> {
         let id = self.get_id(sig.as_str())?;
-        self.get_imw_id(sig,id)
+        self.get_imw_id(sig, id)
     }
 
     #[inline]
@@ -248,37 +247,37 @@ impl WaveDB {
 }
 
 #[cfg(test)]
+#[allow(dead_code, unused_macros, unused_imports, unused_variables)]
 mod tests {
     use crate::wavedb::*;
     use std::path::*;
 
     #[test]
     fn bucket_serde() {
-        let mut in_bucket = Bucket::default();
+        let in_bucket = Bucket::default();
         let serialized = serde_json::to_string(&in_bucket).unwrap();
 
-        let out_bucket : Bucket = serde_json::from_slice(serialized.as_ref()).unwrap();
+        let out_bucket: Bucket =
+            serde_json::from_slice(serialized.as_ref()).unwrap();
     }
 
-
     #[test]
+    #[allow(unused_must_use)]
     fn insert_sanity() {
         std::fs::remove_dir_all("TestDB");
-        let mut tdb = WaveDB::new("TestDB".into(), None);
+        let tdb = WaveDB::new("TestDB".into(), None);
         let mut in_bucket = Bucket::default();
         in_bucket.id = 1;
         match tdb.insert_bucket(&in_bucket) {
             Ok(()) => (),
-            Err(err) => panic!("Inserting bucket sanity errored with {}",err)
+            Err(err) => panic!("Inserting bucket sanity errored with {}", err),
         }
 
         let bucket = tdb.retrieve_bucket(1, 0);
         match bucket {
-            Ok(payload) => {
-                ()
-            }
+            Ok(payload) => (),
             Err(err) => {
-                panic!("Retrieving buccket fails with {}",err);
+                panic!("Retrieving buccket fails with {}", err);
             }
         }
     }

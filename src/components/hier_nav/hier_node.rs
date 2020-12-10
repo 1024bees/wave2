@@ -1,16 +1,12 @@
 use crate::components::hier_nav::hier_nav::{HierOptions, Message};
-use iced::{
-    button, scrollable, text_input, Align, Button, Column, Container, Element,
-    Length, Row, Scrollable, Text, TextInput,
-};
-use log::{error, warn};
+use iced::{button, Button, Column, Element, Length, Row, Text};
+use log::warn;
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
 use wave2_custom_widgets::widget::cell;
 use wave2_custom_widgets::widget::cell::Cell as VizCell;
-use wave2_wavedb::hier_map::{HierMap, ModuleItem, SignalItem};
+use wave2_wavedb::hier_map::{HierMap, ModuleItem};
 
 #[derive(Debug, Clone, Default)]
 struct ModuleWrapper {
@@ -38,18 +34,15 @@ pub struct HierNode {
     children: Vec<HierNode>,
     ui_state: cell::State<HierOptions>,
     expanded_button: button::State,
-    shared_state : SharedNodeState,
+    shared_state: SharedNodeState,
     payload: ModuleWrapper,
 }
 
-
-#[derive(Default,Debug,Clone)]
+#[derive(Default, Debug, Clone)]
 struct SharedNodeState {
     pub expanded: Rc<Cell<bool>>,
     pub selected: Rc<Cell<bool>>,
 }
-
-
 
 #[derive(Debug, Default)]
 pub struct HierRoot {
@@ -58,32 +51,6 @@ pub struct HierRoot {
 }
 
 impl HierRoot {
-    pub fn expand_module<S: Into<String>>(
-        &self,
-        in_path: S,
-    ) -> Result<(), &'static str> {
-        let path = in_path.into();
-        let scope_list: Vec<&str> = path.split(".").collect();
-        let mut hierarchy_ptr: &Vec<HierNode> = &self.root_vec;
-        let mut mutator: Option<&HierNode> = None;
-        for scope in scope_list {
-            mutator = None;
-            for node in hierarchy_ptr {
-                if scope == node.payload.name {
-                    hierarchy_ptr = &node.children;
-                    mutator = Some(node);
-                    break;
-                }
-            }
-        }
-        if let Some(expandee) = mutator {
-            expandee.shared_state.expanded.set(!expandee.shared_state.expanded.get());
-            Ok(())
-        } else {
-            Err("Trying to expand nonexistent path; TODO: refactor this error")
-        }
-    }
-
     pub fn update_expander(&mut self, module_idx: usize) {
         let exp = self.flat_expander_map.get(&module_idx);
         if let Some(real_expander) = exp {
@@ -109,7 +76,6 @@ impl HierRoot {
             );
         }
     }
-
 
     pub fn view(&mut self) -> Element<Message> {
         let elements = self.root_vec.iter_mut().map(|x| x.view()).collect();
@@ -169,9 +135,8 @@ impl HierNode {
                 ..HierNode::default()
             }
         };
-        flat_expander_map.insert(rv.payload.hier_idx,rv.shared_state.clone());
+        flat_expander_map.insert(rv.payload.hier_idx, rv.shared_state.clone());
         rv
-
     }
 
     pub fn view(&mut self) -> Element<Message> {
@@ -184,7 +149,6 @@ impl HierNode {
         } = self;
 
         let expanded_val = shared_state.expanded.get();
-        
 
         let expander = Button::new(
             expanded_button,

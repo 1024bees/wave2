@@ -1,21 +1,17 @@
 use iced::{
     canvas::{self, Canvas, Cursor, Event, Frame, Geometry, Path, Stroke},
-    mouse, Button, Color, Element, HorizontalAlignment, Length, Point,
-    Rectangle, Text,
+    mouse, Color, Element, HorizontalAlignment, Length, Point, Rectangle,
 };
 
-use super::display_wave::{DisplayedWave, WaveDisplayOptions};
-use iced::{button, scrollable, text_input, Align, Column, TextInput};
+use super::display_wave::DisplayedWave;
 use log::info;
 
-
-use wave2_wavedb::{SigType};
+use wave2_wavedb::SigType;
 
 pub const BUFFER_PX: f32 = 4.0;
 pub const WAVEHEIGHT: f32 = 19.0;
 pub const VEC_SHIFT_WIDTH: f32 = 4.0;
 pub const MAX_NUM_TEXT_HEADERS: u32 = 30;
-pub const TEXT_OFFSET: f32 = WAVEHEIGHT / 2.0;
 pub const TS_FONT_SIZE: f32 = 8.0;
 
 /// If we try to put a timestamp too close to the start of the wave window
@@ -77,7 +73,7 @@ impl WaveWindowState {
         Canvas::new(WaveWindow {
             signals: signals,
             state: self,
-            // FIXME: This is Disgusting and needs to be refactored 
+            // FIXME: This is Disgusting and needs to be refactored
             cur_state: self.cursor_state.clone(),
         })
         .width(Length::Fill)
@@ -85,18 +81,19 @@ impl WaveWindowState {
         .into()
     }
 
-    pub fn update(&mut self, message : Message) {
+    pub fn update(&mut self, message: Message) {
         match message {
             Message::UpdateCursor(cursor_state) => {
                 self.cursor_state = cursor_state;
-                info!("received click location is {}",self.cursor_state.cursor_location);
+                info!(
+                    "received click location is {}",
+                    self.cursor_state.cursor_location
+                );
                 self.redraw_cursor();
                 info!("Drawing cursor");
-
             }
         }
     }
-
 
     pub fn request_redraw(&mut self) {
         self.cache.clear()
@@ -111,7 +108,7 @@ impl<'a> WaveWindow<'a> {
     fn get_timestamp(&self, bounds: Rectangle, xcoord: f32) -> u32 {
         let ts_width =
             (self.cur_state.view_range.1 - self.cur_state.view_range.0) as f32;
-        info!("xcoord location is {}",xcoord);
+        info!("xcoord location is {}", xcoord);
         self.cur_state.view_range.0
             + (ts_width * ((xcoord) / bounds.width)) as u32
     }
@@ -130,7 +127,6 @@ impl<'a> WaveWindow<'a> {
     }
 
     fn x_abs_cursor(&self, bounds: &Rectangle) -> f32 {
-
         self.x_abs(self.cur_state.cursor_location, bounds)
     }
 
@@ -161,7 +157,7 @@ impl<'a> WaveWindow<'a> {
         let mut xpos: f32 = 0.0;
         let hdr_line = Point {
             x: bounds.x,
-            y: TS_FONT_SIZE,//+ bounds.y ,
+            y: TS_FONT_SIZE, //+ bounds.y ,
         };
         let boundary_line = Path::new(|p| {
             p.move_to(hdr_line);
@@ -180,7 +176,7 @@ impl<'a> WaveWindow<'a> {
                     content: format!("{}ns", ts),
                     position: Point {
                         x: xpos,
-                        y: 0.0,//bounds.y,
+                        y: 0.0, //bounds.y,
                     },
                     color: GREEN,
                     size: TS_FONT_SIZE,
@@ -198,8 +194,7 @@ impl<'a> WaveWindow<'a> {
     }
 
     fn draw_cursor(&self, frame: &mut Frame, bounds: Rectangle) {
-        let cur_pos: Point =
-            [self.x_abs_cursor(&bounds), TS_FONT_SIZE].into();
+        let cur_pos: Point = [self.x_abs_cursor(&bounds), TS_FONT_SIZE].into();
         let cursor_line = Path::new(|p| {
             p.move_to(cur_pos);
             p.line_to(Point {
@@ -257,13 +252,13 @@ impl<'a> WaveWindow<'a> {
                             working_pt.x += fin_x_delt;
                             p.line_to(working_pt);
                         }
-                        SigType::Vector(width) => {
+                        SigType::Vector(_width) => {
                             let working_pt_top = Point {
                                 y: working_pt.y - WAVEHEIGHT,
                                 ..working_pt
                             };
                             let mut working_pts = [working_pt_top, working_pt];
-                            for (time, sig_payload) in wave.changes() {
+                            for (time, _sig_payload) in wave.changes() {
                                 let x_delt = self.xdelt_from_prev(
                                     *time,
                                     prev_xcoord,
@@ -340,7 +335,10 @@ impl<'a> canvas::Program<Message> for WaveWindow<'a> {
                 mouse::Event::ButtonReleased(mouse::Button::Left) => {
                     self.cur_state.cursor_location =
                         self.get_timestamp(bounds, cursor_position.x);
-                    info!("click location is {}",self.cur_state.cursor_location);
+                    info!(
+                        "click location is {}",
+                        self.cur_state.cursor_location
+                    );
                     Some(Message::UpdateCursor(self.cur_state.clone()))
                 }
                 _ => None,

@@ -1,12 +1,4 @@
-use iced::{
-    button, scrollable, text_input, Align, Button, Column, Container, Element,
-    Length, Row, Scrollable, Text, TextInput,
-};
-
-use log::error;
-use std::cell::Cell;
-use std::sync::{Arc, Mutex};
-use wave2_wavedb::hier_map::{HierMap, ModuleItem, SignalItem};
+use iced::{button, Button, Element, Text};
 
 #[derive(Debug, Clone)]
 pub enum Message {

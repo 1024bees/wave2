@@ -23,7 +23,6 @@ where
     cursor_held: &'a mut bool,
     menu_open: &'a mut bool,
     menu_point: &'a mut Point,
-    can_select_multiple: &'a mut bool,
     hovered_option: &'a mut Option<usize>,
     last_selection: &'a mut Vec<usize>,
     menu_hovered_option: &'a mut Option<usize>,
@@ -50,7 +49,6 @@ where
 pub struct State<O> {
     menu: menu::State,
     //TODO: put control flags into struct
-    can_select_multiple: bool,
     bulk_select: bool,
     ctrl_select: bool,
     cursor_held: bool,
@@ -61,14 +59,12 @@ pub struct State<O> {
     menu_hovered_option: Option<usize>,
     menu_last_selection: Option<O>,
     last_click: Option<mouse::Click>,
-
 }
 
 impl<O> Default for State<O> {
     fn default() -> Self {
         Self {
             menu: menu::State::default(),
-            can_select_multiple: bool::default(),
             bulk_select: bool::default(),
             ctrl_select: bool::default(),
             cursor_held: bool::default(),
@@ -78,7 +74,7 @@ impl<O> Default for State<O> {
             last_selection: Vec::new(),
             menu_hovered_option: Option::default(),
             menu_last_selection: Option::default(),
-            last_click : Option::default(),
+            last_click: Option::default(),
         }
     }
 }
@@ -98,11 +94,10 @@ where
     pub fn new(
         state: &'a mut State<O>,
         items: &'a [T],
-        menu_options: &'a [O]
+        menu_options: &'a [O],
     ) -> Self {
         let State {
             menu,
-            can_select_multiple,
             bulk_select,
             ctrl_select,
             cursor_held,
@@ -122,7 +117,6 @@ where
             cursor_held,
             menu_open,
             menu_point,
-            can_select_multiple,
             hovered_option,
             last_selection,
             heading: None,
@@ -132,7 +126,7 @@ where
             menu_last_selection,
             last_click,
             on_click: None,
-            on_double_click : None,
+            on_double_click: None,
             width: Length::Shrink,
             text_size: None,
             heading_size: None,
@@ -211,8 +205,6 @@ where
         self.on_double_click = Some(Box::new(dbl_click));
         self
     }
-
-
 
     /// Sets the style of the [`CellList`].
     ///
@@ -306,7 +298,7 @@ where
                     }
                 } else if bounds.contains(cursor_position) {
                     if let Some(index) = *self.hovered_option {
-                        if let Some(option) = self.items.get(index) {
+                        if let Some(_) = self.items.get(index) {
                             match (*self.ctrl_select, *self.bulk_select) {
                                 (true, _) => {
                                     if self.last_selection.contains(&index) {
@@ -333,13 +325,19 @@ where
                                 (false, false) => {
                                     self.last_selection.clear();
                                     self.last_selection.push(index);
-                                    let click =
-                                    mouse::Click::new(cursor_position, *self.last_click);
+                                    let click = mouse::Click::new(
+                                        cursor_position,
+                                        *self.last_click,
+                                    );
 
                                     match click.kind() {
                                         mouse::click::Kind::Single => {
-                                            if let Some(ref click_generator) = self.on_click {
-                                                messages.push(click_generator(&self.items[index]));
+                                            if let Some(ref click_generator) =
+                                                self.on_click
+                                            {
+                                                messages.push(click_generator(
+                                                    &self.items[index],
+                                                ));
                                             }
                                         }
                                         mouse::click::Kind::Double
@@ -347,16 +345,12 @@ where
                                             if let Some(ref dbl_click_gen) =
                                                 self.on_double_click
                                             {
-                                                messages.push(dbl_click_gen(&self.items[index]));
+                                                messages.push(dbl_click_gen(
+                                                    &self.items[index],
+                                                ));
                                             }
                                         }
                                     }
-
-
-
-
-
-
                                 }
                             }
                         }
@@ -460,8 +454,6 @@ where
                 menu = menu.text_size(text_size);
             }
 
-            //FIXME: this is some bullshit default; if we dont set text this is broken as hell
-            let text_size = self.text_size.unwrap_or(8);
             info!("Bounds height is {}", bounds.height);
             Some(menu.overlay(*self.menu_point, 0.0)) //(self.options.len() * ( 2 * self.padding + text_size ) as usize) as f32))
         } else {

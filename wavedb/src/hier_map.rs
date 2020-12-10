@@ -1,7 +1,6 @@
 use crate::errors::Waverr;
 use serde::{Deserialize, Serialize};
-use std::cell::Cell;
-use vcd::{IdCode, Scope, ScopeItem};
+use vcd::ScopeItem;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct HierMap {
@@ -43,9 +42,11 @@ impl HierMap {
         for mod_name in module_list[1..].iter() {
             let cm: &ModuleItem = &self.module_list[idx];
             for child in cm.submodules.iter().cloned() {
-                if self.module_list[child].name == *mod_name {
-                    idx = child;
-                }
+                idx = if self.module_list[child].name == *mod_name {
+                    child
+                } else {
+                    idx
+                };
                 continue;
             }
             return Err(Waverr::HierMapError("Cannot find module in abs path"));
@@ -95,10 +96,12 @@ impl HierMap {
 
     /// Get the signals of the "live" module. This is exposed to wave2 app
     /// for filling in the signal navigator
-    pub fn get_module_signals_vec(&self, live_module: usize) -> Vec<SignalItem> {
+    pub fn get_module_signals_vec(
+        &self,
+        live_module: usize,
+    ) -> Vec<SignalItem> {
         self.module_list[live_module].signals.clone()
     }
-
 
     /// Map absolute path -> signal id
     /// This is to support the older API of an ID map, where raw paths can map directly
@@ -143,14 +146,13 @@ impl HierMap {
 
 impl From<vcd::Header> for HierMap {
     fn from(header: vcd::Header) -> HierMap {
-        let mut HierMapVec: Vec<ModuleItem> = Vec::new();
-        let mut TopMods: Vec<usize> = Vec::new();
-        let mut parentmod: Option<usize> = None;
-        let mut livemod_ref: usize = 0;
+        let mut hiermap_vec: Vec<ModuleItem> = Vec::new();
+        let mut top_mods: Vec<usize> = Vec::new();
+        let livemod_ref: usize = 0;
 
         fn recurse_parse(
             map: &mut Vec<ModuleItem>,
-            TopMods: &mut Vec<usize>,
+            top_mods: &mut Vec<usize>,
             items: Vec<ScopeItem>,
             livemod_ref: usize,
             parent_mod: Option<usize>,
@@ -173,14 +175,14 @@ impl From<vcd::Header> for HierMap {
                         let new_idx = map.len() - 1;
 
                         if parent_mod.is_none() {
-                            TopMods.push(new_idx);
+                            top_mods.push(new_idx);
                         } else {
                             map[livemod_ref].add_child(new_idx);
                         }
 
                         recurse_parse(
                             map,
-                            TopMods,
+                            top_mods,
                             scope.children,
                             map.len() - 1,
                             Some(livemod_ref),
@@ -191,16 +193,16 @@ impl From<vcd::Header> for HierMap {
         }
 
         recurse_parse(
-            &mut HierMapVec,
-            &mut TopMods,
+            &mut hiermap_vec,
+            &mut top_mods,
             header.items,
             livemod_ref,
             None,
         );
 
         HierMap {
-            module_list: HierMapVec,
-            top_indices: TopMods,
+            module_list: hiermap_vec,
+            top_indices: top_mods,
         }
     }
 }
@@ -250,7 +252,7 @@ impl SignalItem {
     pub fn id(&self) -> u32 {
         self.1
     }
-    pub fn destructure(item : SignalItem) -> (String, u32) {
+    pub fn destructure(item: SignalItem) -> (String, u32) {
         (item.0, item.1)
     }
 }
@@ -260,7 +262,7 @@ impl ToString for SignalItem {
         self.0.clone()
     }
 }
-
+#[allow(dead_code, unused_macros, unused_imports)]
 mod tests {
     use crate::*;
     use std::collections::HashSet;

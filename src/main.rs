@@ -1,6 +1,6 @@
 use iced::{
-    pane_grid, Application, Column, Command, Container, Element,
-    HorizontalAlignment, Length, PaneGrid, Row, Settings, Text,
+    pane_grid, Application, Command, Container, Element, HorizontalAlignment,
+    Length, PaneGrid, Row, Settings, Text,
 };
 
 use clap::Clap;
@@ -15,13 +15,11 @@ use log::{info, warn};
 use std::path::PathBuf;
 use wave2_wavedb::api::WdbAPI;
 use wave2_wavedb::errors::Waverr;
-use wave2_wavedb::inout::wave_loader::load_vcd;
-use wave2_wavedb::wavedb::WaveDB;
-
 
 #[derive(Clap, Default)]
 #[clap(version = "0.0", author = "Jimmy C <jimmy@1024bees.com>")]
 #[cfg(not(target_arch = "wasm32"))]
+#[allow(dead_code)]
 struct Opts {
     #[clap(short, long, default_value = "~/..conf")]
     config: PathBuf,
@@ -34,12 +32,7 @@ struct Opts {
 }
 
 impl Opts {
-    async fn load(opt: Opts) -> Result<(), std::io::Error> {
-        let Opts {
-            config,
-            wdbpath,
-            vcdpath,
-        } = opt;
+    async fn load(_opt: Opts) -> Result<(), std::io::Error> {
         Ok(())
     }
 }
@@ -47,12 +40,12 @@ impl Opts {
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
     let opts: Opts = Clap::parse();
-    let mut settings: Settings<Opts> = Settings {
+    let settings: Settings<Opts> = Settings {
         flags: opts,
         ..Settings::default()
     };
     env_logger::init();
-    Wave2::run(settings);
+    Wave2::run(settings).expect("Fatal error during initialization");
 }
 
 pub struct State {
@@ -149,9 +142,6 @@ impl Content {
     }
 }
 
-
-
-
 impl Application for Wave2 {
     type Executor = iced::executor::Default;
     type Message = Message;
@@ -168,13 +158,11 @@ impl Application for Wave2 {
         String::from("Wave2")
     }
 
-    
-
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match self {
             Wave2::Loading => {
                 match message {
-                    Message::Loaded(Ok(void)) => {
+                    Message::Loaded(Ok(_)) => {
                         let sig_viewer =
                             Content::SigView(sigwindow::SigViewer::default());
                         let mod_nav = Content::ModNav(
@@ -230,43 +218,53 @@ impl Application for Wave2 {
                                     .panes
                                     .get_mut(&state.hn_pane)
                                     .unwrap()
-                                    .update(Message::HNMessage(hn_message.clone()));
-
+                                    .update(Message::HNMessage(
+                                        hn_message.clone(),
+                                    ));
 
                                 //FIXME: this work should definitely be done in a command
-                                return Command::perform(WdbAPI::get_module_signals(state.get_api(),module_idx) ,
-                                    move |vector| Message::MNMessage(module_nav::Message::SignalUpdate(vector)));
-
-                            },
-                            _ => {
-                                state
-                                    .panes
-                                    .get_mut(&state.hn_pane)
-                                    .unwrap()
-                                    .update(Message::HNMessage(hn_message))
-
+                                return Command::perform(
+                                    WdbAPI::get_module_signals(
+                                        state.get_api(),
+                                        module_idx,
+                                    ),
+                                    move |vector| {
+                                        Message::MNMessage(
+                                            module_nav::Message::SignalUpdate(
+                                                vector,
+                                            ),
+                                        )
+                                    },
+                                );
                             }
-
+                            _ => state
+                                .panes
+                                .get_mut(&state.hn_pane)
+                                .unwrap()
+                                .update(Message::HNMessage(hn_message)),
                         }
+                    }
+                    Message::MNMessage(mn_message) => match mn_message {
+                        module_nav::Message::AddSig(signal_item) => {
+                            return Command::perform(
+                                WdbAPI::get_signals(
+                                    state.get_api(),
+                                    signal_item,
+                                ),
+                                move |wave| {
+                                    Message::SVMessage(
+                                        sigwindow::Message::AddWave(wave),
+                                    )
+                                },
+                            );
+                        }
+
+                        _ => state
+                            .panes
+                            .get_mut(&state.mn_pane)
+                            .unwrap()
+                            .update(Message::MNMessage(mn_message)),
                     },
-                    Message::MNMessage(mn_message) => {
-                        match mn_message {
-                            module_nav::Message::AddSig(signal_item) => {
-                                return Command::perform(WdbAPI::get_signals(state.get_api(),signal_item),
-                                    move |wave| Message::SVMessage(sigwindow::Message::AddWave(wave)));
-
-                            }
-
-
-                            _ => {
-                                state
-                                    .panes
-                                    .get_mut(&state.mn_pane)
-                                    .unwrap()
-                                    .update(Message::MNMessage(mn_message))
-                            }
-                    }
-                    }
                     Message::LoadWDB(payload) => match payload {
                         Ok(wdb_api) => {
                             state.wdb_api = Some(wdb_api);
@@ -278,7 +276,12 @@ impl Application for Wave2 {
                                 .unwrap()
                                 .update(Message::HNMessage(
                                     hier_nav::Message::SetHier(
-                                        state.wdb_api.as_ref().unwrap().get_hier_map().clone(),
+                                        state
+                                            .wdb_api
+                                            .as_ref()
+                                            .unwrap()
+                                            .get_hier_map()
+                                            .clone(),
                                     ),
                                 ));
                         }
@@ -304,21 +307,22 @@ impl Application for Wave2 {
                 panes, menu_bar, ..
             }) => {
                 //all_content.into()
-                let pane_grid = PaneGrid::new(panes, |pane, content, focus| {
-                    let is_focused = focus.is_some();
-                    let title_bar =
-                        pane_grid::TitleBar::new(format!("Focused pane"))
-                            .padding(10);
+                let pane_grid =
+                    PaneGrid::new(panes, |_pane, content, _focus| {
+                        let title_bar =
+                            pane_grid::TitleBar::new(format!("Focused pane"))
+                                .padding(10);
 
-                    pane_grid::Content::new(content.view()).title_bar(title_bar)
-                })
-                .width(Length::Fill)
-                .height(Length::Fill)
-                //FIXME: causes int overflow in the glow backend
-                //.on_drag(|pane_data| Message::PaneMessage(PaneMessage::Dragged(pane_data)))
-                .on_resize(10, |resize_data| {
-                    Message::PaneMessage(PaneMessage::Resize(resize_data))
-                });
+                        pane_grid::Content::new(content.view())
+                            .title_bar(title_bar)
+                    })
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    //FIXME: causes int overflow in the glow backend
+                    //.on_drag(|pane_data| Message::PaneMessage(PaneMessage::Dragged(pane_data)))
+                    .on_resize(10, |resize_data| {
+                        Message::PaneMessage(PaneMessage::Resize(resize_data))
+                    });
 
                 let menu_bar_view =
                     menu_bar.view().map(|message| Message::MBMessage(message));
