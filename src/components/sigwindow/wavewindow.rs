@@ -193,6 +193,11 @@ impl<'a> WaveWindow<'a> {
         }
     }
 
+    fn out_of_range(&self,time : u32) -> bool {
+        time > self.end_window_time()
+    }
+
+
     fn draw_cursor(&self, frame: &mut Frame, bounds: Rectangle) {
         let cur_pos: Point = [self.x_abs_cursor(&bounds), TS_FONT_SIZE].into();
         let cursor_line = Path::new(|p| {
@@ -228,6 +233,10 @@ impl<'a> WaveWindow<'a> {
                     match wave.sig_type {
                         SigType::Bit => {
                             for (time, sig_payload) in wave.changes() {
+                                if self.out_of_range(time.clone()) {
+                                    break;
+                                }
+
                                 working_pt.x += self.xdelt_from_prev(
                                     *time,
                                     prev_xcoord,
@@ -243,7 +252,7 @@ impl<'a> WaveWindow<'a> {
                                 prev_xcoord = *time;
                                 p.line_to(working_pt);
                                 p.move_to(working_pt);
-                            }
+                            }                            
                             let fin_x_delt = self.xdelt_from_prev(
                                 self.end_window_time(),
                                 prev_xcoord,
@@ -259,6 +268,11 @@ impl<'a> WaveWindow<'a> {
                             };
                             let mut working_pts = [working_pt_top, working_pt];
                             for (time, _sig_payload) in wave.changes() {
+
+                                if self.out_of_range(time.clone()) {
+                                    break;
+                                }
+
                                 let x_delt = self.xdelt_from_prev(
                                     *time,
                                     prev_xcoord,

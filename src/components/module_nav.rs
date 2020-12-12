@@ -1,5 +1,5 @@
 use iced::{scrollable, Column, Container, Element, Length, Scrollable};
-use log::error;
+use log::{error,info};
 use std::sync::Arc;
 use strum_macros;
 
@@ -51,7 +51,7 @@ impl SignalNode {
         } = self;
         let local_offset = offset.clone();
         let sig_cell = VizCell::new(ui_state, payload, &SigOptions::ALL)
-            .on_double_click(|signal| Message::AddSig(signal.clone()))
+            .on_double_click(|signal| { info!("Double click!"); Message::AddSig(signal.clone())})
             .on_click(move |_| Message::ClickedItem(local_offset))
             .override_selected(selected.clone());
 

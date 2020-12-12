@@ -59,13 +59,16 @@ impl SigViewer {
     pub fn update(&mut self, message: Message) {
         match message {
             Message::AddWave(imw_res) => {
-                if let Ok(imw) = imw_res {
-                    info!("Ay booboo");
+                match imw_res {
+                    Ok(imw) => {
+                        info!("Ay booboo");
 
-                    self.live_waves.push(DisplayedWave::from(imw));
-                    self.wavewindow.request_redraw();
-                } else {
-                    info!("Cannot create InMemWave");
+                        self.live_waves.push(DisplayedWave::from(imw));
+                        self.wavewindow.request_redraw();
+                    },
+                    Err(err) => {
+                        info!("Cannot create InMemWave, err is {:#?}",err);
+                    }
                 }
             }
             Message::ClearWaves => {
