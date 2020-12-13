@@ -1,5 +1,5 @@
 use iced_native::{
-    layout, mouse, overlay,
+    layout, mouse, overlay, event,
     overlay::menu::{self, Menu},
     scrollable, text, Clipboard, Element, Event, Hasher, Layout, Length, Point,
     Rectangle, Size, Widget,
@@ -256,7 +256,7 @@ where
         messages: &mut Vec<Message>,
         _renderer: &Renderer,
         _clipboard: Option<&dyn Clipboard>,
-    ) {
+    ) -> event::Status {
         let bounds = layout.bounds();
 
         match event {
@@ -269,6 +269,7 @@ where
                         *self.menu_open = false;
                         *self.menu_last_selection = None;
                     }
+                    return event::Status::Captured;
                 } else if bounds.contains(cursor_position) {
                     let click =
                         mouse::Click::new(cursor_position, *self.last_click);
@@ -297,6 +298,7 @@ where
                         *self.selected = false;
                     }
                     *self.last_click = Some(click);
+                    return event::Status::Captured;
                 }
             }
 
@@ -311,6 +313,7 @@ where
                         );
                         *self.menu_last_selection = None;
                         *self.menu_last_selection = None;
+                        return event::Status::Captured;
                     }
                 }
             }
@@ -324,6 +327,7 @@ where
 
             _ => {}
         }
+        event::Status::Ignored
     }
 
     fn draw(
@@ -332,6 +336,7 @@ where
         _defaults: &Renderer::Defaults,
         layout: Layout<'_>,
         cursor_position: Point,
+        _viewport : &Rectangle,
     ) -> Renderer::Output {
         //TODO: redo this all
         self::Renderer::draw(

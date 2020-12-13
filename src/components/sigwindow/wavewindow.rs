@@ -3,6 +3,7 @@ use iced::{
     mouse, Color, Element, HorizontalAlignment, Length, Point, Rectangle,
 };
 
+use iced_native::event;
 use super::display_wave::DisplayedWave;
 use log::info;
 
@@ -341,8 +342,13 @@ impl<'a> canvas::Program<Message> for WaveWindow<'a> {
         event: Event,
         bounds: Rectangle,
         cursor: Cursor,
-    ) -> Option<Message> {
-        let cursor_position = cursor.position_in(&bounds)?;
+    ) -> (event::Status, Option<Message>) {
+        // TODO: Is there a more idiomatic way to do this? 
+        let cursor_position = if let Some(pos) = cursor.position_in(&bounds) {
+            pos 
+        } else {
+            return (event::Status::Ignored, None)
+        };
 
         match event {
             Event::Mouse(mouse_event) => match mouse_event {
@@ -353,11 +359,12 @@ impl<'a> canvas::Program<Message> for WaveWindow<'a> {
                         "click location is {}",
                         self.cur_state.cursor_location
                     );
-                    Some(Message::UpdateCursor(self.cur_state.clone()))
+                    (event::Status::Captured,Some(Message::UpdateCursor(self.cur_state.clone())))
                 }
-                _ => None,
+
+                _ =>   (event::Status::Captured,  None),
             },
-            _ => None,
+            _ => (event::Status::Ignored, None),
         }
     }
 

@@ -52,8 +52,8 @@ where
             bounds,
             background: style.background,
             border_color: Color::BLACK,
-            border_width: 1,
-            border_radius: 1,
+            border_width: 1.0,
+            border_radius: 1.0,
         };
 
         let mut primitives = vec![bg];
@@ -72,8 +72,8 @@ where
                 bounds: header_bounds,
                 background: style.heading_background,
                 border_color: Color::BLACK,
-                border_width: 1,
-                border_radius: 1,
+                border_width: 1.0,
+                border_radius: 1.0,
             });
 
             primitives.push(Primitive::Text {
@@ -112,8 +112,8 @@ where
                         bounds,
                         background: style.selected_background,
                         border_color: Color::BLACK,
-                        border_width: 1,
-                        border_radius: 1,
+                        border_width: 1.0,
+                        border_radius: 1.0,
                     });
                 }
                 false => {
@@ -121,8 +121,8 @@ where
                         bounds,
                         background: style.background,
                         border_color: Color::TRANSPARENT,
-                        border_width: 1,
-                        border_radius: 1,
+                        border_width: 1.0,
+                        border_radius: 1.0,
                     });
                 }
             }

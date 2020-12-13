@@ -308,7 +308,7 @@ impl Application for Wave2 {
             }) => {
                 //all_content.into()
                 let pane_grid =
-                    PaneGrid::new(panes, |_pane, content, _focus| {
+                    PaneGrid::new(panes, |_pane, content| {
                         let title_bar =
                             pane_grid::TitleBar::new(format!("Focused pane"))
                                 .padding(10);

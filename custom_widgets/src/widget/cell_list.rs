@@ -1,5 +1,5 @@
 use iced_native::{
-    keyboard, layout, mouse, overlay,
+    keyboard, layout, mouse, overlay, event,
     overlay::menu::{self, Menu},
     scrollable, text, Clipboard, Element, Event, Hasher, Layout, Length, Point,
     Rectangle, Size, Widget,
@@ -281,7 +281,7 @@ where
         messages: &mut Vec<Message>,
         renderer: &Renderer,
         _clipboard: Option<&dyn Clipboard>,
-    ) {
+    ) -> event::Status {
         let bounds = layout.bounds();
 
         match event {
@@ -296,6 +296,7 @@ where
                         *self.menu_open = false;
                         *self.menu_last_selection = None;
                     }
+                    return event::Status::Captured;
                 } else if bounds.contains(cursor_position) {
                     if let Some(index) = *self.hovered_option {
                         if let Some(_) = self.items.get(index) {
@@ -353,6 +354,8 @@ where
                                     }
                                 }
                             }
+                            return event::Status::Captured;
+
                         }
                     }
                 }
@@ -406,6 +409,8 @@ where
 
             _ => {}
         }
+        event::Status::Ignored
+
     }
 
     fn draw(
@@ -414,6 +419,7 @@ where
         _defaults: &Renderer::Defaults,
         layout: Layout<'_>,
         cursor_position: Point,
+        _viewport : &Rectangle,
     ) -> Renderer::Output {
         //TODO: redo this all
         self::Renderer::draw(
