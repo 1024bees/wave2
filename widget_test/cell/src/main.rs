@@ -67,8 +67,7 @@ impl Sandbox for Example {
         let cell = Cell::new(
             &mut self.pick_list,
             &Language::ALL[0],
-            &Menu::ALL,
-            Message::LanguageSelected,
+            &Menu::ALL
         );
 
         let container = Container::new(cell).width(Length::Units(400));

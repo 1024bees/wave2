@@ -37,6 +37,7 @@ tempfile = "3"
 members = [ "widget_test/wavewindow",
             "widget_test/cell_list",
             "widget_test/cell",
+            "widget_test/hscroll",
             "custom_widgets",
             "wavedb",
 ]
