@@ -67,7 +67,7 @@ impl<'a, Message, Renderer: self::Renderer> HScroll<'a, Message, Renderer> {
 
     /// Sets the height of the [`HScroll`].
     pub fn height(mut self, height: Length) -> Self {
-        self.content = self.content.width(height);
+        self.content = self.content.height(height);
         self
     }
 
@@ -154,7 +154,14 @@ where
         );
 
         let content = self.content.layout(renderer, &child_limits);
+
+
+
         let size = limits.resolve(content.size());
+        
+        info!("content size {:#?}",content.size());
+
+
 
         layout::Node::with_children(size, vec![content])
     }

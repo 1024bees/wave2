@@ -70,7 +70,7 @@ impl Sandbox for HScrollDemo {
                 .map(|variant| {
                     let mut hscroll = HScroll::new(&mut variant.state)
                         .padding(10)
-                        .width(Length::Fill)
+                        .width(Length::Shrink)
                         .height(Length::Fill)
                         .style(*theme)
                         .push(Text::new(variant.title));
