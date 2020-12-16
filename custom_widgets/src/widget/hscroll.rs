@@ -9,15 +9,18 @@ use iced_native::{
     Rectangle, Size, Vector, Widget
 };
 
+use log::info;
+
+
 use std::{f32, hash::Hash, u32};
 
-/// A widget that can vertically display an infinite amount of content with a
+/// A widget that can horizontally display an infinite amount of content with a
 /// scrollbar.
 #[allow(missing_debug_implementations)]
 pub struct HScroll<'a, Message, Renderer: self::Renderer> {
     state: &'a mut State,
-    height: Length,
-    max_height: u32,
+    width: Length,
+    max_width: u32,
     scrollbar_width: u16,
     scrollbar_margin: u16,
     scroller_width: u16,
@@ -30,8 +33,8 @@ impl<'a, Message, Renderer: self::Renderer> HScroll<'a, Message, Renderer> {
     pub fn new(state: &'a mut State) -> Self {
         HScroll {
             state,
-            height: Length::Shrink,
-            max_height: u32::MAX,
+            width: Length::Shrink,
+            max_width: u32::MAX,
             scrollbar_width: 10,
             scrollbar_margin: 0,
             scroller_width: 10,
@@ -58,29 +61,29 @@ impl<'a, Message, Renderer: self::Renderer> HScroll<'a, Message, Renderer> {
 
     /// Sets the width of the [`HScroll`].
     pub fn width(mut self, width: Length) -> Self {
-        self.content = self.content.width(width);
+        self.width = width;
         self
     }
 
     /// Sets the height of the [`HScroll`].
     pub fn height(mut self, height: Length) -> Self {
-        self.height = height;
+        self.content = self.content.width(height);
         self
     }
 
     /// Sets the maximum width of the [`HScroll`].
     pub fn max_width(mut self, max_width: u32) -> Self {
-        self.content = self.content.max_width(max_width);
+        self.max_width = max_width;
         self
     }
 
     /// Sets the maximum height of the [`HScroll`] in pixels.
     pub fn max_height(mut self, max_height: u32) -> Self {
-        self.max_height = max_height;
+        self.content = self.content.max_height(max_height);
         self
     }
 
-    /// Sets the horizontal alignment of the contents of the [`HScroll`] .
+    /// Sets the vertical alignment of the contents of the [`HScroll`] .
     pub fn align_items(mut self, align_items: Align) -> Self {
         self.content = self.content.align_items(align_items);
         self
@@ -128,11 +131,11 @@ where
     Renderer: self::Renderer,
 {
     fn width(&self) -> Length {
-        Widget::<Message, Renderer>::width(&self.content)
+        self.width
     }
 
     fn height(&self) -> Length {
-        self.height
+        Widget::<Message, Renderer>::height(&self.content)
     }
 
     fn layout(
@@ -141,13 +144,13 @@ where
         limits: &layout::Limits,
     ) -> layout::Node {
         let limits = limits
-            .max_height(self.max_height)
-            .width(Widget::<Message, Renderer>::width(&self.content))
-            .height(self.height);
+            .max_width(self.max_width)
+            .width(self.width)
+            .height(Widget::<Message, Renderer>::height(&self.content));
 
         let child_limits = layout::Limits::new(
-            Size::new(limits.min().width, 0.0),
-            Size::new(limits.max().width, f32::INFINITY),
+            Size::new(0.0, limits.min().height),
+            Size::new(f32::INFINITY, limits.max().height),
         );
 
         let content = self.content.layout(renderer, &child_limits);
@@ -196,7 +199,7 @@ where
                 // cursor availability.
                 // This will probably happen naturally once we add multi-window
                 // support.
-                Point::new(-1.0, cursor_position.y)
+                Point::new(cursor_position.x,-1.0)
             };
 
             self.content.on_event(
@@ -217,12 +220,15 @@ where
             match event {
                 Event::Mouse(mouse::Event::WheelScrolled { delta }) => {
                     match delta {
-                        mouse::ScrollDelta::Lines { x, .. } => {
+                        // FIXME: As I currently understand, ScrollDelta captures the movement of
+                        // the scroller of the mouse; this movement is still being grabbed in the y dimension,
+                        // I don't have a mouse that can scroll in x ...? 
+                        mouse::ScrollDelta::Lines { y, .. } => {
                             // TODO: Configurable speed (?)
-                            self.state.scroll(x * 60.0, bounds, content_bounds);
+                            self.state.scroll(y * 60.0, bounds, content_bounds);
                         }
-                        mouse::ScrollDelta::Pixels { x, .. } => {
-                            self.state.scroll(x, bounds, content_bounds);
+                        mouse::ScrollDelta::Pixels { y, .. } => {
+                            self.state.scroll(y, bounds, content_bounds);
                         }
                     }
 
@@ -320,7 +326,7 @@ where
 
         let content = {
             let cursor_position = if is_mouse_over && !is_mouse_over_scrollbar {
-                Point::new(cursor_position.x, cursor_position.y + offset as f32)
+                Point::new(cursor_position.x + offset as f32, cursor_position.y)
             } else {
                 Point::new(cursor_position.x, -1.0)
             };
@@ -331,7 +337,7 @@ where
                 content_layout,
                 cursor_position,
                 &Rectangle {
-                    y: bounds.y + offset as f32,
+                    x: bounds.x + offset as f32,
                     ..bounds
                 },
             )
@@ -355,8 +361,8 @@ where
         struct Marker;
         std::any::TypeId::of::<Marker>().hash(state);
 
-        self.height.hash(state);
-        self.max_height.hash(state);
+        self.width.hash(state);
+        self.max_width.hash(state);
 
         self.content.hash_layout(state)
     }
@@ -397,17 +403,22 @@ impl State {
     /// the [`HScroll`] and its contents.
     pub fn scroll(
         &mut self,
-        delta_y: f32,
+        delta_x: f32,
         bounds: Rectangle,
         content_bounds: Rectangle,
     ) {
-        if bounds.height >= content_bounds.height {
+
+        if bounds.width >= content_bounds.width {
             return;
         }
 
-        self.offset = (self.offset - delta_y)
+        self.offset = (self.offset - delta_x)
             .max(0.0)
-            .min((content_bounds.height - bounds.height) as f32);
+            .min((content_bounds.width- bounds.width) as f32);
+        info!("content bounds width is {:#?}",content_bounds.width);
+        info!("offset is {:#?}",self.offset);
+
+
     }
 
     /// Moves the scroll position to a relative amount, given the bounds of
@@ -422,14 +433,14 @@ impl State {
         content_bounds: Rectangle,
     ) {
         self.offset =
-            ((content_bounds.height - bounds.height) * percentage).max(0.0);
+            ((content_bounds.width - bounds.width) * percentage).max(0.0);
     }
 
     /// Returns the current scrolling offset of the [`State`], given the bounds
     /// of the [`HScroll`] and its contents.
     pub fn offset(&self, bounds: Rectangle, content_bounds: Rectangle) -> u32 {
         let hidden_content =
-            (content_bounds.height - bounds.height).max(0.0).round() as u32;
+            (content_bounds.width - bounds.width).max(0.0).round() as u32;
 
         self.offset.min(hidden_content as f32) as u32
     }
@@ -465,8 +476,8 @@ impl Scrollbar {
     fn grab_scroller(&self, cursor_position: Point) -> Option<f32> {
         if self.outer_bounds.contains(cursor_position) {
             Some(if self.scroller.bounds.contains(cursor_position) {
-                (cursor_position.y - self.scroller.bounds.y)
-                    / self.scroller.bounds.height
+                (cursor_position.x - self.scroller.bounds.x)
+                    / self.scroller.bounds.width
             } else {
                 0.5
             })
@@ -480,10 +491,10 @@ impl Scrollbar {
         grabbed_at: f32,
         cursor_position: Point,
     ) -> f32 {
-        (cursor_position.y
-            - self.bounds.y
-            - self.scroller.bounds.height * grabbed_at)
-            / (self.bounds.height - self.scroller.bounds.height)
+        (cursor_position.x
+            - self.bounds.x
+            - self.scroller.bounds.width * grabbed_at)
+            / (self.bounds.width - self.scroller.bounds.width)
     }
 }
 

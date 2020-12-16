@@ -14,5 +14,5 @@ iced_native = {version="0.3.0"}
 
 
 iced_graphics = "*"
-env_logger = "*"
+pretty_env_logger = "*"
 log = "*"

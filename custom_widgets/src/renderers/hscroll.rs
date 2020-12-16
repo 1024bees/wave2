@@ -6,7 +6,7 @@ use iced_native::{Background, Color, Rectangle, Vector};
 
 pub use crate::widget::hscroll::State;
 pub use iced_style::scrollable::{Scrollbar, Scroller, StyleSheet};
-
+use log::info;
 /// A widget that can vertically display an infinite amount of content
 /// with a scrollbar.
 ///
@@ -20,7 +20,8 @@ where
     B: Backend,
 {
     type Style = Box<dyn iced_style::scrollable::StyleSheet>;
-
+    ///We are transposed here; scrollbar width, it actually refers to its thickness in
+    ///the y dimension
     fn scrollbar(
         &self,
         bounds: Rectangle,
@@ -30,35 +31,34 @@ where
         scrollbar_margin: u16,
         scroller_width: u16,
     ) -> Option<hscroll::Scrollbar> {
-        if content_bounds.height > bounds.height {
+        if content_bounds.width > bounds.width {
             let outer_width =
                 scrollbar_width.max(scroller_width) + 2 * scrollbar_margin;
 
             let outer_bounds = Rectangle {
-                x: bounds.x + bounds.width - outer_width as f32,
-                y: bounds.y,
-                width: outer_width as f32,
-                height: bounds.height,
+                x: bounds.x ,
+                y: bounds.y + bounds.height - outer_width as f32,
+                width: bounds.width,
+                height: outer_width as f32,
+
             };
 
             let scrollbar_bounds = Rectangle {
-                x: bounds.x + bounds.width
-                    - f32::from(outer_width / 2 + scrollbar_width / 2),
-                y: bounds.y,
-                width: scrollbar_width as f32,
-                height: bounds.height,
+                x: bounds.x,
+                y: bounds.y + bounds.height - f32::from(outer_width / 2 + scrollbar_width / 2),
+                width: bounds.width,
+                height: scrollbar_width as f32,
             };
 
-            let ratio = bounds.height / content_bounds.height;
-            let scroller_height = bounds.height * ratio;
-            let y_offset = offset as f32 * ratio;
+            let ratio = bounds.width / content_bounds.width;
+            let scroller_width_offset = bounds.width * ratio;
+            let x_offset = offset as f32 * ratio;
 
             let scroller_bounds = Rectangle {
-                x: bounds.x + bounds.width
-                    - f32::from(outer_width / 2 + scroller_width / 2),
-                y: scrollbar_bounds.y + y_offset,
-                width: scroller_width as f32,
-                height: scroller_height,
+                x: bounds.x + x_offset,
+                y: bounds.y + bounds.height - f32::from(outer_width / 2 + scroller_width / 2),
+                width: scroller_width_offset,
+                height:  scroller_width as f32,
             };
 
             Some(hscroll::Scrollbar {
@@ -90,7 +90,7 @@ where
             if let Some(scrollbar) = scrollbar {
                 let clip = Primitive::Clip {
                     bounds,
-                    offset: Vector::new(0, offset),
+                    offset: Vector::new(offset,0),
                     content: Box::new(content),
                 };
 

@@ -1,15 +1,20 @@
 mod style;
 
 use iced::{
-    scrollable, Column, Container, Element, Length, Radio, Row, Rule, Sandbox,
-    Scrollable, Settings, Space, Text,
+    Column, Container, Element, Length, Radio, Row, Rule, Sandbox,
+    Settings, Space, Text,
 };
 
+use wave2_custom_widgets::widget::hscroll;
+use wave2_custom_widgets::widget::hscroll::HScroll;
+
+
 pub fn main() -> iced::Result {
-    ScrollableDemo::run(Settings::default())
+    pretty_env_logger::init();
+    HScrollDemo::run(Settings::default())
 }
 
-struct ScrollableDemo {
+struct HScrollDemo {
     theme: style::Theme,
     variants: Vec<Variant>,
 }
@@ -19,18 +24,18 @@ enum Message {
     ThemeChanged(style::Theme),
 }
 
-impl Sandbox for ScrollableDemo {
+impl Sandbox for HScrollDemo {
     type Message = Message;
 
     fn new() -> Self {
-        ScrollableDemo {
+        HScrollDemo {
             theme: Default::default(),
             variants: Variant::all(),
         }
     }
 
     fn title(&self) -> String {
-        String::from("Scrollable - Iced")
+        String::from("HScroll - Iced")
     }
 
     fn update(&mut self, message: Message) {
@@ -40,7 +45,7 @@ impl Sandbox for ScrollableDemo {
     }
 
     fn view(&mut self) -> Element<Message> {
-        let ScrollableDemo {
+        let HScrollDemo {
             theme, variants, ..
         } = self;
 
@@ -59,11 +64,11 @@ impl Sandbox for ScrollableDemo {
             },
         );
 
-        let scrollable_row = Row::with_children(
+        let hscroll_row = Column::with_children(
             variants
                 .iter_mut()
                 .map(|variant| {
-                    let mut scrollable = Scrollable::new(&mut variant.state)
+                    let mut hscroll = HScroll::new(&mut variant.state)
                         .padding(10)
                         .width(Length::Fill)
                         .height(Length::Fill)
@@ -71,7 +76,7 @@ impl Sandbox for ScrollableDemo {
                         .push(Text::new(variant.title));
 
                     if let Some(scrollbar_width) = variant.scrollbar_width {
-                        scrollable = scrollable
+                        hscroll = hscroll
                             .scrollbar_width(scrollbar_width)
                             .push(Text::new(format!(
                                 "scrollbar_width: {:?}",
@@ -80,7 +85,7 @@ impl Sandbox for ScrollableDemo {
                     }
 
                     if let Some(scrollbar_margin) = variant.scrollbar_margin {
-                        scrollable = scrollable
+                        hscroll = hscroll
                             .scrollbar_margin(scrollbar_margin)
                             .push(Text::new(format!(
                                 "scrollbar_margin: {:?}",
@@ -89,7 +94,7 @@ impl Sandbox for ScrollableDemo {
                     }
 
                     if let Some(scroller_width) = variant.scroller_width {
-                        scrollable = scrollable
+                        hscroll = hscroll
                             .scroller_width(scroller_width)
                             .push(Text::new(format!(
                                 "scroller_width: {:?}",
@@ -97,20 +102,20 @@ impl Sandbox for ScrollableDemo {
                             )));
                     }
 
-                    scrollable = scrollable
-                        .push(Space::with_height(Length::Units(100)))
+                    hscroll = hscroll
+                        .push(Space::with_width(Length::Units(100)))
                         .push(Text::new(
                             "Some content that should wrap within the \
-                            scrollable. Let's output a lot of short words, so \
+                            hscroll. Let's output a lot of short words, so \
                             that we'll make sure to see how wrapping works \
                             with these scrollbars.",
                         ))
-                        .push(Space::with_height(Length::Units(1200)))
+                        .push(Space::with_width(Length::Units(1200)))
                         .push(Text::new("Middle"))
-                        .push(Space::with_height(Length::Units(1200)))
+                        .push(Space::with_width(Length::Units(1200)))
                         .push(Text::new("The End."));
 
-                    Container::new(scrollable)
+                    Container::new(hscroll)
                         .width(Length::Fill)
                         .height(Length::Fill)
                         .style(*theme)
@@ -127,7 +132,7 @@ impl Sandbox for ScrollableDemo {
             .padding(20)
             .push(choose_theme)
             .push(Rule::horizontal(20).style(self.theme))
-            .push(scrollable_row);
+            .push(hscroll_row);
 
         Container::new(content)
             .width(Length::Fill)
@@ -139,10 +144,10 @@ impl Sandbox for ScrollableDemo {
     }
 }
 
-/// A version of a scrollable
+/// A version of a hscroll
 struct Variant {
     title: &'static str,
-    state: scrollable::State,
+    state: hscroll::State,
     scrollbar_width: Option<u16>,
     scrollbar_margin: Option<u16>,
     scroller_width: Option<u16>,
@@ -153,28 +158,28 @@ impl Variant {
         vec![
             Self {
                 title: "Default Scrollbar",
-                state: scrollable::State::new(),
+                state: hscroll::State::new(),
                 scrollbar_width: None,
                 scrollbar_margin: None,
                 scroller_width: None,
             },
             Self {
                 title: "Slimmed & Margin",
-                state: scrollable::State::new(),
+                state: hscroll::State::new(),
                 scrollbar_width: Some(4),
                 scrollbar_margin: Some(3),
                 scroller_width: Some(4),
             },
             Self {
                 title: "Wide Scroller",
-                state: scrollable::State::new(),
+                state: hscroll::State::new(),
                 scrollbar_width: Some(4),
                 scrollbar_margin: None,
                 scroller_width: Some(10),
             },
             Self {
                 title: "Narrow Scroller",
-                state: scrollable::State::new(),
+                state: hscroll::State::new(),
                 scrollbar_width: Some(10),
                 scrollbar_margin: None,
                 scroller_width: Some(4),
