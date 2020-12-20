@@ -63,6 +63,15 @@ impl InMemWave {
             ..InMemWave::default()
         }
     }
+    pub fn first_change(&self) -> ParsedVec {
+        self
+            .signal_content
+            .first()
+            .expect("Empty signal found")
+            .1
+            .clone()
+    }
+
     pub fn changes(&self) -> std::slice::Iter<'_, (u32, ParsedVec)> {
         self.signal_content.iter()
     }
@@ -130,19 +139,19 @@ impl Default for Bucket {
 /// 01 -> 1
 /// 10 -> Z
 /// 11 -> X
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone,Serialize, Deserialize)]
 pub enum ParsedVec {
     WordVec(FourStateBitArr),
     WideVec(FourStateBitVec),
 }
 
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Default,Clone, Debug, Serialize, Deserialize)]
 pub struct FourStateBitArr {
     value_bits: BitArray<LocalBits, [usize; 1]>,
     zx_bits: Option<BitArray<LocalBits, [usize; 1]>>,
 }
 
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Default,Clone, Debug, Serialize, Deserialize)]
 pub struct FourStateBitVec {
     value_bits: BitVec<LocalBits>,
     zx_bits: Option<BitVec<LocalBits>>,

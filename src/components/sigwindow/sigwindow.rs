@@ -34,6 +34,7 @@ pub enum Message {
     AddWave(Result<Arc<InMemWave>, Arc<Waverr>>),
     RemoveWave(usize),
     SetOpts(u32, WaveDisplayOptions),
+    InitializeWW((u32,u32)),
     WWMessage(wavewindow::Message),
     ClearWaves,
     CellListPlaceholder(DisplayedWave),
@@ -81,6 +82,9 @@ impl SigViewer {
             }
             Message::CellListPlaceholder(_) => {
                 println!("Cell list interaction, impl me");
+            }
+            Message::InitializeWW(bounds) => {
+                self.wavewindow.update(wavewindow::Message::UpdateBounds(bounds));
             }
             Message::WWMessage(ww_message) => {
                 self.wavewindow.update(ww_message);

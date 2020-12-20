@@ -9,8 +9,6 @@ use iced_native::{
     Rectangle, Size, Vector, Widget
 };
 
-use log::info;
-
 
 use std::{f32, hash::Hash, u32};
 
@@ -158,8 +156,6 @@ where
 
 
         let size = limits.resolve(content.size());
-        
-        info!("content size {:#?}",content.size());
 
 
 
@@ -401,7 +397,7 @@ pub struct State {
 }
 
 impl State {
-    /// Creates a new [`State`] with the scrollbar located at the top.
+    /// Creates a new [`State`] with the scrollbar located at the left.
     pub fn new() -> Self {
         State::default()
     }
@@ -422,10 +418,12 @@ impl State {
         self.offset = (self.offset - delta_x)
             .max(0.0)
             .min((content_bounds.width- bounds.width) as f32);
-        info!("content bounds width is {:#?}",content_bounds.width);
-        info!("offset is {:#?}",self.offset);
 
+    }
 
+    /// Get the scrolling offset of the current [`State`]
+    pub fn get_offset(&self) -> f32 {
+        self.offset
     }
 
     /// Moves the scroll position to a relative amount, given the bounds of

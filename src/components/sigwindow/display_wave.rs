@@ -72,6 +72,21 @@ impl std::fmt::Display for WaveColors {
     }
 }
 
+
+#[derive(Clone, Debug)]
+/// Wave state for single bit signals
+///
+/// Used when iterating across an in memory wave to decide coloring state
+pub enum SBWaveState {
+    Beginning,
+    Low,
+    High,
+    X,
+    Z
+}
+
+
+
 #[derive(Clone, Debug)]
 enum WaveColors {
     Green,

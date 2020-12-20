@@ -4,7 +4,9 @@ use iced::{
 };
 
 use iced_native::event;
-use super::display_wave::DisplayedWave;
+use wave2_custom_widgets::widget::hscroll::{HScroll};
+use wave2_custom_widgets::widget::hscroll;
+use super::display_wave::{DisplayedWave, SBWaveState};
 use log::info;
 
 use wave2_wavedb::SigType;
@@ -12,7 +14,7 @@ use wave2_wavedb::SigType;
 pub const BUFFER_PX: f32 = 4.0;
 pub const WAVEHEIGHT: f32 = 19.0;
 pub const VEC_SHIFT_WIDTH: f32 = 4.0;
-pub const MAX_NUM_TEXT_HEADERS: u32 = 30;
+pub const MAX_NUM_TEXT_HEADERS: u32 = 10;
 pub const TS_FONT_SIZE: f32 = 8.0;
 
 /// If we try to put a timestamp too close to the start of the wave window
@@ -35,63 +37,84 @@ const ORANGE: Color = Color::from_rgba(
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    UpdateCursor(CursorState),
+    UpdateCursor(u32),
+    UpdateBounds((u32,u32)),
+    UpdateOffset(f32),
 }
 
 pub struct WaveWindow<'a> {
     signals: &'a [DisplayedWave],
-    state: &'a WaveWindowState,
-    cur_state: CursorState,
+    frame_state: &'a mut FrameState,
+    wave_cache: &'a canvas::Cache,
+    cursor_cache: &'a canvas::Cache,
 }
 
 pub struct WaveWindowState {
     cache: canvas::Cache,
     cursor_cache: canvas::Cache,
-    cursor_state: CursorState,
-    end_sim_time: u32,
+    frame_state : FrameState,
+    scroll_state : hscroll::State
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct CursorState {
+#[derive(Debug, Clone,Copy)]
+/// State for handling zoom state
+pub struct FrameState {
+    start_time: u32,
+    end_time: u32,
+    ns_per_unit: f32,
     pub cursor_location: u32,
-    view_range: (u32, u32),
+    offset: f32,
 }
 
-impl Default for CursorState {
-    fn default() -> Self {
-        CursorState {
-            cursor_location: 10,
-            view_range: (0, 800),
+impl Default for FrameState {
+    fn default() -> FrameState {
+        FrameState {
+            start_time: 0,
+            end_time: 1000,
+            ns_per_unit: 1.0,
+            cursor_location: 0,
+            offset: 0.0
         }
     }
+
 }
+
+
 
 impl WaveWindowState {
     pub fn view<'a>(
         &'a mut self,
         signals: &'a [DisplayedWave],
     ) -> Element<'a, Message> {
-        Canvas::new(WaveWindow {
-            signals: signals,
-            state: self,
-            // FIXME: This is Disgusting and needs to be refactored
-            cur_state: self.cursor_state.clone(),
-        })
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .into()
+
+        let val = HScroll::new(&mut self.scroll_state);
+
+        val
+            .push(
+                Canvas::new(WaveWindow {
+                signals: signals,
+                frame_state: &mut self.frame_state,
+                wave_cache: &self.cache,
+                cursor_cache: &self.cursor_cache
+            })
+            .width(Length::Fill)
+            .height(Length::Fill))
+            .into()
     }
 
     pub fn update(&mut self, message: Message) {
         match message {
-            Message::UpdateCursor(cursor_state) => {
-                self.cursor_state = cursor_state;
-                info!(
-                    "received click location is {}",
-                    self.cursor_state.cursor_location
-                );
+            Message::UpdateCursor(cursor_location) => {
+                self.frame_state.cursor_location = cursor_location;
                 self.redraw_cursor();
                 info!("Drawing cursor");
+            }
+            Message::UpdateOffset(offset) => {
+                self.frame_state.offset = offset;
+            },
+            Message::UpdateBounds((start,end)) => {
+                self.frame_state.start_time = start;
+                self.frame_state.end_time = end;
             }
         }
     }
@@ -106,29 +129,38 @@ impl WaveWindowState {
 }
 
 impl<'a> WaveWindow<'a> {
-    fn get_timestamp(&self, bounds: Rectangle, xcoord: f32) -> u32 {
-        let ts_width =
-            (self.cur_state.view_range.1 - self.cur_state.view_range.0) as f32;
-        info!("xcoord location is {}", xcoord);
-        self.cur_state.view_range.0
-            + (ts_width * ((xcoord) / bounds.width)) as u32
+
+    fn start_time(&self) -> u32 {
+        self.frame_state.start_time
+    }
+
+    fn end_time(&self) -> u32 {
+        self.frame_state.end_time
+    }
+
+    
+    fn offset(&self) -> f32 {
+        self.frame_state.offset
+    }
+
+    fn get_timestamp(&self,xcoord: f32) -> u32 {
+        let offset = self.offset();
+
+        ((offset +xcoord) * self.frame_state.ns_per_unit)
+            .round() as u32
+
     }
 
     fn end_window_time(&self) -> u32 {
-        if self.cur_state.view_range.1 < self.state.end_sim_time {
-            return self.cur_state.view_range.1;
-        }
-        self.state.end_sim_time
+        return self.frame_state.end_time
     }
 
-    fn x_abs(&self, ts: u32, bounds: &Rectangle) -> f32 {
-        let ts_width =
-            (self.cur_state.view_range.1 - self.cur_state.view_range.0) as f32;
-        ((ts) as f32 / ts_width) * bounds.width
+    fn x_abs(&self, ts: u32) -> f32 {
+        ts as f32 / (self.frame_state.ns_per_unit)
     }
 
-    fn x_abs_cursor(&self, bounds: &Rectangle) -> f32 {
-        self.x_abs(self.cur_state.cursor_location, bounds)
+    fn x_abs_cursor(&self) -> f32 {
+        self.x_abs(self.frame_state.cursor_location)
     }
 
     /// Util for finding the x offset in the wave window where a wave should change values
@@ -137,24 +169,14 @@ impl<'a> WaveWindow<'a> {
         &self,
         ts: u32,
         prev_ts: u32,
-        bounds: &Rectangle,
+        _bounds: &Rectangle,
     ) -> f32 {
-        let ts_width =
-            (self.cur_state.view_range.1 - self.cur_state.view_range.0) as f32;
-        ((ts - prev_ts) as f32 / ts_width) * bounds.width
+        (ts - prev_ts) as f32 * self.frame_state.ns_per_unit
     }
 
     fn draw_header(&self, frame: &mut Frame, bounds: &Rectangle) {
-        let mut window_width =
-            self.cur_state.view_range.1 - self.cur_state.view_range.0;
-        let mut ts_width: u32 = 1;
-        while window_width >= MAX_NUM_TEXT_HEADERS {
-            window_width /= 10;
-            ts_width *= 10;
-        }
-        let starting_ts: u32 = self.cur_state.view_range.0
-            + self.cur_state.view_range.0 % ts_width;
-        let mut prev_ts = self.cur_state.view_range.0;
+        let ts_width = ((1200 /  MAX_NUM_TEXT_HEADERS) as f32 * self.frame_state.ns_per_unit).round() as u32;
+        let mut prev_ts = self.start_time();
         let mut xpos: f32 = 0.0;
         let hdr_line = Point {
             x: bounds.x,
@@ -168,7 +190,7 @@ impl<'a> WaveWindow<'a> {
         let bg_stroke = Stroke::default().with_width(1.0).with_color(BLUE);
         frame.stroke(&boundary_line, bg_stroke);
 
-        for ts in (starting_ts..self.cur_state.view_range.1)
+        for ts in (self.start_time()..self.end_time())
             .step_by(ts_width as usize)
         {
             xpos += self.xdelt_from_prev(ts, prev_ts, bounds);
@@ -200,7 +222,7 @@ impl<'a> WaveWindow<'a> {
 
 
     fn draw_cursor(&self, frame: &mut Frame, bounds: Rectangle) {
-        let cur_pos: Point = [self.x_abs_cursor(&bounds), TS_FONT_SIZE].into();
+        let cur_pos: Point = [self.x_abs_cursor(), TS_FONT_SIZE].into();
         let cursor_line = Path::new(|p| {
             p.move_to(cur_pos);
             p.line_to(Point {
@@ -230,9 +252,11 @@ impl<'a> WaveWindow<'a> {
                     let wave = display.get_wave();
                     let mut working_pt = leftmost_pt.clone();
                     p.move_to(leftmost_pt);
-                    let mut prev_xcoord = self.cur_state.view_range.0;
+                    let mut prev_xcoord = self.start_time();
                     match wave.sig_type {
                         SigType::Bit => {
+                            let mut sb_state = SBWaveState::Beginning;
+
                             for (time, sig_payload) in wave.changes() {
                                 if self.out_of_range(time.clone()) {
                                     break;
@@ -246,14 +270,34 @@ impl<'a> WaveWindow<'a> {
                                 p.line_to(working_pt);
                                 p.move_to(working_pt);
                                 //TODO: handle z/x case
-                                match sig_payload.get_bv() {
-                                    Some(false) => working_pt.y += WAVEHEIGHT,
-                                    _ => working_pt.y -= WAVEHEIGHT,
+                                match (&mut sb_state, sig_payload.get_bv()) {
+                                    (SBWaveState::Beginning, Some(false)) => { 
+                                        sb_state = SBWaveState::Low;
+                                    },
+                                    (SBWaveState::Beginning, Some(true)) => {
+                                        working_pt.y -= WAVEHEIGHT;
+                                        sb_state = SBWaveState::High;
+                                    },
+                                    (_, Some(false)) => {
+                                        working_pt.y -= WAVEHEIGHT;
+                                        sb_state = SBWaveState::Low;
+                                    },
+                                    (_, Some(true)) => {
+                                        working_pt.y -= WAVEHEIGHT;
+                                        sb_state = SBWaveState::High;
+                                    },
+                                    (_, _) => {
+                                        panic!("Impliment me");
+                                    },
+
+
+
+
                                 }
                                 prev_xcoord = *time;
                                 p.line_to(working_pt);
                                 p.move_to(working_pt);
-                            }                            
+                            }
                             let fin_x_delt = self.xdelt_from_prev(
                                 self.end_window_time(),
                                 prev_xcoord,
@@ -330,8 +374,8 @@ impl Default for WaveWindowState {
         WaveWindowState {
             cache: canvas::Cache::default(),
             cursor_cache: canvas::Cache::default(),
-            cursor_state: CursorState::default(),
-            end_sim_time: 600,
+            frame_state: FrameState::default(),
+            scroll_state: hscroll::State::new(),
         }
     }
 }
@@ -353,13 +397,13 @@ impl<'a> canvas::Program<Message> for WaveWindow<'a> {
         match event {
             Event::Mouse(mouse_event) => match mouse_event {
                 mouse::Event::ButtonReleased(mouse::Button::Left) => {
-                    self.cur_state.cursor_location =
-                        self.get_timestamp(bounds, cursor_position.x);
+                    self.frame_state.cursor_location =
+                        self.get_timestamp(cursor_position.x);
                     info!(
                         "click location is {}",
-                        self.cur_state.cursor_location
+                        self.frame_state.cursor_location,
                     );
-                    (event::Status::Captured,Some(Message::UpdateCursor(self.cur_state.clone())))
+                    (event::Status::Captured,Some(Message::UpdateCursor(self.frame_state.cursor_location)))
                 }
 
                 _ =>   (event::Status::Captured,  None),
@@ -370,13 +414,12 @@ impl<'a> canvas::Program<Message> for WaveWindow<'a> {
 
     fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
         let content =
-            self.state.cache.draw(bounds.size(), |frame: &mut Frame| {
+            self.wave_cache.draw(bounds.size(), |frame: &mut Frame| {
                 self.draw_all(frame, bounds);
             });
 
         let cursors =
-            self.state
-                .cursor_cache
+            self.cursor_cache
                 .draw(bounds.size(), |frame: &mut Frame| {
                     self.draw_cursor(frame, bounds);
                 });

@@ -11,7 +11,7 @@ use components::hier_nav::hier_nav;
 use components::{menu_bar, module_nav, sigwindow::sigwindow};
 use config::menu_update;
 use env_logger;
-use log::{info, warn};
+use log::warn;
 use std::path::PathBuf;
 use wave2_wavedb::api::WdbAPI;
 use wave2_wavedb::errors::Waverr;
@@ -269,7 +269,7 @@ impl Application for Wave2 {
                         Ok(wdb_api) => {
                             state.wdb_api = Some(wdb_api);
                             state.set_file_pending(false);
-                            info!("Loaded message successfully");
+
                             state
                                 .panes
                                 .get_mut(&state.hn_pane)
@@ -284,6 +284,14 @@ impl Application for Wave2 {
                                             .clone(),
                                     ),
                                 ));
+                                return Command::perform(
+                                    WdbAPI::bounds(
+                                        state.get_api(),
+                                    ),
+                                    move |bounds| Message::SVMessage(sigwindow::Message::InitializeWW(bounds)));
+
+
+
                         }
                         Err(waverr) => {
                             state.set_file_pending(false);

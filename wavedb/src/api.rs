@@ -29,10 +29,9 @@ impl From<WaveDB> for WdbAPI {
     }
 }
 
-///External API to use when interacting with WaveDB instances
+///External API for WaveDB instances
 impl WdbAPI {
     /// We clone self when calling
-
     pub fn open_from_vcd(path_to_vcd: &str) -> Result<WdbAPI, Waverr> {
         let wdb_path = format!("/tmp/wavedb/{}/wdb", quick_hash(&path_to_vcd));
         Ok(WdbAPI {
@@ -68,6 +67,18 @@ impl WdbAPI {
     ) -> Arc<Vec<SignalItem>> {
         Arc::new(api.as_ref().wdb.hier_map.get_module_signals_vec(module_idx))
     }
+
+
+    /// Get the starting and ending time of the signal dump represented by this WaveDB
+    pub async fn bounds(
+        api: Arc<WdbAPI>,
+    ) -> (u32,u32) {
+        api.wdb.get_bounds()
+    }
+
+
+
+
 
     /// Get module names underneath module_path
     /// TODO: encode if there is a submodule here

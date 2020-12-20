@@ -6,7 +6,6 @@ use iced_native::{Background, Color, Rectangle, Vector};
 
 pub use crate::widget::hscroll::State;
 pub use iced_style::scrollable::{Scrollbar, Scroller, StyleSheet};
-use log::info;
 /// A widget that can vertically display an infinite amount of content
 /// with a scrollbar.
 ///

@@ -40,6 +40,8 @@ impl WaveDB {
         }
     }
 
+
+
     fn get_id(&self, sig: &str) -> Result<u32, Waverr> {
         self.hier_map.path_to_id(sig)
     }
@@ -87,6 +89,10 @@ impl WaveDB {
         }
     }
 
+    pub fn get_bounds(&self) -> (u32,u32) {
+        self.config.time_range.clone()
+    }
+
     pub fn was_recovered(&self) -> bool {
         self.db.was_recovered()
     }
@@ -121,6 +127,7 @@ impl WaveDB {
             wdb.load_idmap()?;
             return Ok(wdb);
         }
+        let mut first_time = None;
         let mut global_time: u32 = 0;
         let mut current_range = (global_time, global_time + DEFAULT_SLIZE_SIZE);
         let mut bucket_mapper: HashMap<vcd::IdCode, Bucket> = HashMap::new();
@@ -139,6 +146,9 @@ impl WaveDB {
                         let rounded_time = time - (time % DEFAULT_SLIZE_SIZE);
                         current_range =
                             (rounded_time, rounded_time + DEFAULT_SLIZE_SIZE)
+                    }
+                    if first_time.is_none() {
+                        first_time = Some(time);
                     }
                     global_time = time;
                 }
@@ -177,7 +187,7 @@ impl WaveDB {
             wdb.insert_bucket(bucket)?;
         }
 
-        wdb.set_time_range((0, global_time));
+        wdb.set_time_range((first_time.expect("No timestamp present in VCD!"), global_time));
         wdb.dump_config()?;
         wdb.save_idmap()?;
         wdb.db.flush()?;
