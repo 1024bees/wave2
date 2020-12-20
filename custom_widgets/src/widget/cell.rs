@@ -298,7 +298,7 @@ where
                         *self.selected = false;
                     }
                     *self.last_click = Some(click);
-                    return event::Status::Captured;
+                    return event::Status::Ignored;
                 }
             }
 

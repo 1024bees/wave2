@@ -90,7 +90,7 @@ impl SigViewer {
                 self.wavewindow.update(ww_message);
             }
             _ => {
-                info!("Not yet impl'd");
+                panic!("Not yet impl'd");
             }
         }
     }

@@ -11,7 +11,7 @@ use components::hier_nav::hier_nav;
 use components::{menu_bar, module_nav, sigwindow::sigwindow};
 use config::menu_update;
 use env_logger;
-use log::warn;
+use log::{info,warn};
 use std::path::PathBuf;
 use wave2_wavedb::api::WdbAPI;
 use wave2_wavedb::errors::Waverr;
@@ -159,6 +159,8 @@ impl Application for Wave2 {
     }
 
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
+        info!("Message send to update is {:#?}",message);
+
         match self {
             Wave2::Loading => {
                 match message {

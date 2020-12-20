@@ -87,19 +87,18 @@ impl WaveWindowState {
         signals: &'a [DisplayedWave],
     ) -> Element<'a, Message> {
 
-        let val = HScroll::new(&mut self.scroll_state);
+        //let val = HScroll::new(&mut self.scroll_state);
 
-        val
-            .push(
-                Canvas::new(WaveWindow {
+        let element : Element<_> = Canvas::new(WaveWindow {
                 signals: signals,
                 frame_state: &mut self.frame_state,
                 wave_cache: &self.cache,
                 cursor_cache: &self.cursor_cache
             })
             .width(Length::Fill)
-            .height(Length::Fill))
-            .into()
+            .height(Length::Fill)
+            .into();
+        element.explain(Color::BLACK)
     }
 
     pub fn update(&mut self, message: Message) {
@@ -406,7 +405,7 @@ impl<'a> canvas::Program<Message> for WaveWindow<'a> {
                     (event::Status::Captured,Some(Message::UpdateCursor(self.frame_state.cursor_location)))
                 }
 
-                _ =>   (event::Status::Captured,  None),
+                _ =>   (event::Status::Ignored,  None),
             },
             _ => (event::Status::Ignored, None),
         }

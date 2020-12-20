@@ -354,7 +354,7 @@ where
                                     }
                                 }
                             }
-                            return event::Status::Captured;
+                            return event::Status::Ignored;
 
                         }
                     }
