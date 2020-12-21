@@ -9,6 +9,7 @@ use iced_native::{
     Rectangle, Size, Vector, Widget
 };
 
+use log::info;
 
 use std::{f32, hash::Hash, u32};
 
@@ -152,13 +153,7 @@ where
         );
 
         let content = self.content.layout(renderer, &child_limits);
-
-
-
         let size = limits.resolve(content.size());
-
-
-
         layout::Node::with_children(size, vec![content])
     }
 
@@ -410,6 +405,8 @@ impl State {
         bounds: Rectangle,
         content_bounds: Rectangle,
     ) {
+        info!("Content bounds are {:#?}",content_bounds);
+        info!("scroll bounds are {:#?}",bounds);
 
         if bounds.width >= content_bounds.width {
             return;

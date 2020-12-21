@@ -71,12 +71,11 @@ impl Default for FrameState {
         FrameState {
             start_time: 0,
             end_time: 1000,
-            ns_per_unit: 1.0,
+            ns_per_unit: 10.0,
             cursor_location: 0,
             offset: 0.0
         }
     }
-
 }
 
 
@@ -87,7 +86,8 @@ impl WaveWindowState {
         signals: &'a [DisplayedWave],
     ) -> Element<'a, Message> {
 
-        let val = HScroll::new(&mut self.scroll_state);
+        let val = HScroll::new(&mut self.scroll_state)
+            .scrollbar_width(10);
 
         val
             .push(
@@ -97,8 +97,11 @@ impl WaveWindowState {
                 wave_cache: &self.cache,
                 cursor_cache: &self.cursor_cache
             })
-            .width(Length::Fill)
-            .height(Length::Fill))
+            .width(Length::Units(u16::MAX))
+            .height(Length::Fill)
+            )
+            .width(Length::Shrink)
+            .height(Length::Fill)
             .into()
     }
 
@@ -174,7 +177,7 @@ impl<'a> WaveWindow<'a> {
         (ts - prev_ts) as f32 * self.frame_state.ns_per_unit
     }
 
-    fn draw_header(&self, frame: &mut Frame, bounds: &Rectangle) {
+    fn draw_header(&self, frame: &mut Frame, bounds: Rectangle) {
         let ts_width = ((1200 /  MAX_NUM_TEXT_HEADERS) as f32 * self.frame_state.ns_per_unit).round() as u32;
         let mut prev_ts = self.start_time();
         let mut xpos: f32 = 0.0;
@@ -187,13 +190,14 @@ impl<'a> WaveWindow<'a> {
             p.line_to([hdr_line.x + bounds.width, hdr_line.y].into());
         });
         //TODO: make this const or global in some capacity?
-        let bg_stroke = Stroke::default().with_width(1.0).with_color(BLUE);
+        let bg_stroke = Stroke::default().with_width(30.0).with_color(Color::WHITE);
         frame.stroke(&boundary_line, bg_stroke);
 
         for ts in (self.start_time()..self.end_time())
             .step_by(ts_width as usize)
         {
-            xpos += self.xdelt_from_prev(ts, prev_ts, bounds);
+            info!("DRAW HEADER!, ts is {}",ts);
+            xpos += self.xdelt_from_prev(ts, prev_ts, &bounds);
             if xpos > TS_CLIP_RANGE {
                 frame.fill_text(canvas::Text {
                     content: format!("{}ns", ts),
@@ -201,7 +205,7 @@ impl<'a> WaveWindow<'a> {
                         x: xpos,
                         y: 0.0, //bounds.y,
                     },
-                    color: GREEN,
+                    color: Color::WHITE,
                     size: TS_FONT_SIZE,
                     horizontal_alignment: HorizontalAlignment::Right,
                     ..canvas::Text::default()
@@ -230,7 +234,6 @@ impl<'a> WaveWindow<'a> {
                 ..cur_pos
             });
         });
-        info!("actually drawing cursor a x : {}", cur_pos.x);
         frame.stroke(
             &cursor_line,
             Stroke::default().with_width(2.0).with_color(ORANGE),
@@ -243,7 +246,6 @@ impl<'a> WaveWindow<'a> {
         leftmost_pt.y += 1.5 * WAVEHEIGHT + BUFFER_PX;
         let background = Path::rectangle(Point::default(), bounds.size());
         frame.fill(&background, Color::BLACK);
-        self.draw_header(frame, &bounds);
         let wave_list: Vec<Path> = self
             .signals
             .iter()
@@ -394,6 +396,9 @@ impl<'a> canvas::Program<Message> for WaveWindow<'a> {
             return (event::Status::Ignored, None)
         };
 
+
+        info!("actually drawing cursor at {:#?}",cursor_position);
+
         match event {
             Event::Mouse(mouse_event) => match mouse_event {
                 mouse::Event::ButtonReleased(mouse::Button::Left) => {
@@ -413,14 +418,18 @@ impl<'a> canvas::Program<Message> for WaveWindow<'a> {
     }
 
     fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
+        
+
         let content =
             self.wave_cache.draw(bounds.size(), |frame: &mut Frame| {
                 self.draw_all(frame, bounds);
+
             });
 
         let cursors =
             self.cursor_cache
                 .draw(bounds.size(), |frame: &mut Frame| {
+                    self.draw_header(frame,bounds);
                     self.draw_cursor(frame, bounds);
                 });
 

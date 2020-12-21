@@ -62,8 +62,6 @@ impl SigViewer {
             Message::AddWave(imw_res) => {
                 match imw_res {
                     Ok(imw) => {
-                        info!("Ay booboo");
-
                         self.live_waves.push(DisplayedWave::from(imw));
                         self.wavewindow.request_redraw();
                     },
@@ -74,7 +72,6 @@ impl SigViewer {
             }
             Message::ClearWaves => {
                 self.live_waves.clear();
-                self.wavewindow = wavewindow::WaveWindowState::default();
             }
             Message::RemoveWave(idx) => {
                 self.live_waves.remove(idx);
@@ -106,14 +103,11 @@ impl SigViewer {
             .view(&live_waves[..])
             .map(move |message| Message::WWMessage(message));
 
-        let wave_view = Column::new()
-            .padding(20)
-            .spacing(20)
+        let wave_view = Container::new(ww)
             .width(iced::Length::Fill)
             .height(iced::Length::Fill)
-            .max_height(800)
-            .push(ww);
-
+            .padding(20);
+            
         let cl = CellList::new(waves_state, &live_waves[..], &WaveOptions::ALL)
             .text_size(12)
             .heading("Time".into())
@@ -123,7 +117,6 @@ impl SigViewer {
             .push(cl)
             .width(iced::Length::Fill)
             .height(iced::Length::Fill)
-            .max_height(800)
             .max_width(400)
             .padding(20)
             .spacing(20);
