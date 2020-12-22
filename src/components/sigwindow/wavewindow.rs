@@ -15,7 +15,7 @@ pub const BUFFER_PX: f32 = 4.0;
 pub const WAVEHEIGHT: f32 = 19.0;
 pub const VEC_SHIFT_WIDTH: f32 = 4.0;
 pub const MAX_NUM_TEXT_HEADERS: u32 = 10;
-pub const TS_FONT_SIZE: f32 = 8.0;
+pub const TS_FONT_SIZE: f32 = 12.0;
 
 /// If we try to put a timestamp too close to the start of the wave window
 /// it clips the black bounding box of the wave window and looks bad
@@ -71,7 +71,7 @@ impl Default for FrameState {
         FrameState {
             start_time: 0,
             end_time: 1000,
-            ns_per_unit: 10.0,
+            ns_per_unit: 1.0,
             cursor_location: 0,
             offset: 0.0
         }
@@ -178,25 +178,31 @@ impl<'a> WaveWindow<'a> {
     }
 
     fn draw_header(&self, frame: &mut Frame, bounds: Rectangle) {
-        let ts_width = ((1200 /  MAX_NUM_TEXT_HEADERS) as f32 * self.frame_state.ns_per_unit).round() as u32;
+        //FIXME: need to think of way to generate uniform timestamp delimiters
+        //       probably something probably something like 1,2,5
+        let ts_width : u32 = (200.0 * self.frame_state.ns_per_unit) as u32;
+
         let mut prev_ts = self.start_time();
         let mut xpos: f32 = 0.0;
+        
         let hdr_line = Point {
-            x: bounds.x,
+            x: 0.0,
             y: TS_FONT_SIZE, //+ bounds.y ,
         };
+
+        let right_side = [hdr_line.x + bounds.width, hdr_line.y].into();
+
         let boundary_line = Path::new(|p| {
             p.move_to(hdr_line);
-            p.line_to([hdr_line.x + bounds.width, hdr_line.y].into());
+            p.line_to(right_side);
         });
         //TODO: make this const or global in some capacity?
-        let bg_stroke = Stroke::default().with_width(30.0).with_color(Color::WHITE);
+        let bg_stroke = Stroke::default().with_width(1.0).with_color(BLUE);
         frame.stroke(&boundary_line, bg_stroke);
 
         for ts in (self.start_time()..self.end_time())
             .step_by(ts_width as usize)
         {
-            info!("DRAW HEADER!, ts is {}",ts);
             xpos += self.xdelt_from_prev(ts, prev_ts, &bounds);
             if xpos > TS_CLIP_RANGE {
                 frame.fill_text(canvas::Text {
@@ -280,20 +286,17 @@ impl<'a> WaveWindow<'a> {
                                         working_pt.y -= WAVEHEIGHT;
                                         sb_state = SBWaveState::High;
                                     },
-                                    (_, Some(false)) => {
-                                        working_pt.y -= WAVEHEIGHT;
+                                    (SBWaveState::High, Some(false)) => {
+                                        working_pt.y += WAVEHEIGHT;
                                         sb_state = SBWaveState::Low;
                                     },
-                                    (_, Some(true)) => {
+                                    (SBWaveState::Low, Some(true)) => {
                                         working_pt.y -= WAVEHEIGHT;
                                         sb_state = SBWaveState::High;
                                     },
                                     (_, _) => {
                                         panic!("Impliment me");
                                     },
-
-
-
 
                                 }
                                 prev_xcoord = *time;
@@ -395,9 +398,6 @@ impl<'a> canvas::Program<Message> for WaveWindow<'a> {
         } else {
             return (event::Status::Ignored, None)
         };
-
-
-        info!("actually drawing cursor at {:#?}",cursor_position);
 
         match event {
             Event::Mouse(mouse_event) => match mouse_event {
