@@ -5,40 +5,52 @@ use log::error;
 
 pub struct ListNode<T,O> {
     ui_state: cell::State<O>,
+    node_state: ListNodeState,
     payload: T,
-    pub offset: usize,
-    selected: bool,
 }
+
+
+#[derive(Copy,Clone,Default)]
+/// Carries state specific to list node
+pub struct ListNodeState {
+    /// offset into the CellList
+    pub offset: usize,
+    /// bool on if this node has or hasn't been seleted 
+    pub selected: bool,
+}
+
 
 impl<T,O> ListNode<T,O> 
 where
-    T: ToString + Clone,
+    T: ToString + Clone ,
     O: ToString + Clone + 'static,
 {
     fn new(payload: T, offset: usize) -> Self {
         ListNode {
             payload,
-            offset,
             ui_state: cell::State::default(),
-            selected: false,
+            node_state : ListNodeState{ offset: offset, ..ListNodeState::default()}
         }
     }
     fn view<Message: 'static>(&mut self, 
         options : &'static [O],
-        on_click: impl Fn(&T) -> Message + 'static ,
-        on_double_click : impl Fn(&T) -> Message + 'static ,
+        on_click: impl Fn(ListNodeState) -> Box<dyn Fn(&T) -> Message + 'static >,
+        on_double_click : impl Fn(ListNodeState) -> Box<dyn Fn(&T) -> Message + 'static >,
         ) -> Element<Message> {
         let ListNode {
             ui_state,
             payload,
-            selected,
+            node_state,
             ..
         } = self;
+        
+        
+        let click = on_click(node_state.clone());
 
         let sig_cell = VizCell::new(ui_state, payload, options)
-            .on_click(on_click)
-            .on_double_click(on_double_click)
-            .override_selected(selected.clone());
+            .on_click(click)
+            .on_double_click(on_double_click(node_state.clone()))
+            .override_selected(node_state.selected.clone());
 
 
         sig_cell.into()
@@ -79,8 +91,8 @@ where
 
     pub fn view<Message: 'static>(&mut self, 
         options : &'static [O],
-        on_click: impl Fn(&T) -> Message + 'static + Copy,
-        on_double_click : impl Fn(&T) -> Message + 'static + Copy,
+        on_click: impl Fn(ListNodeState) -> Box<dyn Fn(&T) -> Message + 'static> + Copy,
+        on_double_click : impl Fn(ListNodeState) -> Box<dyn Fn(&T) -> Message + 'static> + Copy,
     ) -> Element<Message> {
         Column::with_children(
             self
@@ -92,9 +104,8 @@ where
     }
 
     pub fn toggle_selected(&mut self, offset: usize, selected: bool) {
-
         if let Some(value) = self.nodes.get_mut(offset) {
-            value.selected = selected;
+            value.node_state.selected = selected;
         } else {
             error!("Trying to toggle out of range cell! Failing")
         }

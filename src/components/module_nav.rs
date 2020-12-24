@@ -6,7 +6,7 @@ use strum_macros;
 use wave2_custom_widgets::widget::cell;
 use wave2_custom_widgets::widget::cell::Cell as VizCell;
 
-use crate::components::shared::cell_list::CellList;
+use crate::components::shared::cell_list::{CellList, ListNodeState};
 use wave2_wavedb::hier_map::SignalItem;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, strum_macros::Display)]
@@ -35,30 +35,30 @@ pub struct SignalNode {
     selected: bool,
 }
 
-impl SignalNode {
-    fn new(payload: SignalItem, offset: usize) -> Self {
-        SignalNode {
-            payload,
-            offset,
-            ..SignalNode::default()
-        }
-    }
-    fn view(&mut self) -> Element<Message> {
-        let SignalNode {
-            ui_state,
-            payload,
-            offset,
-            selected,
-        } = self;
-        let local_offset = offset.clone();
-        let sig_cell = VizCell::new(ui_state, payload, &SigOptions::ALL)
-            .on_double_click(|signal| { info!("Double click!"); Message::AddSig(signal.clone())})
-            .on_click(move |_| Message::ClickedItem(local_offset))
-            .override_selected(selected.clone());
-
-        sig_cell.into()
-    }
-}
+//impl SignalNode {
+//    fn new(payload: SignalItem, offset: usize) -> Self {
+//        SignalNode {
+//            payload,
+//            offset,
+//            ..SignalNode::default()
+//        }
+//    }
+//    fn view(&mut self) -> Element<Message> {
+//        let SignalNode {
+//            ui_state,
+//            payload,
+//            offset,
+//            selected,
+//        } = self;
+//        let local_offset = offset.clone();
+//        let sig_cell = VizCell::new(ui_state, payload, &SigOptions::ALL)
+//            .on_double_click(|signal| { info!("Double click!"); Message::AddSig(signal.clone())})
+//            .on_click(move |_| Message::ClickedItem(local_offset))
+//            .override_selected(selected.clone());
+//
+//        sig_cell.into()
+//    }
+//}
 
 ///Responsible for navigating signals within a module
 #[derive(Default)]
@@ -67,6 +67,9 @@ pub struct ModNavigator {
     selected_offset: Option<usize>,
     scroll_x: scrollable::State,
 }
+
+
+
 
 impl ModNavigator {
     pub fn update(&mut self, message: Message) {
@@ -100,9 +103,24 @@ impl ModNavigator {
         let ModNavigator {
             signals, scroll_x, ..
         } = self;
-        let viewed_signals = signals.view(&SigOptions::ALL,
-            |signal| { info!("Double click!"); Message::AddSig(signal.clone())},
-            move |_| Message::ClickedItem(0));
+
+
+        
+        fn click_func(node_state: ListNodeState) -> Box<dyn Fn(&SignalItem) -> Message + 'static > {
+            return Box::new(move |_| Message::ClickedItem(node_state.offset))
+        }
+
+        fn double_click(node_state: ListNodeState) -> Box<dyn Fn(&SignalItem) -> Message +'static > {
+            return Box::new(|sig_item| Message::AddSig(sig_item.clone()))
+        }
+
+
+
+        let viewed_signals = signals.view(
+            &SigOptions::ALL,
+            click_func,
+            double_click,
+            );
 
 
 

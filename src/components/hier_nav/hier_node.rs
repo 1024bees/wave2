@@ -158,7 +158,7 @@ impl HierNode {
 
         //TODO: fixme, placeholder message closure
         let root_cell = VizCell::new(ui_state, payload, &HierOptions::ALL)
-            .on_click(|module| Message::SendModule(module.hier_idx))
+            .on_click(Box::new(|module| Message::SendModule(module.hier_idx)))
             .override_selected(shared_state.selected.get());
 
         let top_row = if !children.is_empty() {

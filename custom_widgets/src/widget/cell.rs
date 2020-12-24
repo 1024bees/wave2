@@ -181,9 +181,9 @@ where
     /// [`Cell`]: struct.Cell.html
     pub fn on_click(
         mut self,
-        on_click: impl Fn(&'a T) -> Message + 'static,
+        on_click: Box<dyn Fn(&'a T) -> Message + 'static>,
     ) -> Self {
-        self.on_click = Some(Box::new(on_click));
+        self.on_click = Some(on_click);
         self
     }
 
@@ -192,9 +192,9 @@ where
     /// [`Cell`]: struct.Cell.html
     pub fn on_double_click(
         mut self,
-        dbl_click: impl Fn(&T) -> Message + 'static,
+        dbl_click: Box<dyn Fn(&'a T) -> Message + 'static>,
     ) -> Self {
-        self.on_double_click = Some(Box::new(dbl_click));
+        self.on_double_click = Some(dbl_click);
         self
     }
 }
