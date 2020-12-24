@@ -1,4 +1,4 @@
-use iced::{scrollable, Column, Container, Element, Length, Scrollable};
+use iced::{scrollable, Container, Element, Length, Scrollable};
 use log::{error,info};
 use std::sync::Arc;
 use strum_macros;
@@ -6,6 +6,7 @@ use strum_macros;
 use wave2_custom_widgets::widget::cell;
 use wave2_custom_widgets::widget::cell::Cell as VizCell;
 
+use crate::components::shared::cell_list::CellList;
 use wave2_wavedb::hier_map::SignalItem;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, strum_macros::Display)]
@@ -59,10 +60,10 @@ impl SignalNode {
     }
 }
 
-///This is for navigating signals within a module
+///Responsible for navigating signals within a module
 #[derive(Default)]
 pub struct ModNavigator {
-    signals: Vec<SignalNode>,
+    signals: CellList<SignalItem,SigOptions>,
     selected_offset: Option<usize>,
     scroll_x: scrollable::State,
 }
@@ -73,18 +74,10 @@ impl ModNavigator {
             Message::SignalUpdate(payload) => {
                 self.signals = Arc::try_unwrap(payload).map_or_else(
                     |e| {
-                        e.as_ref()
-                            .iter()
-                            .cloned()
-                            .enumerate()
-                            .map(|(idx, payload)| SignalNode::new(payload, idx))
-                            .collect()
+                        CellList::new(e.as_ref().clone())
                     },
                     |o| {
-                        o.into_iter()
-                            .enumerate()
-                            .map(|(idx, payload)| SignalNode::new(payload, idx))
-                            .collect()
+                        CellList::new(o)
                     },
                 );
 
@@ -93,9 +86,9 @@ impl ModNavigator {
 
             Message::ClickedItem(offset) => {
                 if let Some(prev_offset) = self.selected_offset {
-                    self.signals[prev_offset].selected = false;
+                    self.signals.toggle_selected(prev_offset, false);
                 }
-                self.signals[offset].selected = true;
+                self.signals.toggle_selected(offset, true);
                 self.selected_offset = Some(offset);
             }
             _ => {
@@ -107,13 +100,15 @@ impl ModNavigator {
         let ModNavigator {
             signals, scroll_x, ..
         } = self;
-        let viewed_signals = Column::with_children(
-            signals.iter_mut().map(|x| x.view()).collect(),
-        );
+        let viewed_signals = signals.view(&SigOptions::ALL,
+            |signal| { info!("Double click!"); Message::AddSig(signal.clone())},
+            move |_| Message::ClickedItem(0));
+
+
 
         let scrollable = Scrollable::new(scroll_x).push(
             Container::new(viewed_signals)
-                .height(Length::Fill)
+                .height(Length::Shrink)
                 .width(Length::Fill)
                 .center_x(),
         );

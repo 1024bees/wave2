@@ -3,3 +3,4 @@ pub mod menu_bar;
 pub mod module_nav;
 pub mod sigwindow;
 pub mod widget_bar;
+pub mod shared;

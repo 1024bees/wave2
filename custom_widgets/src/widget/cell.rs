@@ -25,8 +25,8 @@ where
     menu_hovered_option: &'a mut Option<usize>,
     menu_last_selection: &'a mut Option<O>,
     last_click: &'a mut Option<mouse::Click>,
-    on_click: Option<Box<dyn Fn(&T) -> Message>>,
-    on_double_click: Option<Box<dyn Fn(&T) -> Message>>,
+    on_click: Option<Box<dyn Fn(&'a T) -> Message>>,
+    on_double_click: Option<Box<dyn Fn(&'a T) -> Message>>,
     overriden_selected: Option<bool>,
     item: &'a T,
     options: &'static [O],
@@ -181,7 +181,7 @@ where
     /// [`Cell`]: struct.Cell.html
     pub fn on_click(
         mut self,
-        on_click: impl Fn(&T) -> Message + 'static,
+        on_click: impl Fn(&'a T) -> Message + 'static,
     ) -> Self {
         self.on_click = Some(Box::new(on_click));
         self

@@ -1829,22 +1829,6 @@ dependencies = [
 [[package]]
 name = "iced_glow"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "107ef6f830b96dcfc851cc4783d10f650bb67a99dcef53cfedae9069e7aef188"
-dependencies = [
- "bytemuck",
- "euclid 0.22.1",
- "glow 0.6.1",
- "glow_glyph 0.4.0",
- "glyph_brush",
- "iced_graphics 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "iced_native 0.3.0",
- "log",
-]
-
-[[package]]
-name = "iced_glow"
-version = "0.1.0"
 source = "git+https://github.com/hecrj/iced?rev=4f2962d73f3bdeeca8a11817e404c45e91e2c2cc#4f2962d73f3bdeeca8a11817e404c45e91e2c2cc"
 dependencies = [
  "bytemuck",
@@ -1874,22 +1858,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "iced_glow"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "107ef6f830b96dcfc851cc4783d10f650bb67a99dcef53cfedae9069e7aef188"
+dependencies = [
+ "bytemuck",
+ "euclid 0.22.1",
+ "glow 0.6.1",
+ "glow_glyph 0.4.0",
+ "glyph_brush",
+ "iced_graphics 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "iced_native 0.3.0",
+ "log",
+]
+
+[[package]]
 name = "iced_glutin"
 version = "0.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c6bff267e2b6da582c20082e36ac204a49d883176b32fd5a8f97c51869cdc3cf"
-
-[[package]]
-name = "iced_glutin"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fcd6fd8bbfcaa451cb23dd34d0181386cc5dc7bf3b7bc3fffb68cbde5bdd569a"
-dependencies = [
- "glutin 0.25.1",
- "iced_graphics 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "iced_native 0.3.0",
- "iced_winit 0.2.0",
-]
 
 [[package]]
 name = "iced_glutin"
@@ -1914,19 +1902,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "iced_graphics"
+name = "iced_glutin"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7de74358f3c950421151765bcf04ce665af538e340e55aff78d2c88c343c7deb"
+checksum = "fcd6fd8bbfcaa451cb23dd34d0181386cc5dc7bf3b7bc3fffb68cbde5bdd569a"
 dependencies = [
- "bytemuck",
- "font-kit 0.8.0",
- "glam 0.10.2",
+ "glutin 0.25.1",
+ "iced_graphics 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "iced_native 0.3.0",
- "iced_style 0.2.0",
- "lyon 0.16.2",
- "raw-window-handle",
- "thiserror",
+ "iced_winit 0.2.0",
 ]
 
 [[package]]
@@ -1956,6 +1940,22 @@ dependencies = [
  "iced_style 0.1.0 (git+https://github.com/hecrj/iced?rev=b5d842f877145c78f5d595a87cc1927bb6f5b86a)",
  "lyon 0.15.9",
  "raw-window-handle",
+]
+
+[[package]]
+name = "iced_graphics"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7de74358f3c950421151765bcf04ce665af538e340e55aff78d2c88c343c7deb"
+dependencies = [
+ "bytemuck",
+ "font-kit 0.8.0",
+ "glam 0.10.2",
+ "iced_native 0.3.0",
+ "iced_style 0.2.0",
+ "lyon 0.16.2",
+ "raw-window-handle",
+ "thiserror",
 ]
 
 [[package]]

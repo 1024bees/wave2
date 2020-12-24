@@ -5,6 +5,8 @@ use log::info;
 use std::sync::Arc;
 use wave2_custom_widgets::widget::cell_list;
 use wave2_custom_widgets::widget::cell_list::CellList;
+
+
 use wave2_wavedb::errors::Waverr;
 use wave2_wavedb::InMemWave;
 
@@ -45,6 +47,7 @@ pub struct SigViewer {
     wavewindow: wavewindow::WaveWindowState,
     live_waves: Vec<DisplayedWave>,
 }
+
 
 impl Default for SigViewer {
     fn default() -> Self {

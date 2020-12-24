@@ -14,7 +14,6 @@ use wave2_wavedb::SigType;
 pub const BUFFER_PX: f32 = 4.0;
 pub const WAVEHEIGHT: f32 = 19.0;
 pub const VEC_SHIFT_WIDTH: f32 = 4.0;
-pub const MAX_NUM_TEXT_HEADERS: u32 = 10;
 pub const TS_FONT_SIZE: f32 = 12.0;
 
 /// If we try to put a timestamp too close to the start of the wave window
