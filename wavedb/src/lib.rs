@@ -315,7 +315,7 @@ mod tests {
         let mut path_to_wikivcd = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path_to_wikivcd.push("test_vcds/wikipedia.vcd");
         //bad but hey... is what it is
-        std::fs::remove_dir_all("/tmp/rng").expect("could not clean wavedb");
+        std::fs::remove_dir_all("/tmp/rng");
         let wdb =
             WaveDB::from_vcd(path_to_wikivcd.clone(), Path::new("/tmp/rng"));
         let actualdb = match wdb {
@@ -354,8 +354,7 @@ mod tests {
         let mut path_to_wikivcd = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path_to_wikivcd.push("test_vcds/vga.vcd");
         //bad but hey... is what it is
-        std::fs::remove_dir_all("/tmp/vcddb")
-            .expect("could not clear old wavedb");
+        std::fs::remove_dir_all("/tmp/vcddb");
         let wdb = WaveDB::from_vcd(path_to_wikivcd, Path::new("/tmp/vcddb"))
             .expect("could not create wavedb");
 
