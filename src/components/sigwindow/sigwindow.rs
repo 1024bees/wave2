@@ -5,7 +5,6 @@ use log::info;
 use std::sync::Arc;
 use crate::components::shared::cell_list::{CellList, ListNodeState};
 
-
 use wave2_wavedb::errors::Waverr;
 use wave2_wavedb::InMemWave;
 
@@ -39,6 +38,7 @@ pub enum Message {
     WWMessage(wavewindow::Message),
     ClearWaves,
     CellListPlaceholder,
+    SelectedWave(usize)
 }
 
 #[derive(Default)]
@@ -46,6 +46,7 @@ pub struct SigViewer {
     waves_state: CellList<DisplayedWave, WaveOptions>,
     wavewindow: wavewindow::WaveWindowState,
     live_waves: Vec<DisplayedWave>,
+    selected: Option<Vec<usize>>
 }
 
 
@@ -82,6 +83,18 @@ impl SigViewer {
             Message::WWMessage(ww_message) => {
                 self.wavewindow.update(ww_message);
             }
+            Message::SelectedWave(offset) => {
+                if self.selected.is_some() {
+                    for prev_offset in self.selected.as_ref().unwrap().iter().cloned() {
+                        self.waves_state.toggle_selected(prev_offset,false);
+                    }
+                }
+
+                self.waves_state.toggle_selected(offset,false);
+
+                self.selected = Some(vec![offset]);
+
+            }
             _ => {
                 info!("Not yet impl'd");
             }
@@ -92,6 +105,7 @@ impl SigViewer {
             waves_state,
             wavewindow,
             live_waves,
+            ..
         } = self;
 
         //TODO: move message logic out of wavewindow
@@ -103,8 +117,11 @@ impl SigViewer {
             .width(iced::Length::Fill)
             .height(iced::Length::Fill)
             .padding(20);
-        fn click_func(_node_state: ListNodeState) -> Box<dyn Fn(&DisplayedWave) -> Message + 'static > {
-            return Box::new(move |_| Message::CellListPlaceholder)
+
+
+
+        fn click_func(node_state: ListNodeState) -> Box<dyn Fn(&DisplayedWave) -> Message + 'static > {
+            return Box::new(move |_| Message::SelectedWave(node_state.offset))
         }
 
         fn double_click(_node_state: ListNodeState) -> Box<dyn Fn(&DisplayedWave) -> Message + 'static > {
@@ -112,14 +129,8 @@ impl SigViewer {
         }
 
 
-
-
-
-        
-
-        
         let cl = waves_state.view(&WaveOptions::ALL,click_func,double_click);
-            
+
         let pick_list = Column::new()
             .push(cl)
             .width(iced::Length::Fill)

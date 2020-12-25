@@ -122,7 +122,6 @@ where
         } else {
             error!("Trying to toggle out of range cell! Failing")
         }
-            
     }
 }
 
