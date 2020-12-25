@@ -89,6 +89,19 @@ where
     }
 
 
+    pub fn push(&mut self, cell_payload : T) {
+        self.nodes.push(ListNode::new(cell_payload,self.nodes.len()));
+    }
+
+    pub fn get_slice(&self) -> Vec<&T> {
+        self.nodes
+            .iter()
+            .map(|node| &node.payload)
+            .collect()
+
+    }
+
+
     pub fn view<Message: 'static>(&mut self, 
         options : &'static [O],
         on_click: impl Fn(ListNodeState) -> Box<dyn Fn(&T) -> Message + 'static> + Copy,

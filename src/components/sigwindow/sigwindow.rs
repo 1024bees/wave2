@@ -3,8 +3,7 @@ use super::wavewindow;
 use iced::{Column, Container, Element, Row};
 use log::info;
 use std::sync::Arc;
-use wave2_custom_widgets::widget::cell_list;
-use wave2_custom_widgets::widget::cell_list::CellList;
+use crate::components::shared::cell_list::{CellList, ListNodeState};
 
 
 use wave2_wavedb::errors::Waverr;
@@ -39,25 +38,18 @@ pub enum Message {
     InitializeWW((u32,u32)),
     WWMessage(wavewindow::Message),
     ClearWaves,
-    CellListPlaceholder(DisplayedWave),
+    CellListPlaceholder,
 }
 
+#[derive(Default)]
 pub struct SigViewer {
-    waves_state: cell_list::State<WaveOptions>,
+    waves_state: CellList<DisplayedWave, WaveOptions>,
     wavewindow: wavewindow::WaveWindowState,
     live_waves: Vec<DisplayedWave>,
 }
 
 
-impl Default for SigViewer {
-    fn default() -> Self {
-        SigViewer {
-            waves_state: cell_list::State::default(),
-            wavewindow: wavewindow::WaveWindowState::default(),
-            live_waves: Vec::default(),
-        }
-    }
-}
+
 
 impl SigViewer {
     pub fn update(&mut self, message: Message) {
@@ -66,6 +58,7 @@ impl SigViewer {
                 match imw_res {
                     Ok(imw) => {
                         self.live_waves.push(DisplayedWave::from(imw));
+                        self.waves_state.push(self.live_waves.last().unwrap().clone());
                         self.wavewindow.request_redraw();
                     },
                     Err(err) => {
@@ -80,7 +73,7 @@ impl SigViewer {
                 self.live_waves.remove(idx);
                 self.wavewindow.request_redraw();
             }
-            Message::CellListPlaceholder(_) => {
+            Message::CellListPlaceholder => {
                 println!("Cell list interaction, impl me");
             }
             Message::InitializeWW(bounds) => {
@@ -110,12 +103,23 @@ impl SigViewer {
             .width(iced::Length::Fill)
             .height(iced::Length::Fill)
             .padding(20);
-            
-        let cl = CellList::new(waves_state, &live_waves[..], &WaveOptions::ALL)
-            .text_size(12)
-            .heading("Time".into())
-            .heading_size(10);
+        fn click_func(_node_state: ListNodeState) -> Box<dyn Fn(&DisplayedWave) -> Message + 'static > {
+            return Box::new(move |_| Message::CellListPlaceholder)
+        }
 
+        fn double_click(_node_state: ListNodeState) -> Box<dyn Fn(&DisplayedWave) -> Message + 'static > {
+            return Box::new(move |_| Message::CellListPlaceholder)
+        }
+
+
+
+
+
+        
+
+        
+        let cl = waves_state.view(&WaveOptions::ALL,click_func,double_click);
+            
         let pick_list = Column::new()
             .push(cl)
             .width(iced::Length::Fill)

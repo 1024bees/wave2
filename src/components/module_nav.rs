@@ -1,10 +1,9 @@
 use iced::{scrollable, Container, Element, Length, Scrollable};
-use log::{error,info};
+use log::{error};
 use std::sync::Arc;
 use strum_macros;
 
 use wave2_custom_widgets::widget::cell;
-use wave2_custom_widgets::widget::cell::Cell as VizCell;
 
 use crate::components::shared::cell_list::{CellList, ListNodeState};
 use wave2_wavedb::hier_map::SignalItem;
@@ -35,30 +34,6 @@ pub struct SignalNode {
     selected: bool,
 }
 
-//impl SignalNode {
-//    fn new(payload: SignalItem, offset: usize) -> Self {
-//        SignalNode {
-//            payload,
-//            offset,
-//            ..SignalNode::default()
-//        }
-//    }
-//    fn view(&mut self) -> Element<Message> {
-//        let SignalNode {
-//            ui_state,
-//            payload,
-//            offset,
-//            selected,
-//        } = self;
-//        let local_offset = offset.clone();
-//        let sig_cell = VizCell::new(ui_state, payload, &SigOptions::ALL)
-//            .on_double_click(|signal| { info!("Double click!"); Message::AddSig(signal.clone())})
-//            .on_click(move |_| Message::ClickedItem(local_offset))
-//            .override_selected(selected.clone());
-//
-//        sig_cell.into()
-//    }
-//}
 
 ///Responsible for navigating signals within a module
 #[derive(Default)]
@@ -110,7 +85,7 @@ impl ModNavigator {
             return Box::new(move |_| Message::ClickedItem(node_state.offset))
         }
 
-        fn double_click(node_state: ListNodeState) -> Box<dyn Fn(&SignalItem) -> Message +'static > {
+        fn double_click(_node_state: ListNodeState) -> Box<dyn Fn(&SignalItem) -> Message +'static > {
             return Box::new(|sig_item| Message::AddSig(sig_item.clone()))
         }
 
