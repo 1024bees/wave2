@@ -82,6 +82,7 @@ impl SigViewer {
                 if let Some(selected) = self.selected.as_ref() {
                     for idx in selected.into_iter().rev().cloned() {
                         self.live_waves.remove(idx);
+                        self.waves_state.remove(idx);
                     }
                     self.wavewindow.request_redraw();
                 }

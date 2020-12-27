@@ -66,6 +66,37 @@ pub struct CellList<T,O> {
     pub nodes: Vec<ListNode<T,O>>
 }
 
+impl<'a,T,O> IntoIterator for &'a CellList<T,O> {
+    type Item = &'a T;
+    type IntoIter = CLIter<'a,T,O>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        CLIter {
+            list: self,
+            index: 0,
+        }
+    }
+}
+
+pub struct CLIter<'a,T,O> {
+    list: &'a CellList<T,O>,
+    index: usize,
+}
+
+impl<'a,T,O> Iterator for CLIter<'a,T,O> {
+    type Item = &'a T;
+    fn next(&mut self) -> Option<&'a T> {
+        match self.list.nodes.get(self.index) {
+            Some(node) => {
+                self.index +=1;
+                Some(&node.payload)
+            }
+            None => None
+        }
+                
+    }
+}
+
 
 impl<T,O> CellList<T,O>
 where
@@ -91,6 +122,10 @@ where
 
     pub fn push(&mut self, cell_payload : T) {
         self.nodes.push(ListNode::new(cell_payload,self.nodes.len()));
+    }
+
+    pub fn remove(&mut self, idx: usize) -> T {
+        self.nodes.remove(idx).payload
     }
 
     pub fn get_slice(&self) -> Vec<&T> {
