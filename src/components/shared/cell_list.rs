@@ -3,6 +3,8 @@ use wave2_custom_widgets::widget::cell::Cell as VizCell;
 use iced::{Column, Element}; 
 use log::error;
 
+use wave2_custom_widgets::traits::CellOption;
+
 pub struct ListNode<T,O> {
     ui_state: cell::State<O>,
     node_state: ListNodeState,
@@ -23,7 +25,7 @@ pub struct ListNodeState {
 impl<T,O> ListNode<T,O> 
 where
     T: ToString + Clone ,
-    O: ToString + Clone + 'static,
+    O: CellOption
 {
     fn new(payload: T, offset: usize) -> Self {
         ListNode {
@@ -32,11 +34,10 @@ where
             node_state : ListNodeState{ offset: offset, ..ListNodeState::default()}
         }
     }
-    fn view<Message: 'static>(&mut self, 
-        options : &'static [O],
-        on_click: impl Fn(ListNodeState) -> Box<dyn Fn(&T) -> Message + 'static >,
-        on_double_click : impl Fn(ListNodeState) -> Box<dyn Fn(&T) -> Message + 'static >,
-        ) -> Element<Message> {
+    fn view(&mut self, 
+        on_click: impl Fn(ListNodeState) -> Box<dyn Fn(&T) -> O::Message + 'static >,
+        on_double_click : impl Fn(ListNodeState) -> Box<dyn Fn(&T) -> O::Message + 'static >,
+        ) -> Element<O::Message> {
         let ListNode {
             ui_state,
             payload,
@@ -47,7 +48,7 @@ where
         
         let click = on_click(node_state.clone());
 
-        let sig_cell = VizCell::new(ui_state, payload, options)
+        let sig_cell = VizCell::new(ui_state, payload)
             .on_click(click)
             .on_double_click(on_double_click(node_state.clone()))
             .override_selected(node_state.selected.clone());
@@ -69,8 +70,7 @@ pub struct CellList<T,O> {
 impl<T,O> CellList<T,O>
 where
     T: ToString + Clone,
-    O: ToString + Clone + 'static,
-
+    O: CellOption
 {
     pub fn new<C>(collection: C) -> Self
     where
@@ -102,16 +102,15 @@ where
     }
 
 
-    pub fn view<Message: 'static>(&mut self, 
-        options : &'static [O],
-        on_click: impl Fn(ListNodeState) -> Box<dyn Fn(&T) -> Message + 'static> + Copy,
-        on_double_click : impl Fn(ListNodeState) -> Box<dyn Fn(&T) -> Message + 'static> + Copy,
-    ) -> Element<Message> {
+    pub fn view(&mut self, 
+        on_click: impl Fn(ListNodeState) -> Box<dyn Fn(&T) -> O::Message + 'static> + Copy,
+        on_double_click : impl Fn(ListNodeState) -> Box<dyn Fn(&T) -> O::Message + 'static> + Copy,
+    ) -> Element<O::Message> {
         Column::with_children(
             self
             .nodes
             .iter_mut()
-            .map(|x| x.view(options,on_click,on_double_click))
+            .map(|x| x.view(on_click,on_double_click))
             .collect())
             .into()
     }

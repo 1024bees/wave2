@@ -4,11 +4,12 @@ use iced::{Column, Container, Element, Row};
 use log::info;
 use std::sync::Arc;
 use crate::components::shared::cell_list::{CellList, ListNodeState};
-
+use strum_macros;
+use wave2_custom_widgets::traits::CellOption;
 use wave2_wavedb::errors::Waverr;
 use wave2_wavedb::InMemWave;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq,strum_macros::Display)]
 //TODO: add options, move to its own module?
 pub enum WaveOptions {
     Delete,
@@ -17,28 +18,35 @@ pub enum WaveOptions {
 impl WaveOptions {
     const ALL: [WaveOptions; 1] = [WaveOptions::Delete];
 }
-impl std::fmt::Display for WaveOptions {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                WaveOptions::Delete => "Delete",
-            }
-        )
+
+impl CellOption for WaveOptions {
+    type Message = Message;
+
+    fn all() -> &'static [Self] {
+        &WaveOptions::ALL
+    }
+
+    fn to_message(&self) -> Self::Message {
+        match self {
+            WaveOptions::Delete => Message::RemoveSelected
+        }
     }
 }
+
 
 #[derive(Debug, Clone)]
 pub enum Message {
     AddWave(Result<Arc<InMemWave>, Arc<Waverr>>),
-    RemoveWave(usize),
     SetOpts(u32, WaveDisplayOptions),
     InitializeWW((u32,u32)),
     WWMessage(wavewindow::Message),
     ClearWaves,
     CellListPlaceholder,
-    SelectedWave(usize)
+    SelectedWave(usize),
+    //Option Messages
+    RemoveSelected
+
+
 }
 
 #[derive(Default)]
@@ -70,9 +78,14 @@ impl SigViewer {
             Message::ClearWaves => {
                 self.live_waves.clear();
             }
-            Message::RemoveWave(idx) => {
-                self.live_waves.remove(idx);
-                self.wavewindow.request_redraw();
+            Message::RemoveSelected => {
+                if let Some(selected) = self.selected.as_ref() {
+                    for idx in selected.into_iter().rev().cloned() {
+                        self.live_waves.remove(idx);
+                    }
+                    self.wavewindow.request_redraw();
+                }
+                self.selected = None;
             }
             Message::CellListPlaceholder => {
                 println!("Cell list interaction, impl me");
@@ -90,7 +103,7 @@ impl SigViewer {
                     }
                 }
 
-                self.waves_state.toggle_selected(offset,false);
+                self.waves_state.toggle_selected(offset,true);
 
                 self.selected = Some(vec![offset]);
 
@@ -129,7 +142,7 @@ impl SigViewer {
         }
 
 
-        let cl = waves_state.view(&WaveOptions::ALL,click_func,double_click);
+        let cl = waves_state.view(click_func,double_click);
 
         let pick_list = Column::new()
             .push(cl)

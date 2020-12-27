@@ -2,37 +2,49 @@ use iced::{scrollable, Container, Element, Length, Scrollable};
 use log::{error};
 use std::sync::Arc;
 use strum_macros;
-
-use wave2_custom_widgets::widget::cell;
+use wave2_custom_widgets::traits::CellOption;
 
 use crate::components::shared::cell_list::{CellList, ListNodeState};
 use wave2_wavedb::hier_map::SignalItem;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, strum_macros::Display)]
-//TODO: add options, move to its own module?
 pub enum SigOptions {
     Add,
 }
 
 impl SigOptions {
-    //TODO: create ALL macro
     const ALL: [SigOptions; 1] = [SigOptions::Add];
 }
+
+
+
+impl CellOption for SigOptions {
+    type Message = Message;
+
+    fn all() -> &'static [Self] {
+        &SigOptions::ALL
+    }
+
+    fn to_message(&self) -> Self::Message {
+        match self {
+            SigOptions::Add => Message::AddSelected
+        }
+    }
+
+
+}
+
 
 #[derive(Debug, Clone)]
 pub enum Message {
     SignalUpdate(Arc<Vec<SignalItem>>),
     AddSig(SignalItem),
     ClickedItem(usize),
+    //Messages from SigOptions
+    AddSelected
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct SignalNode {
-    ui_state: cell::State<SigOptions>,
-    payload: SignalItem,
-    offset: usize,
-    selected: bool,
-}
+
 
 
 ///Responsible for navigating signals within a module
@@ -69,6 +81,9 @@ impl ModNavigator {
                 self.signals.toggle_selected(offset, true);
                 self.selected_offset = Some(offset);
             }
+            Message::AddSelected => {
+                
+            }
             _ => {
                 error!("Not implimented yet!");
             }
@@ -92,7 +107,6 @@ impl ModNavigator {
 
 
         let viewed_signals = signals.view(
-            &SigOptions::ALL,
             click_func,
             double_click,
             );
