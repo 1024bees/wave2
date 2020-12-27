@@ -8,6 +8,10 @@ use wave2_custom_widgets::widget::cell;
 use wave2_custom_widgets::widget::cell::Cell as VizCell;
 use wave2_wavedb::hier_map::{HierMap, ModuleItem};
 
+
+
+
+
 #[derive(Debug, Clone, Default)]
 struct ModuleWrapper {
     hier_idx: usize,
@@ -157,7 +161,7 @@ impl HierNode {
         .on_press(Message::Toggle(payload.hier_idx));
 
         //TODO: fixme, placeholder message closure
-        let root_cell = VizCell::new(ui_state, payload, &HierOptions::ALL)
+        let root_cell = VizCell::new(ui_state, payload)
             .on_click(Box::new(|module| Message::SendModule(module.hier_idx)))
             .override_selected(shared_state.selected.get());
 

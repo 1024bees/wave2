@@ -5,6 +5,9 @@ use iced_native::{
     Rectangle, Size, Widget,
 };
 
+
+use crate::traits::CellOption;
+use std::marker::PhantomData;
 use log::info;
 
 /// A widget to represent a singular "Cell"
@@ -12,10 +15,10 @@ use log::info;
 /// This is the core widget on which most components are built on. add doc comments in sooner
 /// rather than later
 #[allow(missing_debug_implementations)]
-pub struct Cell<'a, T, O, Message, Renderer: self::Renderer>
+pub struct Cell<'a, T, O, Message: 'static, Renderer: self::Renderer>
 where
     T: ToString + Clone,
-    O: ToString + Clone + 'static,
+    O: CellOption<Message=Message>,
 {
     menu: &'a mut menu::State,
     menu_open: &'a mut bool,
@@ -29,7 +32,7 @@ where
     on_double_click: Option<Box<dyn Fn(&'a T) -> Message>>,
     overriden_selected: Option<bool>,
     item: &'a T,
-    options: &'static [O],
+    options: PhantomData<O>,
     width: Length,
     padding: u16,
     text_size: Option<u16>,
@@ -77,7 +80,7 @@ impl<'a, T: 'a, O: 'a, Message, Renderer: self::Renderer>
     Cell<'a, T, O, Message, Renderer>
 where
     T: ToString + Clone,
-    O: ToString + Clone + 'static,
+    O: CellOption<Message=Message>,
 {
     /// Creates a new [`Cell`] with the given [`State`], a list of options,
     /// the current selected value(s), and the message to produce when option(s) is / are
@@ -88,7 +91,6 @@ where
     pub fn new(
         state: &'a mut State<O>,
         item: &'a T,
-        menu_options: &'static [O],
     ) -> Self {
         let State {
             menu,
@@ -108,7 +110,7 @@ where
             hovered_option,
             selected,
             item: item,
-            options: menu_options,
+            options: PhantomData::default(),
             menu_hovered_option,
             menu_last_selection,
             width: Length::Shrink,
@@ -203,7 +205,7 @@ impl<'a, T: 'a, O: 'a, Message, Renderer> Widget<Message, Renderer>
     for Cell<'a, T, O, Message, Renderer>
 where
     T: Clone + ToString,
-    O: Clone + ToString + 'static,
+    O: CellOption<Message=Message>,
     Message: 'static,
     Renderer: self::Renderer + scrollable::Renderer + 'a,
 {
@@ -263,12 +265,10 @@ where
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
                 if *self.menu_open {
                     if let Some(selection) = self.menu_last_selection {
-                        info!("Selected {} from menu", selection.to_string());
-                        *self.menu_open = false;
-                    } else {
-                        *self.menu_open = false;
-                        *self.menu_last_selection = None;
+                        messages.push(selection.to_message())
                     }
+                    *self.menu_open = false;
+                    *self.menu_last_selection = None;
                     return event::Status::Captured;
                 } else if bounds.contains(cursor_position) {
                     let click =
@@ -311,7 +311,6 @@ where
                             "Opening menu at position x: {}, y: {}",
                             cursor_position.x, cursor_position.y
                         );
-                        *self.menu_last_selection = None;
                         *self.menu_last_selection = None;
                         return event::Status::Captured;
                     }
@@ -361,7 +360,7 @@ where
 
             let mut menu = Menu::new(
                 &mut self.menu,
-                &self.options,
+                O::all(),
                 &mut self.menu_hovered_option,
                 &mut self.menu_last_selection,
             )
@@ -429,7 +428,7 @@ impl<'a, T: 'a, O: 'a, Message, Renderer> Into<Element<'a, Message, Renderer>>
     for Cell<'a, T, O, Message, Renderer>
 where
     T: Clone + ToString,
-    O: ToString + Clone + 'static,
+    O: CellOption<Message=Message>,
 
     Renderer: self::Renderer + 'a,
     Message: 'static,
