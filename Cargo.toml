@@ -38,7 +38,8 @@ members = [ "widget_test/wavewindow",
             "widget_test/cell_list",
             "widget_test/cell",
             "widget_test/hscroll",
-            "custom_widgets",
+            "widget_test/menu_bar",
+            "custom_widgets/widget_derives",
             "wavedb",
 ]
 

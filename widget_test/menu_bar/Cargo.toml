@@ -1,0 +1,19 @@
+[package]
+name = "menu_bar"
+version = "0.1.0"
+authors = ["James Connolly <jimmy@1024bees.com>"]
+edition = "2018"
+publish = false
+
+[dependencies]
+wave2 = { path = "../.."}
+wave2_custom_widgets = { path = "../../custom_widgets"}
+tokio = "0.2.18"
+iced = { version="0.2.0", features = ["glow", "glow_canvas","tokio"] }
+iced_native = {version="0.3.0"} 
+iced_graphics = "*"
+
+strum = "0.19"
+strum_macros = "0.19"
+env_logger = "*"
+log = "*"

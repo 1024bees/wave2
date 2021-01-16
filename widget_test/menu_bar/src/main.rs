@@ -5,67 +5,113 @@ use iced::{
 
 use env_logger;
 use log::info;
-use wave2_custom_widgets::traits::CellOption;
-use wave2_custom_widgets::widget::cell;
-use wave2_custom_widgets::widget::cell::Cell;
+use wave2_custom_widgets::widget::menu_bar::{self,MenuBar,MenuBarOption,MenuOption};
+use strum_macros;
+
 pub fn main() -> Result<(), iced::Error> {
     env_logger::init();
-    info!("TEST");
     Example::run(Settings::default())
 }
 
-#[derive(Clone)]
-enum Menu {
-    Test1,
-    Test2,
+
+#[derive(Debug,Clone,Copy,strum_macros::Display)]
+pub enum TopMenu {
+    Edit(EditMenu),
+    View(ViewMenu),
 }
 
-impl CellOption for Menu {
-    type Message = Message;
-    
-    fn all() -> &'static [Menu] {
-        &Self::ALL
+#[derive(Debug,Clone,Copy,strum_macros::Display)]
+pub enum ViewMenu {
+    Window1,
+    Window2,
+}
+
+#[derive(Debug,Clone,Copy,strum_macros::Display)]
+pub enum EditMenu {
+    Copy,
+    Delete,
+    Paste
+}
+
+impl EditMenu {
+    const fn base() -> Self {
+        EditMenu::Copy
     }
+}
+
+
+impl TopMenu {
+    const ALL: [TopMenu; 2] = [TopMenu::Edit(EditMenu::base()), TopMenu::View(ViewMenu::Window1),];
+}
+
+impl MenuOption for ViewMenu {
+    type Message = TopMenu;
 
     fn to_message(&self) -> Self::Message {
-        match self {
-            Menu::Test1 => Message::Test1,
-            Menu::Test2 => Message::Test2,
-        }
+        TopMenu::View(self.clone())
     }
 
+    fn all(&self) -> &'static [&dyn MenuOption<Message=Self::Message>]
+    {
+        &ViewMenu::ALL
+    }
 }
 
-impl Menu {
-    const ALL: [Menu; 2] = [Menu::Test1, Menu::Test2];
-}
-impl std::fmt::Display for Menu {
+impl MenuOption for EditMenu {
+    type Message = TopMenu;
 
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Menu::Test1 => write!(f, "Test1"),
-            Menu::Test2 => write!(f, "Test1"),
-
-        }
-        
+    fn to_message(&self) -> Self::Message{
+        TopMenu::Edit(self.clone())
     }
 
+    fn all(&self) -> &'static [&dyn MenuOption<Message=Self::Message>] {
+        &EditMenu::ALL
+    }
 }
+
+
+impl ViewMenu {
+    const ALL: [&'static dyn MenuOption<Message=<Self as MenuOption>::Message>; 2] =  [&ViewMenu::Window1, &ViewMenu::Window2]; 
+
+}
+
+
+impl EditMenu {
+    const ALL: [&'static dyn MenuOption<Message=TopMenu>; 3] = [&EditMenu::Copy, &EditMenu::Delete, &EditMenu::Paste];
+}
+
+
+
+impl MenuBarOption for TopMenu {
+    type Message = TopMenu;
+    fn all() -> &'static [Self] {
+        &Self::ALL
+    }
+    fn get_children(&self) -> &'static [&dyn MenuOption<Message=TopMenu>] {
+        match self {
+            TopMenu::Edit(default) => {
+                default.all()
+            }
+            TopMenu::View(default) => {
+                default.all()
+            }
+        }
+    }
+}
+
+
+
+
+
 
 #[derive(Default)]
 struct Example {
     scroll: scrollable::State,
-    pick_list: cell::State<Menu>,
+    menubar : menu_bar::State,
     selected_language: Language,
 }
 
-#[derive(Debug, Clone, Copy)]
-enum Message {
-    LanguageSelected(Language),
-    Test1,
-    Test2
-}
-
+type Message = TopMenu;
 impl Sandbox for Example {
     type Message = Message;
 
@@ -79,30 +125,25 @@ impl Sandbox for Example {
 
     fn update(&mut self, message: Message) {
         match message {
-            Message::LanguageSelected(language) => {
-                self.selected_language = language;
-            }
             _ => {
-                println!("Test!");
+                info!("help!")
             }
         }
     }
 
     fn view(&mut self) -> Element<Message> {
-        let cell = Cell::new(
-            &mut self.pick_list,
-            &Language::ALL[0],
-        );
+        
+        let menu_bar : MenuBar<TopMenu,Message,_> = MenuBar::new(&mut self.menubar,Message::all());
 
-        let container = Container::new(cell).width(Length::Units(400));
 
         let mut content = Scrollable::new(&mut self.scroll)
             .width(Length::Fill)
             .align_items(Align::Center)
             .spacing(10)
+            .push(menu_bar)
             .push(Space::with_height(Length::Units(600)))
-            .push(Text::new("Which is your favorite language?"))
-            .push(container);
+            .push(Text::new("Which is your favorite language?"));
+            
 
         content = content.push(Space::with_height(Length::Units(600)));
 

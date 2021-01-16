@@ -2,7 +2,7 @@
 name = "wave2_custom_widgets"
 version = "0.1.0"
 authors = ["James Connolly <jimmy@1024bees.com>"]
-description = "custom widgets to be used inside wave2"
+description = "Custom widgets to be used inside wave2; these aren't in any way coupled to the application though"
 edition = "2018"
 
 
@@ -14,4 +14,5 @@ iced_style = "*"
 iced_core = "*"
 log = "0.4.0"
 pretty_env_logger = "0.4"
+strum_macros = "0.19"
 
