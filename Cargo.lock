@@ -4024,6 +4024,7 @@ dependencies = [
  "log",
  "pretty_env_logger",
  "strum_macros",
+ "wave2_widget_derives",
 ]
 
 [[package]]
@@ -4046,6 +4047,17 @@ dependencies = [
  "tokio 0.2.22",
  "toml",
  "vcd",
+]
+
+[[package]]
+name = "wave2_widget_derives"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2 1.0.19",
+ "quote 1.0.7",
+ "strum_macros",
+ "syn",
+ "wave2_custom_widgets",
 ]
 
 [[package]]
@@ -4435,17 +4447,6 @@ dependencies = [
  "log",
  "wgpu 0.6.0",
  "zerocopy",
-]
-
-[[package]]
-name = "widget_derives"
-version = "0.1.0"
-dependencies = [
- "proc-macro2 1.0.19",
- "quote 1.0.7",
- "strum_macros",
- "syn",
- "wave2_custom_widgets",
 ]
 
 [[package]]

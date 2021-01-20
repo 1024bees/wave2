@@ -1,5 +1,5 @@
 [package]
-name = "widget_derives"
+name = "wave2_widget_derives"
 version = "0.1.0"
 authors = ["James Connolly <jimmy@1024bees.com>"]
 description = "Custom derives widgets to be used inside wave2; these aren't in any way coupled to the application though"

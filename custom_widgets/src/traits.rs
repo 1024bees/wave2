@@ -39,3 +39,6 @@ pub trait CellOption: std::fmt::Display + Clone + 'static {
     ///
     fn to_message(&self) -> Self::Message;
 }
+
+
+pub use wave2_widget_derives::{MenuOption,MenuBarOption};

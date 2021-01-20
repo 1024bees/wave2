@@ -124,6 +124,20 @@ impl Default for Bucket {
     }
 }
 
+
+
+
+#[derive(Clone,Copy, Debug)]
+///Enum for representing ways to format ParsedVec into String
+pub enum WaveFormat {
+    Decimal,
+    Hex,
+    Octal,
+    SDecimal,
+}
+
+
+
 /// Most simulators are 4 state, where any signal can be 0,1,z or x
 /// We expect signals to be driven, so we optimize for that case
 ///
@@ -156,6 +170,115 @@ pub struct FourStateBitVec {
     value_bits: BitVec<LocalBits>,
     zx_bits: Option<BitVec<LocalBits>>,
 }
+
+pub trait SignalRepr {
+    fn to_string(&self, format: WaveFormat, bit_width: usize) -> Option<String>;
+}
+
+
+//TODO: FourStateBitArr can be optimized 
+impl SignalRepr for FourStateBitArr {
+    fn to_string(&self, format : WaveFormat, bit_width: usize) -> Option<String> {
+        let FourStateBitArr { value_bits, zx_bits} = self;
+        if let Some(_) = zx_bits {
+            match format {
+                _ => None
+            }
+        } else {
+            let mut need_padding = false;
+            let vstr: String = value_bits
+                .domain()
+                .enumerate()
+                .rev()
+                .map(|(idx,value)| {
+                    match format {
+                        WaveFormat::Hex => {
+                            format!("{:0>width$X}",value, width = (bit_width -idx * 32).min(32))
+                        },
+                        WaveFormat::Octal => {
+                            format!("{:0>width$o}",value, width = (bit_width -idx * 32).min(32))
+                        },
+                        WaveFormat::Decimal => {
+                            if need_padding {
+                                format!("{:0>width$}",value, width = (bit_width -idx * 32).min(32))
+                            } else {
+                                if value == 0 {
+                                    String::from("")
+                                }  else {
+                                need_padding = true;
+                                format!("{}",value)
+                                }
+                            }
+
+                        }
+                        _ => unimplemented!("Format unsupported! Time to die!")
+
+                    }
+
+                    
+                }).collect();
+
+                    Some(vstr)
+            }
+        }
+}
+
+
+
+
+impl SignalRepr for FourStateBitVec {
+    fn to_string(&self, format: WaveFormat, bit_width: usize) -> Option<String> {
+        let FourStateBitVec { value_bits, zx_bits} = self;
+
+        if let Some(_) = zx_bits {
+            match format {
+                _ => None
+            }
+        } else {
+            let mut need_padding = false;
+            let vstr: String = value_bits
+                .domain()
+                .enumerate()
+                .rev()
+                .map(|(idx,value)| {
+                    match format {
+                        WaveFormat::Hex => {
+                            format!("{:0>width$X}",value, width = (bit_width -idx * 32).min(32))
+                        },
+                        WaveFormat::Octal => {
+                            format!("{:0>width$o}",value, width = (bit_width -idx * 32).min(32))
+                        },
+                        WaveFormat::Decimal => {
+                            if need_padding {
+                                format!("{:0>width$}",value, width = (bit_width -idx * 32).min(32))
+                            } else {
+                                if value == 0 {
+                                    String::from("")
+                                }  else {
+                                need_padding = true;
+                                format!("{}",value)
+                                }
+                            }
+
+                        }
+                        _ => unimplemented!("Format unsupported! Time to die!")
+
+                    }
+
+                    
+                }).collect();
+
+                    Some(vstr)
+            }
+
+
+        }
+
+
+        
+}
+
+
 
 macro_rules! from_vcd_vec {
     ($([$t:ident,$ut:ident]),*) => {

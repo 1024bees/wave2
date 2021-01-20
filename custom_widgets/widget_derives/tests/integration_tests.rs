@@ -1,4 +1,4 @@
-use widget_derives::{MenuBarOption,MenuOption};
+use wave2_widget_derives::{MenuBarOption,MenuOption};
 use wave2_custom_widgets::widget::menu_bar::{MenuOption,MenuBarOption};
 use strum_macros;
 

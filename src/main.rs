@@ -1,6 +1,6 @@
 use iced::{
     pane_grid, Application, Command, Container, Element, HorizontalAlignment,
-    Length, PaneGrid, Row, Settings, Text,
+    Length, PaneGrid, Column, Settings, Text,
 };
 
 use clap::Clap;
@@ -53,7 +53,7 @@ pub struct State {
     sv_pane: pane_grid::Pane,
     mn_pane: pane_grid::Pane,
     hn_pane: pane_grid::Pane,
-    menu_bar: menu_bar::MenuBar,
+    menu_bar: menu_bar::GlobalMenuBar,
     wdb_api: Option<Arc<WdbAPI>>,
 }
 
@@ -186,7 +186,7 @@ impl Application for Wave2 {
                         //TODO: do some like uhhh... cleaning up here
                         //      should probably initialize sizes of panes, etc
 
-                        let menu_bar = menu_bar::MenuBar::default();
+                        let menu_bar = menu_bar::GlobalMenuBar::default();
                         *self = Wave2::Loaded(State {
                             panes,
                             sv_pane,
@@ -335,7 +335,7 @@ impl Application for Wave2 {
                 let menu_bar_view =
                     menu_bar.view().map(|message| Message::MBMessage(message));
 
-                Row::new().push(menu_bar_view).push(pane_grid).into()
+                Column::new().push(menu_bar_view).push(pane_grid).into()
             }
         }
     }

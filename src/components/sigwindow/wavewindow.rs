@@ -20,6 +20,12 @@ pub const TS_FONT_SIZE: f32 = 12.0;
 /// it clips the black bounding box of the wave window and looks bad
 const TS_CLIP_RANGE: f32 = 5.0;
 
+
+/// Mininum x_delta between two "value" changes that must occur before we consider writing the
+/// wave's value on the line
+const TEXT_THRESHOLD: f32 = 20.0;
+
+
 const BLUE: Color = Color::from_rgba(
     0x1b as f32 / 255.0,
     0x0a as f32 / 255.0,
@@ -140,7 +146,6 @@ impl<'a> WaveWindow<'a> {
         self.frame_state.end_time
     }
 
-    
     fn offset(&self) -> f32 {
         self.frame_state.offset
     }
@@ -183,7 +188,7 @@ impl<'a> WaveWindow<'a> {
 
         let mut prev_ts = self.start_time();
         let mut xpos: f32 = 0.0;
-        
+
         let hdr_line = Point {
             x: 0.0,
             y: TS_FONT_SIZE, //+ bounds.y ,
@@ -327,6 +332,15 @@ impl<'a> WaveWindow<'a> {
                                     prev_xcoord,
                                     &bounds,
                                 ) - VEC_SHIFT_WIDTH / 2.0;
+
+
+
+                                if x_delt > TEXT_THRESHOLD  {
+
+                                }
+
+
+
 
                                 for (point, direction) in working_pts
                                     .iter_mut()
