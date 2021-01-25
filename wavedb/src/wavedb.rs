@@ -1,7 +1,9 @@
 use crate::errors::Waverr;
 use crate::hier_map::HierMap;
 use crate::vcd_parser::WaveParser;
-use crate::{Bucket, InMemWave, DEFAULT_SLIZE_SIZE};
+use crate::storage::in_memory::InMemWave;
+use crate::storage::bucket::Bucket;
+use crate::{DEFAULT_SLIZE_SIZE};
 use bincode;
 use serde::{Deserialize, Serialize};
 use sled::Db;
@@ -199,13 +201,13 @@ impl WaveDB {
         let serialized = serde_json::to_string(&bucket)?;
 
         if let Ok(Some(_)) =
-            tree.insert(bucket.id.to_be_bytes(), serialized.as_str())
+            tree.insert(bucket.signal_id().to_be_bytes(), serialized.as_str())
         {
             // is problematic; implies that this value was previously set and we are
             // overwriting it. We should write only once per bucket
             return Err(Waverr::BucketErr {
-                id: bucket.id,
-                ts: bucket.timestamp_range.0,
+                id: bucket.signal_id(),
+                ts_range: bucket.get_db_idx(),
                 context: "We are overwriting a value for this bucket!",
             });
         }
@@ -224,7 +226,7 @@ impl WaveDB {
         }
         Err(Waverr::BucketErr {
             id,
-            ts: ts_start,
+            ts_range: WaveDB::ts2key(ts_start),
             context: "failed to retrieve bucket",
         })
     }
@@ -261,6 +263,9 @@ impl WaveDB {
 mod tests {
     use crate::wavedb::*;
     use std::path::*;
+    use crate::signals::SigType;
+    use crate::*;
+
 
     #[test]
     fn bucket_serde() {
@@ -276,14 +281,13 @@ mod tests {
     fn insert_sanity() {
         std::fs::remove_dir_all("TestDB");
         let tdb = WaveDB::new("TestDB".into(), None);
-        let mut in_bucket = Bucket::default();
-        in_bucket.id = 1;
+        let in_bucket = Bucket::default();
         match tdb.insert_bucket(&in_bucket) {
             Ok(()) => (),
             Err(err) => panic!("Inserting bucket sanity errored with {}", err),
         }
 
-        let bucket = tdb.retrieve_bucket(1, 0);
+        let bucket = tdb.retrieve_bucket(0, 0);
         match bucket {
             Ok(payload) => (),
             Err(err) => {
@@ -291,4 +295,60 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    #[allow(unused_must_use)]
+    fn wdb_from_wikivcd() {
+        let mut path_to_wikivcd = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        path_to_wikivcd.push("test_vcds/wikipedia.vcd");
+        //bad but hey... is what it is
+        std::fs::remove_dir_all("/tmp/rng");
+        let wdb =
+            WaveDB::from_vcd(path_to_wikivcd.clone(), Path::new("/tmp/rng"));
+        let actualdb = match wdb {
+            Ok(wdb) => wdb,
+            Err(errors::Waverr::VCDErr(vcdmess)) => {
+                panic!("{} is the vcd error message", vcdmess)
+            }
+            Err(Waverr::GenericErr(message)) => {
+                panic!("Unhandled error case: {} ", message)
+            }
+            Err(_) => panic!("Unhandled error case"),
+        };
+        let var = actualdb.get_imw("logic.data".into()).unwrap();
+        assert_eq!(var.sig_type, SigType::Vector(8));
+        drop(actualdb);
+
+        // we need to test what happens when we're loading wdb from disk
+        let wdb2 = WaveDB::from_vcd(path_to_wikivcd, Path::new("/tmp/rng"));
+        let actualdb = match wdb2 {
+            Ok(wdb2) => wdb2,
+            Err(errors::Waverr::VCDErr(vcdmess)) => {
+                panic!("{} is the vcd error message", vcdmess)
+            }
+            Err(Waverr::GenericErr(message)) => {
+                panic!("Unhandled error case: {} ", message)
+            }
+            Err(_) => panic!("Unhandled error case"),
+        };
+        let var = actualdb.get_imw("logic.en".into()).unwrap();
+        assert_eq!(var.as_ref().sig_type, SigType::Bit);
+    }
+
+    #[test]
+    #[allow(unused_must_use)]
+    fn wdb_from_vgavcd() {
+        let mut path_to_wikivcd = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        path_to_wikivcd.push("test_vcds/vga.vcd");
+        //bad but hey... is what it is
+        std::fs::remove_dir_all("/tmp/vcddb");
+        let wdb = WaveDB::from_vcd(path_to_wikivcd, Path::new("/tmp/vcddb"))
+            .expect("could not create wavedb");
+
+        let var = wdb.get_imw("TOP.vga_g_DAC".into()).unwrap();
+        assert_eq!(var.as_ref().sig_type, SigType::Vector(10));
+
+        std::fs::remove_dir_all("/tmp/vcddb");
+    }
+
 }

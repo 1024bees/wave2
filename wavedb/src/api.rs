@@ -1,6 +1,6 @@
 use crate::errors::Waverr;
 use crate::wavedb::WaveDB;
-use crate::InMemWave;
+use crate::storage::in_memory::InMemWave;
 
 use crate::hier_map::{HierMap, SignalItem};
 use std::collections::hash_map::DefaultHasher;
@@ -46,11 +46,6 @@ impl WdbAPI {
         self.wdb.get_hier_map().clone()
     }
 
-    /// Get the signal content associated with this path
-    pub fn get_signal_content(&self) -> InMemWave {
-        unimplemented!()
-    }
-
     pub async fn get_signals(
         api: Arc<WdbAPI>,
         signal: SignalItem,
@@ -60,7 +55,6 @@ impl WdbAPI {
     }
 
     /// Get the names of all signals that exist within this module (that are visible to wavedb)
-    ///
     pub async fn get_module_signals(
         api: Arc<WdbAPI>,
         module_idx: usize,

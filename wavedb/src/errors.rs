@@ -1,23 +1,34 @@
+/*! This module creates a generic error type for any error that can manifest across wavedb.
+
+Uses [`thiserror`] to derive different error types as they appear
+
+
+
+[`thiserror`]: thiserror
+!*/
 use std::io;
 use thiserror::Error;
 
+
+///Generic error type for any error that can manifest within wavedb or wave2
 #[derive(Debug, Error)]
 pub enum Waverr {
-    //Parse errors
+    /// Error during VCD parsing
     #[error(
         "VCDError found, issue is `{0}`. TODO: make a better error enum here!"
     )]
     VCDErr(&'static str),
-    #[error("Wdb Bucket error for bucket id : {id:?}, ts : {ts:?}. context: {context:?}")]
+    #[error("Wdb Bucket error for bucket id : {id:?}, ts : {ts_range:?}. context: {context:?}")]
     BucketErr {
         id: u32,
-        ts: u32,
+        ts_range: String,
         context: &'static str,
     },
     #[error(
         "MissingID found, payload is `{0}` TODO: make a better error type!"
     )]
     SledError(#[from] sled::Error),
+    ///Serde failure. TODO: move this to bincode whenever possible
     #[error("Problem ser/deser bucket is {0}. TODO: Depricate this")]
     BuckerSerdeErr(#[from] serde_json::Error),
 
