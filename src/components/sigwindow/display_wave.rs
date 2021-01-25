@@ -1,8 +1,8 @@
 use iced::Color;
 use iced::canvas::Text;
 use std::sync::Arc;
-use wave2_wavedb::InMemWave;
-use wave2_wavedb::{ParsedVec,WaveFormat};
+use wave2_wavedb::storage::in_memory::InMemWave;
+use wave2_wavedb::signals::{ParsedVec,WaveFormat};
 
 
 #[derive(Clone, Copy, Debug)]

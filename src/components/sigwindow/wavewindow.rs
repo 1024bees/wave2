@@ -9,7 +9,7 @@ use wave2_custom_widgets::widget::hscroll;
 use super::display_wave::{DisplayedWave, SBWaveState};
 use log::info;
 
-use wave2_wavedb::SigType;
+use wave2_wavedb::signals::SigType;
 
 pub const BUFFER_PX: f32 = 4.0;
 pub const WAVEHEIGHT: f32 = 19.0;

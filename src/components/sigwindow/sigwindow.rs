@@ -7,7 +7,7 @@ use crate::components::shared::cell_list::{CellList, ListNodeState};
 use strum_macros;
 use wave2_custom_widgets::traits::CellOption;
 use wave2_wavedb::errors::Waverr;
-use wave2_wavedb::InMemWave;
+use wave2_wavedb::storage::in_memory::InMemWave;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq,strum_macros::Display)]
 //TODO: add options, move to its own module?
