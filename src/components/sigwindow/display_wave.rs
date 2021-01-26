@@ -2,8 +2,13 @@ use iced::Color;
 use iced::canvas::Text;
 use std::sync::Arc;
 use wave2_wavedb::storage::in_memory::InMemWave;
-use wave2_wavedb::signals::{ParsedVec,WaveFormat};
+use wave2_wavedb::signals::{ParsedVec,WaveFormat,SignalRepr};
 
+/// Mininum x_delta between two "value" changes that must occur before we consider writing the
+/// wave's value on the line
+const TEXT_THRESHOLD: f32 = 20.0;
+
+const TEXT_SIZE: f32 = 15.0;
 
 #[derive(Clone, Copy, Debug)]
 pub struct WaveDisplayOptions {
@@ -33,7 +38,7 @@ pub const fn to_color(opts: &WaveDisplayOptions) -> Color {
 #[derive(Clone, Debug)]
 pub struct DisplayedWave {
     wave_content: Arc<InMemWave>,
-    display_conf: Option<WaveDisplayOptions>,
+    pub display_conf: Option<WaveDisplayOptions>,
 }
 
 //FIXME: for testing only; this should be removed once sigwindow is stable
@@ -90,33 +95,25 @@ impl std::fmt::Display for WaveColors {
 /// Utility for converting value -> canvas based text.
 /// The text that we are generating exists in the margins between two "wave deltas", so we have to
 /// truncate that value occasionally
-pub fn generate_canvas_text(text_space : f32, width : u32, data: ParsedVec,format: Option<WaveDisplayOptions>) -> Text {
-    let str_format = format.unwrap_or(WaveDisplayOptions::default()).format;
-
+pub fn generate_canvas_text(data: &ParsedVec,display_options: WaveDisplayOptions, bitwidth: usize, space: f32) -> Option<Text> {
+    let str_format = display_options.format;
+    if space < TEXT_THRESHOLD {
+        return None
+    }
+    let value_string = data.to_string(str_format,bitwidth);
+    if let Some(value) = value_string {
+        let visible_chars = (space / TEXT_SIZE).ceil() as usize;
+        let printed_str : &str = if visible_chars < value.len() {
+            value.get(0..visible_chars)
+                .expect("Truncating string improperly when generating wavewindow canvas text")
+        } else {
+                value.as_str()
+            };
+        Some(Text::from(printed_str))
+    } else {
+        None
+    }
     
-
-
-
-    let ValueStr = match str_format {
-        WaveFormat::Decimal => {
-            
-            
-        }
-        WaveFormat::Hex => {
-
-        }
-        WaveFormat::SDecimal => {
-            unimplemented!("Need to impliment SDecimal canvas rep")
-        }
-        WaveFormat::Octal => {
-            unimplemented!("On the record.. fuck Octal")
-        }
-
-
-    };
-
-
-    Text::from("Dog!")
 }
 
 

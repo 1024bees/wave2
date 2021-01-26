@@ -6,7 +6,7 @@ use iced::{
 use iced_native::event;
 use wave2_custom_widgets::widget::hscroll::{HScroll};
 use wave2_custom_widgets::widget::hscroll;
-use super::display_wave::{DisplayedWave, SBWaveState};
+use super::display_wave::{DisplayedWave, SBWaveState,generate_canvas_text};
 use log::info;
 
 use wave2_wavedb::signals::SigType;
@@ -20,10 +20,6 @@ pub const TS_FONT_SIZE: f32 = 12.0;
 /// it clips the black bounding box of the wave window and looks bad
 const TS_CLIP_RANGE: f32 = 5.0;
 
-
-/// Mininum x_delta between two "value" changes that must occur before we consider writing the
-/// wave's value on the line
-const TEXT_THRESHOLD: f32 = 20.0;
 
 
 const BLUE: Color = Color::from_rgba(
@@ -263,6 +259,7 @@ impl<'a> WaveWindow<'a> {
                 Path::new(|p| {
                     let wave = display.get_wave();
                     let mut working_pt = leftmost_pt.clone();
+                    let display_options = display.display_conf.unwrap_or_default();
                     p.move_to(leftmost_pt);
                     let mut prev_xcoord = self.start_time();
                     match wave.sig_type {
@@ -315,13 +312,13 @@ impl<'a> WaveWindow<'a> {
                             working_pt.x += fin_x_delt;
                             p.line_to(working_pt);
                         }
-                        SigType::Vector(_width) => {
+                        SigType::Vector(width) => {
                             let working_pt_top = Point {
                                 y: working_pt.y - WAVEHEIGHT,
                                 ..working_pt
                             };
                             let mut working_pts = [working_pt_top, working_pt];
-                            for (time, _sig_payload) in wave.changes() {
+                            for (time, sig_payload) in wave.changes() {
 
                                 if self.out_of_range(time.clone()) {
                                     break;
@@ -334,10 +331,8 @@ impl<'a> WaveWindow<'a> {
                                 ) - VEC_SHIFT_WIDTH / 2.0;
 
 
+                                let text = generate_canvas_text(sig_payload,display_options,width,x_delt);
 
-                                if x_delt > TEXT_THRESHOLD  {
-
-                                }
 
 
 
