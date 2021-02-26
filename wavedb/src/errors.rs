@@ -24,6 +24,8 @@ pub enum Waverr {
         ts_range: String,
         context: &'static str,
     },
+    #[error("Unhandled comand found when building puddle; command is {0:?}")]
+    VcdCommandErr(vcd::Command),
     #[error(
         "MissingID found, payload is `{0}` TODO: make a better error type!"
     )]

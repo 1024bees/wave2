@@ -1,15 +1,23 @@
 use bitvec::prelude::*;
 use serde::{Deserialize, Serialize};
-use vcd::Value;
+use vcd::{Value,Command};
 
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
 ///Signal type enum; describes bitwidth for vectored signals
 pub enum SigType {
     Bit,
+    Float,
     Vector(usize),
+    Str(usize),
 }
 
+
+impl Default for SigType {
+    fn default() -> Self {
+        SigType::Bit
+    }
+}
 impl SigType {
     pub fn from_width(width: usize) -> SigType {
         match width {
@@ -17,6 +25,19 @@ impl SigType {
             bw => SigType::Vector(bw),
         }
     }
+
+    pub fn width(&self) -> usize {
+        match self {
+            SigType::Bit => 1,
+            SigType::Float => 64,
+            SigType::Vector(width) => width.clone(),
+            SigType::Str(width) => width.clone()
+
+
+        }
+    }
+
+
 }
 
 
@@ -60,7 +81,7 @@ impl WaveFormat {
 /// 01 -> 1
 /// 10 -> Z
 /// 11 -> X
-#[derive(Debug, Clone,Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub enum ParsedVec {
     WordVec(FourStateBitArr),
     WideVec(FourStateBitVec),
@@ -70,8 +91,8 @@ pub enum ParsedVec {
 /// When signals are 64 bits or less, we use BitArrays to represent value bits and zx_bits
 #[derive(Default,Clone, Debug, Serialize, Deserialize)]
 pub struct FourStateBitArr {
-    value_bits: BitArray<LocalBits, [u32; 1]>,
-    zx_bits: Option<BitArray<LocalBits, [u32; 1]>>,
+    value_bits: BitArray<LocalBits, [u8; 4]>,
+    zx_bits: Option<BitArray<LocalBits, [u8; 4]>>,
 }
 
 
@@ -300,13 +321,6 @@ impl ParsedVec {
     }
 }
 
-impl From<u8> for ParsedVec {
-    fn from(vec_val: u8) -> ParsedVec {
-        let mut fbv = FourStateBitArr::default();
-        fbv.value_bits = [vec_val as u32].into();
-        ParsedVec::WordVec(fbv)
-    }
-}
 
 impl From<Vec<Value>> for ParsedVec {
     fn from(vec_val: Vec<Value>) -> ParsedVec {
@@ -368,7 +382,7 @@ mod tests {
     #[test]
     fn serde_4bit_arr() {
         let mut fbv = FourStateBitArr::default();
-        fbv.value_bits = [0xffff as u32].into();
+        fbv.value_bits = [0xff, 0xff, 0, 0].into();
         let bytes = serde_json::to_string(&fbv).unwrap();
         serde_json::from_str::<FourStateBitArr>(bytes.as_ref()).expect(
             format!("failed to deserialize, bytes are {:#?}", bytes).as_str(),

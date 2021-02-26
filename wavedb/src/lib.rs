@@ -15,6 +15,7 @@ pub mod storage;
 pub mod signals;
 pub mod hier_map;
 pub mod inout;
+pub mod puddle;
 mod vcd_parser;
 pub mod wavedb;
 
