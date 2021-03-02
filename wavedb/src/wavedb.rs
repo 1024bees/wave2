@@ -2,12 +2,11 @@ use crate::errors::Waverr;
 use crate::hier_map::HierMap;
 use crate::vcd_parser::WaveParser;
 use crate::storage::in_memory::InMemWave;
-use crate::storage::bucket::Bucket;
 use crate::{DEFAULT_SLIZE_SIZE};
 use bincode;
 use serde::{Deserialize, Serialize};
 use sled::Db;
-use std::collections::HashMap;
+use crate::puddle::Puddle;
 use std::path::*;
 use std::sync::Arc;
 use toml;
@@ -132,62 +131,62 @@ impl WaveDB {
         let mut first_time = None;
         let mut global_time: u32 = 0;
         let mut current_range = (global_time, global_time + DEFAULT_SLIZE_SIZE);
-        let mut bucket_mapper: HashMap<vcd::IdCode, Bucket> = HashMap::new();
-        wdb.hier_map = Arc::new(parser.create_hiermap()?);
-        for item in parser {
-            match item {
-                Ok(Command::Timestamp(time)) => {
-                    let time = time as u32;
-                    if time % DEFAULT_SLIZE_SIZE
-                        < global_time % DEFAULT_SLIZE_SIZE
-                    {
-                        for (_, bucket) in bucket_mapper.iter() {
-                            wdb.insert_bucket(bucket)?;
-                        }
-                        bucket_mapper.clear();
-                        let rounded_time = time - (time % DEFAULT_SLIZE_SIZE);
-                        current_range =
-                            (rounded_time, rounded_time + DEFAULT_SLIZE_SIZE)
-                    }
-                    if first_time.is_none() {
-                        first_time = Some(time);
-                    }
-                    global_time = time;
-                }
-                //TODO: collapse these arms if possible? good way to share this code?
-                Ok(Command::ChangeVector(code, vvalue)) => {
-                    if !bucket_mapper.contains_key(&code) {
-                        bucket_mapper.insert(
-                            code,
-                            Bucket::new(
-                                code.0 as u32,
-                                vvalue.len(),
-                                current_range,
-                            ),
-                        );
-                    }
-                    let bucket = bucket_mapper.get_mut(&code).unwrap();
-                    bucket.add_new_signal(global_time, vvalue);
-                }
-                Ok(Command::ChangeScalar(code, value)) => {
-                    if !bucket_mapper.contains_key(&code) {
-                        bucket_mapper.insert(
-                            code,
-                            Bucket::new(code.0 as u32, 1, current_range),
-                        );
-                    }
-                    let bucket = bucket_mapper.get_mut(&code).unwrap();
-                    bucket.add_new_signal(global_time, vec![value]);
-                }
-                Ok(_) => {}
-                Err(_) => {
-                    return Err(Waverr::VCDErr("Malformed vcd"));
-                }
-            }
-        }
-        for (_, bucket) in bucket_mapper.iter() {
-            wdb.insert_bucket(bucket)?;
-        }
+        //let mut bucket_mapper: HashMap<vcd::IdCode, Bucket> = HashMap::new();
+        //wdb.hier_map = Arc::new(parser.create_hiermap()?);
+        //for item in parser {
+        //    match item {
+        //        Ok(Command::Timestamp(time)) => {
+        //            let time = time as u32;
+        //            if time % DEFAULT_SLIZE_SIZE
+        //                < global_time % DEFAULT_SLIZE_SIZE
+        //            {
+        //                for (_, bucket) in bucket_mapper.iter() {
+        //                    wdb.insert_bucket(bucket)?;
+        //                }
+        //                bucket_mapper.clear();
+        //                let rounded_time = time - (time % DEFAULT_SLIZE_SIZE);
+        //                current_range =
+        //                    (rounded_time, rounded_time + DEFAULT_SLIZE_SIZE)
+        //            }
+        //            if first_time.is_none() {
+        //                first_time = Some(time);
+        //            }
+        //            global_time = time;
+        //        }
+        //        //TODO: collapse these arms if possible? good way to share this code?
+        //        Ok(Command::ChangeVector(code, vvalue)) => {
+        //            if !bucket_mapper.contains_key(&code) {
+        //                bucket_mapper.insert(
+        //                    code,
+        //                    Bucket::new(
+        //                        code.0 as u32,
+        //                        vvalue.len(),
+        //                        current_range,
+        //                    ),
+        //                );
+        //            }
+        //            let bucket = bucket_mapper.get_mut(&code).unwrap();
+        //            bucket.add_new_signal(global_time, vvalue);
+        //        }
+        //        Ok(Command::ChangeScalar(code, value)) => {
+        //            if !bucket_mapper.contains_key(&code) {
+        //                bucket_mapper.insert(
+        //                    code,
+        //                    Bucket::new(code.0 as u32, 1, current_range),
+        //                );
+        //            }
+        //            let bucket = bucket_mapper.get_mut(&code).unwrap();
+        //            bucket.add_new_signal(global_time, vec![value]);
+        //        }
+        //        Ok(_) => {}
+        //        Err(_) => {
+        //            return Err(Waverr::VCDErr("Malformed vcd"));
+        //        }
+        //    }
+        //}
+        //for (_, bucket) in bucket_mapper.iter() {
+        //    wdb.insert_bucket(bucket)?;
+        //}
 
         wdb.set_time_range((first_time.expect("No timestamp present in VCD!"), global_time));
         wdb.dump_config()?;
@@ -196,54 +195,56 @@ impl WaveDB {
         Ok(wdb)
     }
 
-    fn insert_bucket(&self, bucket: &Bucket) -> Result<(), Waverr> {
-        let tree: sled::Tree = self.db.open_tree(bucket.get_db_idx())?;
-        let serialized = serde_json::to_string(&bucket)?;
+    fn insert_puddle(&self, puddle: &Puddle) -> Result<(), Waverr> {
+        let tree: sled::Tree = self.db.open_tree(puddle.get_btree_idx().to_le_bytes())?;
+        let serialized = serde_json::to_string(&puddle)?;
 
         if let Ok(Some(_)) =
-            tree.insert(bucket.signal_id().to_be_bytes(), serialized.as_str())
+            tree.insert(puddle.get_base_sigid().to_le_bytes(), serialized.as_str())
         {
             // is problematic; implies that this value was previously set and we are
             // overwriting it. We should write only once per bucket
-            return Err(Waverr::BucketErr {
-                id: bucket.signal_id(),
-                ts_range: bucket.get_db_idx(),
-                context: "We are overwriting a value for this bucket!",
+            return Err(Waverr::PuddleErr{
+                time: puddle.get_btree_idx(),
+                base_sigid: puddle.get_base_sigid(),
+                context: "This puddle already exists! We should never double insert",
             });
         }
         Ok(())
     }
 
-    fn retrieve_bucket(
+    fn retrieve_puddle(
         &self,
         id: u32,
         ts_start: u32,
-    ) -> Result<Bucket, Waverr> {
-        let tree = self.db.open_tree(WaveDB::ts2key(ts_start))?;
-        if let Some(bucket) = tree.get(id.to_be_bytes())? {
-            let bucket: Bucket = serde_json::from_slice(bucket.as_ref())?;
-            return Ok(bucket);
+    ) -> Result<Arc<Puddle>, Waverr> {
+        let tree = self.db.open_tree(ts_start.to_le_bytes())?;
+        let base_id = id - id % Puddle::signals_per_puddle();
+        if let Some(puddle) = tree.get(base_id.to_le_bytes())? {
+            let puddle: Puddle = serde_json::from_slice(puddle.as_ref())?;
+            return Ok(Arc::new(puddle));
         }
-        Err(Waverr::BucketErr {
-            id,
-            ts_range: WaveDB::ts2key(ts_start),
-            context: "failed to retrieve bucket",
+        Err(Waverr::PuddleErr{
+            time: ts_start,
+            base_sigid: base_id,
+            context: "failed to retrieve puddle",
         })
     }
 
-    pub fn get_imw_id(
+    pub fn get_imw_id<'a>(
         &self,
         sig_name: String,
         sig_id: u32,
-    ) -> Result<Arc<InMemWave>, Arc<Waverr>> {
-        let buckets: Vec<Result<Bucket, Waverr>> = self
-            .get_time_slices()
-            .map(|start_slice| self.retrieve_bucket(sig_id, start_slice))
-            .collect();
+    ) -> Result<Arc<InMemWave<'a>>, Arc<Waverr>> {
+        //let buckets: Vec<Result<Bucket, Waverr>> = self
+        //    .get_time_slices()
+        //    .map(|start_slice| self.retrieve_bucket(sig_id, start_slice))
+        //    .collect();
 
-        InMemWave::new(sig_name, buckets)
-            .map_err(|err| Arc::new(err))
-            .map(|imw| Arc::new(imw))
+        //InMemWave::new(sig_name, buckets)
+        //    .map_err(|err| Arc::new(err))
+        //    .map(|imw| Arc::new(imw))
+        unimplemented!("Need to fix other shit!")
     }
 
     pub fn get_imw(&self, sig: String) -> Result<Arc<InMemWave>, Arc<Waverr>> {
@@ -251,11 +252,6 @@ impl WaveDB {
         self.get_imw_id(sig, id)
     }
 
-    #[inline]
-    fn ts2key(start: u32) -> String {
-        let rounded_ts = start - (start % DEFAULT_SLIZE_SIZE);
-        format!("{}-{}", rounded_ts, rounded_ts + DEFAULT_SLIZE_SIZE)
-    }
 }
 
 #[cfg(test)]

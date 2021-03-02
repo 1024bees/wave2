@@ -46,10 +46,10 @@ impl WdbAPI {
         self.wdb.get_hier_map().clone()
     }
 
-    pub async fn get_signals(
+    pub async fn get_signals<'a>(
         api: Arc<WdbAPI>,
         signal: SignalItem,
-    ) -> Result<Arc<InMemWave>, Arc<Waverr>> {
+    ) -> Result<Arc<InMemWave<'a>>, Arc<Waverr>> {
         let (sig_name, sig_id) = SignalItem::destructure(signal);
         api.wdb.get_imw_id(sig_name, sig_id)
     }

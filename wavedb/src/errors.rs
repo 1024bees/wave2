@@ -8,7 +8,7 @@ Uses [`thiserror`] to derive different error types as they appear
 !*/
 use std::io;
 use thiserror::Error;
-
+use crate::puddle::{SignalId,Toffset};
 
 ///Generic error type for any error that can manifest within wavedb or wave2
 #[derive(Debug, Error)]
@@ -18,10 +18,18 @@ pub enum Waverr {
         "VCDError found, issue is `{0}`. TODO: make a better error enum here!"
     )]
     VCDErr(&'static str),
+    ///TODO: depricated, remove
     #[error("Wdb Bucket error for bucket id : {id:?}, ts : {ts_range:?}. context: {context:?}")]
     BucketErr {
         id: u32,
         ts_range: String,
+        context: &'static str,
+    },
+    #[error("Puddle error: Puddle time : {time:?}, base_sigid: {base_sigid:?}.\n
+        context : {context:?}")]
+    PuddleErr {
+        time: u32,
+        base_sigid: SignalId,
         context: &'static str,
     },
     #[error("Unhandled comand found when building puddle; command is {0:?}")]

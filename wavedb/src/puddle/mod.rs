@@ -1,33 +1,35 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::signals::{SigType,ParsedVec};
 use std::sync::Arc;
 use std::iter::Iterator;
-type SignalId = u32;
+pub type SignalId = u32;
 /// offset into a puddle
-type Poffset= usize;
+pub type Poffset= usize;
 /// Time offset; describes what puddle to look at
-type Toffset= u32;
+pub type Toffset= u32;
 pub mod builder;
 mod utils;
 
-#[derive(Debug,Serialize,Deserialize)]
+#[derive(Debug,Serialize,Deserialize,Default)]
 pub struct PMeta {
     /// offset into the payload when this signal starts
-    offset: u32,
+    offset: Poffset,
     /// number of items in the payload
     len: u16,
     /// Signal type information
-    sig_type: SigType,
+    width: usize,
     /// if this slice of the puddle has variable length data
     /// variable length data happens zx bits are present, etc
-    variable_payload: bool,
+    var_len: bool,
 }
 
 impl PMeta {
+    fn width(&self) -> usize {
+        self.width
+    }
     fn drop_len(&self) -> Option<usize> {
-        if self.variable_payload {
-            Some(self.sig_type.width() + Droplet::header_width())
+        if self.var_len {
+            Some(self.width() as usize + Droplet::header_width())
         } else {
             None
         }
@@ -46,14 +48,20 @@ pub struct Puddle {
     prev_sig_map: HashMap<SignalId,Toffset>,
     ///Base time offset of this puddle; 
     base : Toffset,
+    base_sigid: SignalId,
     payload : Vec<u8>,
 }
 
 impl Puddle {
     /// The time width of a puddle; currently statically set, maybe worth setting as part of some
-    /// configuration 
+    /// configuration for wavedb
     pub const fn puddle_width() -> Toffset {
         10000
+    }
+
+    ///TODO: this should be some configuration part of wavedb
+    pub const fn signals_per_puddle() -> SignalId {
+        50
     }
 
     pub fn puddle_end(&self) -> Toffset {
@@ -62,7 +70,14 @@ impl Puddle {
 
     fn is_variable(&self, signal_id: SignalId) -> Option<bool> {
         self.offset_map.get(&signal_id)
-            .map(|meta_data| meta_data.variable_payload)
+            .map(|meta_data| meta_data.var_len)
+    }
+    pub fn get_btree_idx(&self) -> Toffset {
+        self.base
+    }
+
+    pub fn get_base_sigid(&self) -> SignalId{
+        self.base_sigid 
     }
 
     pub fn get_droplet(&self,signal_id: SignalId, poffset : Toffset) -> Result<Droplet, Toffset> {
@@ -78,7 +93,7 @@ impl Puddle {
         let pmeta = offset_data.unwrap();
 
 
-        if pmeta.variable_payload {
+        if pmeta.var_len {
             unimplemented!("i dont wanna deal with this yet")
         } else {
             let lbound = pmeta.offset as usize;
@@ -90,7 +105,7 @@ impl Puddle {
     }
 }
 
-
+#[derive(Debug)]
 pub struct PCursor<'a> {
     sig_id: SignalId,
     /// Time offset of the cursor 
@@ -104,8 +119,8 @@ pub struct PCursor<'a> {
     payload_handle: &'a[u8],
     meta_handle: &'a PMeta,
     puddle_handle: Arc<Puddle>,
-
 }
+
 impl<'a> Iterator for PCursor<'a> {
     type Item = Droplet<'a>;
 
@@ -115,10 +130,10 @@ impl<'a> Iterator for PCursor<'a> {
         if self.pidx >= self.plen {
             return None
         } else {
-            if  self.meta_handle.variable_payload {
+            if  self.meta_handle.var_len {
                 unimplemented!()
             } else {
-                let sig_width = self.meta_handle.sig_type.width() / 8;
+                let sig_width = self.meta_handle.width() / 8;
                 self.poffset += sig_width;
                 return Some(Droplet{content: &self.payload_handle[self.poffset..self.poffset + sig_width]})
             }
@@ -186,13 +201,13 @@ impl<'a> PCursor<'a> {
                 return Err(prev_signal)
             }
         } else {
-            if self.meta_handle.variable_payload {
+            if self.meta_handle.var_len {
                 unimplemented!()
             }
             //TODO: this could be potentially sped up; current impl is linear
             self.pidx = 0;
             self.poffset = self.meta_handle.offset as usize;
-            let sig_width = self.meta_handle.sig_type.width();
+            let sig_width = self.meta_handle.width();
             loop {
                 let next_time= self.puddle_handle.base + Droplet::timestamp_from_bytes(self.payload_handle,self.poffset + sig_width) as u32;
                 if next_time <= offset && self.pidx < self.plen {
@@ -217,29 +232,28 @@ impl<'a> PCursor<'a> {
     }
 
     /// Move the cursor to point to the next droplet
-    pub fn next_change(&self) -> Result<Droplet,Toffset> {
-       
-        if self.meta_handle.variable_payload { 
+    pub fn next_change(&mut self) -> Result<Droplet,Toffset> {
+        if self.meta_handle.var_len { 
             unimplemented!()
         }
         self.pidx += 1;
         if self.pidx < self.plen {
-            self.poffset += self.meta_handle.sig_type.width();
-            Ok(Droplet::new(self.payload_handle,self.poffset,self.meta_handle.sig_type.width() as Poffset))
+            self.poffset += self.meta_handle.width();
+            Ok(Droplet::new(self.payload_handle,self.poffset,self.meta_handle.width() as Poffset))
         } else {
             Err(self.puddle_handle.next_sig_map.get(&self.sig_id).unwrap().clone())
         }
     }
 
     /// Move the cursor to point to the next droplet
-    pub fn prev_change(&self) -> Result<Droplet,Toffset> {
-        if self.meta_handle.variable_payload { 
+    pub fn prev_change(&mut self) -> Result<Droplet,Toffset> {
+        if self.meta_handle.var_len { 
             unimplemented!()
         }
         else if self.pidx != 0 {
             self.pidx -= 1;
-            self.poffset -= self.meta_handle.sig_type.width();
-            Ok(Droplet::new(self.payload_handle,self.poffset,self.meta_handle.sig_type.width() as Poffset))
+            self.poffset -= self.meta_handle.width();
+            Ok(Droplet::new(self.payload_handle,self.poffset,self.meta_handle.width() as Poffset))
         } else {
             Err(self.puddle_handle.next_sig_map.get(&self.sig_id).unwrap().clone())
         }

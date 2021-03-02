@@ -1,10 +1,9 @@
-use super::{Toffset, SignalId};
+use super::{Toffset, SignalId,Poffset,Puddle,PMeta};
 use std::collections::HashMap;
 use vcd::{Command,Value};
 use crate::errors::Waverr;
 use std::convert::TryFrom;
 use super::utils::get_id;
-use super::Puddle;
 use crate::signals::SigType;
 
 /// Transient payload; this is the temporary container that is accumulated into as 
@@ -14,8 +13,8 @@ use crate::signals::SigType;
 struct RunningPayload  {
     data : Vec<u8>,
     num_items: u16,
-    sig_type: SigType,
-    variable_len: bool,
+    width: usize,
+    var_len: bool,
     
 }
 
@@ -53,7 +52,7 @@ impl Extend<Value> for RunningPayload {
                     if zx_base.is_none() {
                         zx_base = Some(self.data.len());
                         self.data.resize(self.data.len() + data_size,0);
-                        self.variable_len = true;
+                        self.var_len = true;
                     }
                     let zx_byte_offset = byte_offset + data_size;
                     self.data[zx_byte_offset] |= 1 << bit_offset;
@@ -71,7 +70,6 @@ impl PuddleBuilder {
             ..PuddleBuilder::default()
         }
     }
-    
 
 
     pub fn add_signal(&mut self, command: Command,timestamp: Toffset) -> Result<(),Waverr> {
@@ -84,6 +82,7 @@ impl PuddleBuilder {
                 running_pload.extend(vec![val]);
             },
             Command::ChangeVector(id,val) => {
+                running_pload.width = usize::try_from(val.len()).unwrap();
                 running_pload.extend(val);
             },
             Command::ChangeReal(id,val) => {
@@ -101,10 +100,39 @@ impl PuddleBuilder {
 
 }
 
-//impl Into<Puddle> for PuddleBuilder {
-//    fn into(self) -> Puddle { 
-//
-//    }
-//
-//}
+impl Into<Puddle> for PuddleBuilder {
+    fn into(self) -> Puddle { 
+        let mut offset : Poffset = 0;
+        let mut offset_map = HashMap::default();
+        let prev_sig_map = HashMap::default();
+        let next_sig_map = HashMap::default();
+
+        //TODO: merge this in with the payloads into iter. me just lazy hehe!
+        let base_sigid = self.payloads.iter().min_by_key(|entry| entry.0).unwrap().0.clone();
+
+        let payload = self.payloads.into_iter()
+            .flat_map(|(key, payload)| {
+                let droplet_descriptor = PMeta {
+                    offset,
+                    len: payload.num_items,
+                    width: payload.width,
+                    var_len: payload.var_len,
+                    ..PMeta::default()
+                };
+                offset_map.insert(key, droplet_descriptor);
+                offset += payload.data.len();
+                payload.data.into_iter()
+            })
+            .collect::<Vec<u8>>();
+        Puddle {
+            offset_map,
+            prev_sig_map,
+            next_sig_map,
+            base: self.base,
+            base_sigid,
+            payload
+        }
+    }
+
+}
 
