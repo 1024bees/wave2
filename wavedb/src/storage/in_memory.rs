@@ -1,16 +1,17 @@
 use crate::errors::Waverr;
-use crate::puddle::PCursor;
+use crate::puddle::Puddle;
+use std::sync::Arc;
 
 #[derive(Debug)]
-pub struct InMemWave<'a> {
+pub struct InMemWave {
     name: String,
-    cursors: Vec<PCursor<'a>>,
+    cursors: Vec<Arc<Puddle>>
 }
 
 
 
 ///In memory DS for wave content; created from a list of Buckets
-impl<'a> InMemWave<'a> {
+impl InMemWave {
     //pub fn default_vec() -> Self {
     //    InMemWave {
     //        sig_type: SigType::Vector(4),
@@ -32,7 +33,7 @@ impl<'a> InMemWave<'a> {
 
     pub fn new(
         name_str: String,
-        cursor: PCursor<'a>,
+        cursor: Vec<Arc<Puddle>>,
     ) -> Result<InMemWave, Waverr> {
         Ok(InMemWave {
             name: name_str,

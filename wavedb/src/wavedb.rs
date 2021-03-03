@@ -6,11 +6,13 @@ use crate::{DEFAULT_SLIZE_SIZE};
 use bincode;
 use serde::{Deserialize, Serialize};
 use sled::Db;
-use crate::puddle::Puddle;
+use std::collections::HashMap;
 use std::path::*;
 use std::sync::Arc;
 use toml;
 use vcd::Command;
+use crate::puddle::{Puddle,SignalId,Toffset};
+use crate::puddle::builder::PuddleBuilder;
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 struct WDBConfig {
@@ -26,6 +28,7 @@ pub struct WaveDB {
     db: Db,
     //TODO: think about what should be wanted from a cfg file
     config: WDBConfig,
+    puddle_cache: HashMap<SignalId,Arc<Puddle>>,
     pub hier_map: Arc<HierMap>,
 }
 
@@ -34,6 +37,7 @@ impl WaveDB {
         WaveDB {
             db: sled::open(db_path.unwrap_or(db_name.as_ref())).unwrap(),
             hier_map: Arc::default(),
+            puddle_cache: HashMap::default(),
             config: WDBConfig {
                 db_name: db_name.clone(),
                 ..WDBConfig::default()
@@ -131,62 +135,49 @@ impl WaveDB {
         let mut first_time = None;
         let mut global_time: u32 = 0;
         let mut current_range = (global_time, global_time + DEFAULT_SLIZE_SIZE);
-        //let mut bucket_mapper: HashMap<vcd::IdCode, Bucket> = HashMap::new();
-        //wdb.hier_map = Arc::new(parser.create_hiermap()?);
-        //for item in parser {
-        //    match item {
-        //        Ok(Command::Timestamp(time)) => {
-        //            let time = time as u32;
-        //            if time % DEFAULT_SLIZE_SIZE
-        //                < global_time % DEFAULT_SLIZE_SIZE
-        //            {
-        //                for (_, bucket) in bucket_mapper.iter() {
-        //                    wdb.insert_bucket(bucket)?;
-        //                }
-        //                bucket_mapper.clear();
-        //                let rounded_time = time - (time % DEFAULT_SLIZE_SIZE);
-        //                current_range =
-        //                    (rounded_time, rounded_time + DEFAULT_SLIZE_SIZE)
-        //            }
-        //            if first_time.is_none() {
-        //                first_time = Some(time);
-        //            }
-        //            global_time = time;
-        //        }
-        //        //TODO: collapse these arms if possible? good way to share this code?
-        //        Ok(Command::ChangeVector(code, vvalue)) => {
-        //            if !bucket_mapper.contains_key(&code) {
-        //                bucket_mapper.insert(
-        //                    code,
-        //                    Bucket::new(
-        //                        code.0 as u32,
-        //                        vvalue.len(),
-        //                        current_range,
-        //                    ),
-        //                );
-        //            }
-        //            let bucket = bucket_mapper.get_mut(&code).unwrap();
-        //            bucket.add_new_signal(global_time, vvalue);
-        //        }
-        //        Ok(Command::ChangeScalar(code, value)) => {
-        //            if !bucket_mapper.contains_key(&code) {
-        //                bucket_mapper.insert(
-        //                    code,
-        //                    Bucket::new(code.0 as u32, 1, current_range),
-        //                );
-        //            }
-        //            let bucket = bucket_mapper.get_mut(&code).unwrap();
-        //            bucket.add_new_signal(global_time, vec![value]);
-        //        }
-        //        Ok(_) => {}
-        //        Err(_) => {
-        //            return Err(Waverr::VCDErr("Malformed vcd"));
-        //        }
-        //    }
-        //}
-        //for (_, bucket) in bucket_mapper.iter() {
-        //    wdb.insert_bucket(bucket)?;
-        //}
+        let mut inflight_puddles: HashMap<SignalId, PuddleBuilder> = HashMap::new();
+        wdb.hier_map = Arc::new(parser.create_hiermap()?);
+        for item in parser {
+            match item {
+                Ok(Command::Timestamp(time)) => {
+                    let time = time as u32;
+                    if time % DEFAULT_SLIZE_SIZE
+                        < global_time % DEFAULT_SLIZE_SIZE
+                    {
+                        for (_, puddle) in inflight_puddles.into_iter() {
+                            wdb.insert_puddle(puddle.into())?;
+                        }
+                        inflight_puddles = HashMap::new();
+                        
+                        let rounded_time = time - (time % DEFAULT_SLIZE_SIZE);
+                        current_range =
+                            (rounded_time, rounded_time + DEFAULT_SLIZE_SIZE)
+                    }
+                    if first_time.is_none() {
+                        first_time = Some(time);
+                    }
+                    global_time = time;
+                }
+                //TODO: collapse these arms if possible? good way to share this code?
+                Ok(command) => {
+                    match command {
+                        //TODO: add a get id function to the vcd lib that returns an option
+                        Command::ChangeScalar(id,.. ) | Command::ChangeVector(id,..) | Command::ChangeReal(id,..) | Command::ChangeString(id,..) => {
+                            let base_id = id.0 as u32 - id.0 as u32 % Puddle::signals_per_puddle();
+                            let puddle_builder = inflight_puddles.entry(base_id).or_insert(PuddleBuilder::new(current_range.0));
+                            puddle_builder.add_signal(command, global_time)?;
+                        }
+                        _ => return Err(Waverr::VcdCommandErr(command))
+                    }
+                }
+                Err(_) => {
+                    return Err(Waverr::VCDErr("Malformed vcd"));
+                }
+            }
+        }
+        for (_, puddle) in inflight_puddles.into_iter() {
+            wdb.insert_puddle(puddle.into())?;
+        }
 
         wdb.set_time_range((first_time.expect("No timestamp present in VCD!"), global_time));
         wdb.dump_config()?;
@@ -195,7 +186,7 @@ impl WaveDB {
         Ok(wdb)
     }
 
-    fn insert_puddle(&self, puddle: &Puddle) -> Result<(), Waverr> {
+    fn insert_puddle(&self, puddle: Puddle) -> Result<(), Waverr> {
         let tree: sled::Tree = self.db.open_tree(puddle.get_btree_idx().to_le_bytes())?;
         let serialized = serde_json::to_string(&puddle)?;
 
@@ -236,14 +227,14 @@ impl WaveDB {
         sig_name: String,
         sig_id: u32,
     ) -> Result<Arc<InMemWave<'a>>, Arc<Waverr>> {
-        //let buckets: Vec<Result<Bucket, Waverr>> = self
-        //    .get_time_slices()
-        //    .map(|start_slice| self.retrieve_bucket(sig_id, start_slice))
-        //    .collect();
+        let puddles: Vec<Result<Arc<Puddle>, Waverr>> = self
+            .get_time_slices()
+            .map(|start_slice| self.retrieve_puddle(sig_id, start_slice))
+            .collect();
 
-        //InMemWave::new(sig_name, buckets)
-        //    .map_err(|err| Arc::new(err))
-        //    .map(|imw| Arc::new(imw))
+        InMemWave::new(sig_name, buckets)
+            .map_err(|err| Arc::new(err))
+            .map(|imw| Arc::new(imw))
         unimplemented!("Need to fix other shit!")
     }
 

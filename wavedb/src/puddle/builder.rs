@@ -64,12 +64,13 @@ impl Extend<Value> for RunningPayload {
 }
 
 impl PuddleBuilder {
-    fn new(base: Toffset) -> Self {
+    pub fn new(base: Toffset) -> Self {
         PuddleBuilder {
             base,
             ..PuddleBuilder::default()
         }
     }
+
 
 
     pub fn add_signal(&mut self, command: Command,timestamp: Toffset) -> Result<(),Waverr> {
