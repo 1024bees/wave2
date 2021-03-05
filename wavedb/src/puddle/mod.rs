@@ -142,18 +142,20 @@ impl<'a> Iterator for PCursor<'a> {
     }
 
 }
+
+
+/**
+Droplet structure.
+
+2 bytes of header; header structure is as follows (little endian) starting from LSB:
+
+* Timestamp(12 bits): offset from start of the drop.
+* Optional (3 bits): Length info? TBD 
+* ZX Bit (1bit) : This bit is set if there are any undefined (X) or undriven (HiZ) bits of this signal. If this is high, the payload portion of the Drop will be twice as long.
+
+
+*/
 pub struct Droplet<'a> {
-    ///
-    /// Droplet structure:
-    ///
-    ///     2 bytes of header; header structure is as follows (little endian):
-    ///         starting from LSB 
-    ///         Timestamp(12 bits): offset from start of the drop.
-    ///         Optional (3 bits): Length info? TBD 
-    ///         ZX Bit (1bit) : This bit is set if there are any undefined (X) or undriven (HiZ) bits of this signal. If this is high, the payload portion of the Drop will be twice as long.
-    ///     N bytes of payload; N should either be;
-    ///         C; statically set by 
-    ///
     content: &'a[u8],
 }
 

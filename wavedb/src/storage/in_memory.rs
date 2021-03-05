@@ -37,7 +37,7 @@ impl InMemWave {
     ) -> Result<InMemWave, Waverr> {
         Ok(InMemWave {
             name: name_str,
-            cursors: vec![cursor],
+            cursors: cursor,
         })
     }
 }

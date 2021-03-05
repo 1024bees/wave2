@@ -5,6 +5,7 @@ use crate::errors::Waverr;
 use std::convert::TryFrom;
 use super::utils::get_id;
 use crate::signals::SigType;
+use log::info;
 
 /// Transient payload; this is the temporary container that is accumulated into as 
 /// a vcd is parsed; TODO: make this sync? in the future it would be nice to build these out in
@@ -77,19 +78,20 @@ impl PuddleBuilder {
         let time_delta = u16::try_from(timestamp - self.base).expect("Puddles are much too large; probably an error with how this is called") & 0xfff;
         let id = get_id(&command)?;
         let running_pload = self.payloads.entry(id as u32).or_insert(RunningPayload::default());
+        running_pload.extend(time_delta.to_le_bytes().iter().cloned());
         match command {
-            Command::ChangeScalar(id,val) => {
+            Command::ChangeScalar(..,val) => {
                 //TODO: optimize
                 running_pload.extend(vec![val]);
             },
-            Command::ChangeVector(id,val) => {
+            Command::ChangeVector(..,val) => {
                 running_pload.width = usize::try_from(val.len()).unwrap();
                 running_pload.extend(val);
             },
-            Command::ChangeReal(id,val) => {
-                running_pload.extend(val.to_le_bytes().into_iter().cloned());
+            Command::ChangeReal(..,val) => {
+                running_pload.extend(val.to_le_bytes().iter().cloned());
             }, 
-            Command::ChangeString(id,string) => {
+            Command::ChangeString(..,string) => {
                 running_pload.extend(string.as_bytes().into_iter().cloned());
             },
             _ => {
@@ -109,7 +111,10 @@ impl Into<Puddle> for PuddleBuilder {
         let next_sig_map = HashMap::default();
 
         //TODO: merge this in with the payloads into iter. me just lazy hehe!
-        let base_sigid = self.payloads.iter().min_by_key(|entry| entry.0).unwrap().0.clone();
+        let base_sigid = self.payloads.iter()
+            .min_by_key(|entry| entry.0)
+            .map(|entry| entry.0 - entry.0 % Puddle::signals_per_puddle())
+            .unwrap();
 
         let payload = self.payloads.into_iter()
             .flat_map(|(key, payload)| {
@@ -125,6 +130,7 @@ impl Into<Puddle> for PuddleBuilder {
                 payload.data.into_iter()
             })
             .collect::<Vec<u8>>();
+        info!("Base sigid is {}",base_sigid);
         Puddle {
             offset_map,
             prev_sig_map,
