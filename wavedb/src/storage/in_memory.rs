@@ -1,10 +1,11 @@
 use crate::errors::Waverr;
-use crate::puddle::Puddle;
+use crate::puddle::{Puddle,SignalId};
 use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct InMemWave {
     name: String,
+    signal_id: SignalId,
     cursors: Vec<Arc<Puddle>>
 }
 
@@ -33,10 +34,12 @@ impl InMemWave {
 
     pub fn new(
         name_str: String,
+        signal_id: SignalId,
         cursor: Vec<Arc<Puddle>>,
     ) -> Result<InMemWave, Waverr> {
         Ok(InMemWave {
             name: name_str,
+            signal_id,
             cursors: cursor,
         })
     }

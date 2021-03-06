@@ -32,6 +32,11 @@ pub enum Waverr {
         base_sigid: SignalId,
         context: &'static str,
     },
+    #[error("PCursor error. \n\t {id:?} \n\t context: {context:?}")]
+    PCursorErr {
+        id: SignalId,
+        context: &'static str,
+    },
     #[error("Unhandled comand found when building puddle; command is {0:?}")]
     VcdCommandErr(vcd::Command),
     #[error(

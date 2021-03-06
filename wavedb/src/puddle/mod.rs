@@ -2,13 +2,20 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::iter::Iterator;
+use crate::errors::Waverr;
+
+
+pub mod builder;
+mod utils;
+
+
+
+
 pub type SignalId = u32;
 /// offset into a puddle
 pub type Poffset= usize;
 /// Time offset; describes what puddle to look at
 pub type Toffset= u32;
-pub mod builder;
-mod utils;
 
 #[derive(Debug,Serialize,Deserialize,Default)]
 pub struct PMeta {
@@ -103,22 +110,31 @@ impl Puddle {
 
         }
     }
+
+    pub fn get_cursor<'a>(&'a self, sig_id: SignalId) -> Result<PCursor<'a>,Waverr> {
+        let meta_handle = self.offset_map
+            .get(&sig_id)
+            .ok_or(Waverr::PCursorErr{id: sig_id, context: "No content for this signal"})?;
+
+        Ok(PCursor::new(sig_id,meta_handle,self))
+    }
+
+
 }
 
 #[derive(Debug)]
 pub struct PCursor<'a> {
     sig_id: SignalId,
-    /// Time offset of the cursor 
-    curr_off : Toffset,
     /// Offset into the payload
     poffset: Poffset,
     /// index into the current puddle; keeps track if we need to go to the next puddle
     pidx: u16,
     /// length of the puddle; if pidx equals this number, we have to go to the next puddle 
     plen: u16,
+    /// this slice should contain the ENTIRE puddle payload
     payload_handle: &'a[u8],
     meta_handle: &'a PMeta,
-    puddle_handle: Arc<Puddle>,
+    puddle_handle: &'a Puddle,
 }
 
 impl<'a> Iterator for PCursor<'a> {
@@ -185,8 +201,22 @@ impl<'a> Droplet<'a> {
 
 
 impl<'a> PCursor<'a> {
+    pub fn new(sig_id: SignalId, meta_handle: &'a PMeta, puddle_handle: &'a Puddle) -> Self {
+        PCursor {
+            sig_id,
+            pidx: 0,
+            poffset: meta_handle.offset,
+            plen: meta_handle.len,
+            meta_handle,
+            payload_handle: &puddle_handle.payload[..],
+            puddle_handle,
+        }
+
+    }
+
+
     pub fn set_time(&mut self, offset: Toffset) -> Result<(),Toffset> {
-        if offset > self.puddle_handle.as_ref().puddle_end() {
+        if offset > self.puddle_handle.puddle_end() {
             let next_signal = self.puddle_handle.next_sig_map.get(&self.sig_id).expect("TODO: Message").clone();
             if next_signal >= offset {
                 //move to last signal in current puddle
@@ -194,7 +224,7 @@ impl<'a> PCursor<'a> {
             } else {
                 return Err(next_signal)
             }
-        } else if offset < self.puddle_handle.as_ref().base {
+        } else if offset < self.puddle_handle.base {
             let prev_signal = self.puddle_handle.prev_sig_map.get(&self.sig_id).expect("TODO: Message").clone();
             if prev_signal >= offset {
                 //move to last signal in current puddle
@@ -262,4 +292,7 @@ impl<'a> PCursor<'a> {
     }
 
 }
+
+
+
 

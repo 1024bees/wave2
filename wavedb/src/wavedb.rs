@@ -236,7 +236,7 @@ impl WaveDB {
             .map(|start_slice| self.retrieve_puddle(sig_id, start_slice).unwrap())
             .collect();
 
-        InMemWave::new(sig_name, puddles)
+        InMemWave::new(sig_name, sig_id, puddles)
             .map_err(|err| Arc::new(err))
             .map(|imw| Arc::new(imw))
     }
