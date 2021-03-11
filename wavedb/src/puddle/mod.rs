@@ -79,7 +79,13 @@ impl Puddle {
         self.offset_map.get(&signal_id)
             .map(|meta_data| meta_data.var_len)
     }
+
+    //TODO: get rid of this god damn it, merge with puddle_base
     pub fn get_btree_idx(&self) -> Toffset {
+        self.base
+    }
+
+    pub fn puddle_base(&self) -> Toffset {
         self.base
     }
 
@@ -189,10 +195,14 @@ impl<'a> Droplet<'a> {
         (((payload[poffset+1] & 0x0f) as u16) << 8) | payload[poffset] as u16
 
     }
-    fn get_timestamp(&self) -> u16 {
+    pub fn get_timestamp(&self) -> u16 {
         (((self.content[1] & 0x0f) as u16) << 8) | self.content[0] as u16
     }
-    fn get_data(&self) -> &[u8] {
+
+    pub fn take_data(self) -> &'a [u8] {
+        &self.content[2..]
+    }
+    pub fn get_data(&self) -> &[u8] {
         &self.content[2..]
     }
 

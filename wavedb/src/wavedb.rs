@@ -226,11 +226,11 @@ impl WaveDB {
         })
     }
 
-    pub fn get_imw_id(
+    pub fn get_imw_id<'a>(
         &self,
         sig_name: String,
         sig_id: u32,
-    ) -> Result<Arc<InMemWave>, Arc<Waverr>> {
+    ) -> Result<Arc<InMemWave<'a>>, Arc<Waverr>> {
         let puddles = self
             .get_time_slices()
             .map(|start_slice| self.retrieve_puddle(sig_id, start_slice).unwrap())
@@ -241,7 +241,7 @@ impl WaveDB {
             .map(|imw| Arc::new(imw))
     }
 
-    pub fn get_imw(&self, sig: String) -> Result<Arc<InMemWave>, Arc<Waverr>> {
+    pub fn get_imw<'a>(&self, sig: String) -> Result<Arc<InMemWave<'a>>, Arc<Waverr>> {
         let id = self.get_id(sig.as_str())?;
         self.get_imw_id(sig, id)
     }
@@ -336,7 +336,9 @@ mod tests {
         let wdb = WaveDB::from_vcd(path_to_wikivcd, Path::new("/tmp/vcddb"))
             .expect("could not create wavedb");
 
-        let var = wdb.get_imw("TOP.vga_g_DAC".into()).unwrap();
+        let var = wdb.get_imw("TOP.vga_g_DAC".into()).expect("signal doesn't exist and it definitely should!!");
+
+        let val = var.all_data().nth(0).expect("We should have some data here");
        
 
         std::fs::remove_dir_all("/tmp/vcddb");
