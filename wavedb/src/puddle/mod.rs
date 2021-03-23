@@ -4,6 +4,7 @@ use std::sync::Arc;
 use std::iter::Iterator;
 use crate::errors::Waverr;
 
+use log::info;
 
 pub mod builder;
 mod utils;
@@ -121,11 +122,9 @@ impl Puddle {
         let meta_handle = self.offset_map
             .get(&sig_id)
             .ok_or(Waverr::PCursorErr{id: sig_id, context: "No content for this signal"})?;
-
         Ok(PCursor::new(sig_id,meta_handle,self))
     }
-
-
+    
 }
 
 #[derive(Debug)]
@@ -145,19 +144,35 @@ pub struct PCursor<'a> {
 
 impl<'a> Iterator for PCursor<'a> {
     type Item = Droplet<'a>;
-
     fn next(&mut self) -> Option<Self::Item> {
-        self.pidx +=1;
+        fn get_droplet<'a>(cursor: &mut PCursor<'a>, sig_width: usize) -> Option<Droplet<'a>> {
+                                                                                                           
+            let rv = Some(Droplet{content: &cursor.payload_handle[cursor.poffset..cursor.poffset + sig_width]});
+            cursor.poffset += sig_width;
+            cursor.pidx +=1;
+            rv
+
+        }
+
 
         if self.pidx >= self.plen {
             return None
         } else {
-            if  self.meta_handle.var_len {
-                unimplemented!()
+            if self.meta_handle.var_len {
+                if Droplet::is_zx_from_bytes(self.payload_handle) {
+                    let sig_width = 2 * self.meta_handle.width() / 8 + Droplet::header_width();
+                    get_droplet(self, sig_width)
+
+                } else if Droplet::is_var_from_bytes(self.payload_handle) {
+                    unimplemented!()
+                } else {
+                    let sig_width = self.meta_handle.width() / 8 + Droplet::header_width();
+                    get_droplet(self, sig_width)
+                }
+
             } else {
-                let sig_width = self.meta_handle.width() / 8;
-                self.poffset += sig_width;
-                return Some(Droplet{content: &self.payload_handle[self.poffset..self.poffset + sig_width]})
+                let sig_width = self.meta_handle.width() / 8 + Droplet::header_width() + if self.meta_handle.width() % 8 != 0 {1} else {0};
+                get_droplet(self, sig_width)
             }
         }
 
@@ -172,7 +187,8 @@ Droplet structure.
 2 bytes of header; header structure is as follows (little endian) starting from LSB:
 
 * Timestamp(12 bits): offset from start of the drop.
-* Optional (3 bits): Length info? TBD 
+* Optional (2 bits): Unallocated
+* Variable length signal (1 bit): this bit is set if the signal has variable length; if this is the case
 * ZX Bit (1bit) : This bit is set if there are any undefined (X) or undriven (HiZ) bits of this signal. If this is high, the payload portion of the Drop will be twice as long.
 
 
@@ -187,7 +203,7 @@ impl<'a> Droplet<'a> {
     
     fn new(payload: &'a[u8], poffset: Poffset, len: Poffset) -> Self {
         Droplet {
-            content : &payload[poffset..poffset+len]
+            content : &payload[poffset..poffset+len+Droplet::header_width()]
         }
     }
 
@@ -197,6 +213,15 @@ impl<'a> Droplet<'a> {
     }
     pub fn get_timestamp(&self) -> u16 {
         (((self.content[1] & 0x0f) as u16) << 8) | self.content[0] as u16
+    }
+
+    
+    fn is_zx_from_bytes(payload: &'a [u8]) -> bool {
+        (payload[1] & 0x80) != 0
+    }
+
+    fn is_var_from_bytes(payload: &'a [u8]) -> bool {
+        (payload[1] & 0x40) != 0
     }
 
     pub fn take_data(self) -> &'a [u8] {
@@ -302,7 +327,6 @@ impl<'a> PCursor<'a> {
     }
 
 }
-
 
 
 

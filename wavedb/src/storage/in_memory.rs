@@ -1,6 +1,7 @@
 use crate::errors::Waverr;
 use crate::puddle::{Puddle,SignalId,PCursor,Toffset};
 use std::sync::Arc;
+use log::info;
 
 #[derive(Debug)]
 pub struct InMemWave<'a> {
@@ -17,7 +18,7 @@ pub struct InMemWave<'a> {
 
 
 
-///In memory DS for wave content; created from a list of Buckets
+///In memory DS for wave content; created from a Vector of Arcs to puddles
 impl<'a> InMemWave<'a> {
 
     //pub fn first_change(&self) -> ParsedVec {
@@ -34,10 +35,10 @@ impl<'a> InMemWave<'a> {
     pub fn all_data(&'a self) -> Box<dyn Iterator<Item=(u32, &'a[u8])> + 'a> {
         let sigid = self.signal_id;
         Box::new(self.puddles.iter()
-            .map(move |puddle| (puddle.get_cursor(sigid).unwrap(), puddle.puddle_base()))
+            .filter_map(move |puddle| puddle.get_cursor(sigid).ok().map(|cursor| (cursor, puddle.puddle_base())))
             .flat_map(|(cursor, base)| cursor.into_iter().zip(std::iter::repeat(base)))
-            .map(|(droplet, base)| ( base + droplet.get_timestamp() as Toffset,  droplet.take_data())
-            ))
+            .map(|(droplet, base)| ( base + droplet.get_timestamp() as Toffset,  droplet.take_data()))
+            )
     }
     
     //fn init_cursor(&'a mut self) -> Result<(),Waverr> {
@@ -55,13 +56,12 @@ impl<'a> InMemWave<'a> {
         signal_id: SignalId,
         puddles: Vec<Arc<Puddle>>,
     ) -> Result<InMemWave<'a>, Waverr> {
-        let wave = InMemWave {
+        Ok(InMemWave {
             name: name_str,
             signal_id,
             puddles: puddles,
             ref_holder: std::marker::PhantomData::default()
-        };
-        Ok(wave)
+        })
     }
 }
 

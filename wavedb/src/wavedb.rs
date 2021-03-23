@@ -149,7 +149,6 @@ impl WaveDB {
                             wdb.insert_puddle(puddle.into())?;
                         }
                         inflight_puddles = HashMap::new();
-                        
                         let rounded_time = time - (time % DEFAULT_SLIZE_SIZE);
                         current_range =
                             (rounded_time, rounded_time + DEFAULT_SLIZE_SIZE)
@@ -336,9 +335,11 @@ mod tests {
         let wdb = WaveDB::from_vcd(path_to_wikivcd, Path::new("/tmp/vcddb"))
             .expect("could not create wavedb");
 
-        let var = wdb.get_imw("TOP.vga_g_DAC".into()).expect("signal doesn't exist and it definitely should!!");
+        let var = wdb.get_imw("TOP.clock".into()).expect("signal doesn't exist and it definitely should!!");
 
-        let val = var.all_data().nth(0).expect("We should have some data here");
+        let val : (u32,&[u8]) = var.all_data().nth(0).unwrap();
+        info!("len is val.1: {}",val.0);
+        //assert!(val.1.len() == 8);
        
 
         std::fs::remove_dir_all("/tmp/vcddb");
