@@ -76,11 +76,6 @@ impl Puddle {
         self.base + Puddle::puddle_width()
     }
 
-    fn is_variable(&self, signal_id: SignalId) -> Option<bool> {
-        self.offset_map.get(&signal_id)
-            .map(|meta_data| meta_data.var_len)
-    }
-
     //TODO: get rid of this god damn it, merge with puddle_base
     pub fn get_btree_idx(&self) -> Toffset {
         self.base
@@ -146,7 +141,6 @@ impl<'a> Iterator for PCursor<'a> {
     type Item = Droplet<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         fn get_droplet<'a>(cursor: &mut PCursor<'a>, sig_width: usize) -> Option<Droplet<'a>> {
-                                                                                                           
             let rv = Some(Droplet{content: &cursor.payload_handle[cursor.poffset..cursor.poffset + sig_width]});
             cursor.poffset += sig_width;
             cursor.pidx +=1;
@@ -159,14 +153,14 @@ impl<'a> Iterator for PCursor<'a> {
             return None
         } else {
             if self.meta_handle.var_len {
-                if Droplet::is_zx_from_bytes(self.payload_handle) {
-                    let sig_width = 2 * self.meta_handle.width() / 8 + Droplet::header_width();
+                if Droplet::is_zx_from_bytes(&self.payload_handle[self.poffset..self.poffset + Droplet::header_width()]) {
+                    let sig_width = 2 * (self.meta_handle.width() / 8 + if self.meta_handle.width() % 8 != 0 {1} else {0}) + Droplet::header_width()  ;
                     get_droplet(self, sig_width)
 
                 } else if Droplet::is_var_from_bytes(self.payload_handle) {
                     unimplemented!()
                 } else {
-                    let sig_width = self.meta_handle.width() / 8 + Droplet::header_width();
+                    let sig_width = self.meta_handle.width() / 8 + Droplet::header_width() + if self.meta_handle.width() % 8 != 0 {1} else {0};
                     get_droplet(self, sig_width)
                 }
 
@@ -190,6 +184,26 @@ Droplet structure.
 * Optional (2 bits): Unallocated
 * Variable length signal (1 bit): this bit is set if the signal has variable length; if this is the case
 * ZX Bit (1bit) : This bit is set if there are any undefined (X) or undriven (HiZ) bits of this signal. If this is high, the payload portion of the Drop will be twice as long.
+
+if the zx bit is set, we have two "parallel" bit vectors that encode the state of the payload. 
+
+
+We have the original payload from bytes 0..N-1, and then the "zx" payload from bytes N to 2N-1
+
+e.g. if we have a signal that is normally 4 bits wide, then we would have a payload that looks like the following (in binary)
+
+0100 0001, where the "original" signal is 0100 and the zx signal is 0001. 
+
+we then treat each bit of the original as a two bit signal, where the MSB comes from the zx signal and the LSB comes from the original signal. 
+
+These two bit signals have the following mapping. 
+00 -> 0
+01 -> 1
+10 -> Z
+11 -> X
+
+
+so in the case alluded above we have 00, 01, 00 and 10, which maps to 010z
 
 
 */
@@ -224,6 +238,12 @@ impl<'a> Droplet<'a> {
         (payload[1] & 0x40) != 0
     }
 
+   
+    fn is_zx(&self) -> bool {
+        (self.content[1] & 0x80) != 0
+    }
+
+   
     pub fn take_data(self) -> &'a [u8] {
         &self.content[2..]
     }

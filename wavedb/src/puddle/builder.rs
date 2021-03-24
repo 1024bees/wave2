@@ -16,7 +16,7 @@ struct RunningPayload  {
     data : Vec<u8>,
     num_items: u16,
     width: usize,
-    var_len: bool,
+    contains_zx: bool,
     
 }
 
@@ -37,8 +37,8 @@ impl Extend<Value> for RunningPayload {
     fn extend<T: IntoIterator<Item=Value>>(&mut self, iter: T) {
         let iter = iter.into_iter();
         let data_size = (iter.size_hint().0 as f32 / 8.0).ceil() as usize;
-        info!("data size is {}",data_size);
         let mut zx_base : Option<usize>= None;
+        let header_base = self.data.len()- 1;
         //FIXME: SINFUL BEYOND COMPARE. BY GOD THIS WILL BE PAINFUL ONE DAY
         self.data.resize(self.data.len() + data_size,0);
         let base = self.data.len()-1;
@@ -59,7 +59,12 @@ impl Extend<Value> for RunningPayload {
                     if zx_base.is_none() {
                         zx_base = Some(self.data.len());
                         self.data.resize(self.data.len() + data_size,0);
-                        self.var_len = true;
+                        self.contains_zx = true;
+                        self.data[header_base] |= 0x80;
+                        info!("header base is {}",header_base);
+                        if self.data.len() > 5 {
+                            info!("sanity check {}", self.data[5]);
+                        }
                     }
                     let zx_byte_offset = byte_offset + data_size;
                     self.data[zx_byte_offset] |= 1 << bit_offset;
@@ -68,13 +73,12 @@ impl Extend<Value> for RunningPayload {
             }
         }
         if bit_offset != 0 {
-            info!("bit offset is {}, data is currently, data: {}", bit_offset, self.data[byte_offset]);
-            
             self.data[byte_offset] >>= bit_offset;
-            info!("bit offset is {}, data is currently, data: {}", bit_offset, self.data[byte_offset]);
-
+            info!("byte_offset is {} ",byte_offset);
             if zx_base.is_some() {
+                
                 self.data[byte_offset + data_size] >>= bit_offset;
+
             }
         }
     }
@@ -140,7 +144,7 @@ impl Into<Puddle> for PuddleBuilder {
                     offset,
                     len: payload.num_items,
                     width: payload.width,
-                    var_len: payload.var_len,
+                    var_len: payload.contains_zx,
                     ..PMeta::default()
                 };
                 offset_map.insert(key, droplet_descriptor);
@@ -271,7 +275,27 @@ mod tests {
         let puddle : Puddle = pb.into();
         let droplet_vec : Vec<Droplet>= puddle.get_cursor(0).expect("This cursor should exist").into_iter().collect();
         assert_eq!(droplet_vec.len(), large_range as usize, "Missing values inside droplet_vec");
+        for (time, droplet) in droplet_vec.iter().enumerate() {
+            
+            if time % 2 != 0 {
+                info!("timestamp is {}",droplet.get_timestamp());
+                info!("raw timestamp is {}", droplet.content[1]);
+                assert!(droplet.is_zx());
+                info!("len is {}", droplet.get_data().len());
 
+                let data = u16::from_le_bytes(droplet.get_data().try_into().unwrap());
+                assert_eq!(0x0101, data);
+            } else {
+                assert!(!droplet.is_zx());
+                info!("len is {}", droplet.get_data().len());
+                let data = u8::from_le_bytes(droplet.get_data().try_into().unwrap());
+                assert_eq!(0x00, data);
+
+
+            }
+            
+            assert_eq!(time,droplet.get_timestamp() as usize);
+        }
     }
 
     #[test]
