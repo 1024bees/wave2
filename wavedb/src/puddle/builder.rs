@@ -168,9 +168,14 @@ impl Into<Puddle> for PuddleBuilder {
 
 #[cfg(test)]
 #[allow(dead_code, unused_macros, unused_imports, unused_variables)]
-mod tests {
+pub mod tests {
     use super::*;
     use crate::puddle::Droplet;
+    use std::sync::Arc;
+    use rand::seq::SliceRandom;
+    use rand::distributions::{Uniform,Distribution};
+
+
     fn num_to_vec(in_value: u64, len: u8) -> Vec<Value> {
         (0..len)
             .filter_map(|bit| ((in_value & (1 << bit)) != 0 ).then(||Value::V1).or_else(|| Some(Value::V0)))
@@ -191,6 +196,40 @@ mod tests {
             })
             .rev()
             .collect()
+
+    }
+
+    
+    pub fn build_dummy_puddles(base: Toffset, num_ids: u32, sig_width: u8) -> Arc<Puddle> {
+        let mut pb = PuddleBuilder::new(base);
+        for i in 0..num_ids {
+            let id = i;
+            for time in 0..Puddle::puddle_width() {
+                pb.add_signal(Command::ChangeVector((i as u32).into(), num_to_vec(time as u64,sig_width)),time+base).unwrap();
+            }
+        }
+        Arc::new(pb.into())
+    }
+
+
+    //look, im not using it right now.. but one day, when I get benchmarks up.. i will. i promise
+    fn build_rand_puddles<Width:Distribution<u64> , SignalFreq: Distribution<bool>>(base: Toffset, num_ids: u32, signal_widths: Width, freq:SignalFreq) -> Arc<Puddle>
+    where 
+        Width:Distribution<u64>,
+        SignalFreq: Distribution<bool>
+    {
+        let mut pb = PuddleBuilder::new(base);
+        for i in 0..num_ids {
+            let id = i;
+            let width = signal_widths.sample(&mut rand::thread_rng());
+            let value_dist = Uniform::from(0..(2^width)-1);
+            for time in 0..Puddle::puddle_width() {
+                if freq.sample(&mut rand::thread_rng()) {
+                    pb.add_signal(Command::ChangeVector((i as u64).into(),num_to_vec(value_dist.sample(&mut rand::thread_rng()),width as u8)),time+ base).unwrap();
+                }
+            }
+        }
+        Arc::new(pb.into())
 
     }
 
@@ -276,10 +315,7 @@ mod tests {
         let droplet_vec : Vec<Droplet>= puddle.get_cursor(0).expect("This cursor should exist").into_iter().collect();
         assert_eq!(droplet_vec.len(), large_range as usize, "Missing values inside droplet_vec");
         for (time, droplet) in droplet_vec.iter().enumerate() {
-            
             if time % 2 != 0 {
-                info!("timestamp is {}",droplet.get_timestamp());
-                info!("raw timestamp is {}", droplet.content[1]);
                 assert!(droplet.is_zx());
                 info!("len is {}", droplet.get_data().len());
 
@@ -287,13 +323,11 @@ mod tests {
                 assert_eq!(0x0101, data);
             } else {
                 assert!(!droplet.is_zx());
-                info!("len is {}", droplet.get_data().len());
                 let data = u8::from_le_bytes(droplet.get_data().try_into().unwrap());
                 assert_eq!(0x00, data);
 
 
             }
-            
             assert_eq!(time,droplet.get_timestamp() as usize);
         }
     }
@@ -302,7 +336,6 @@ mod tests {
     #[allow(unused_must_use)]
     fn puddle_builder_z_single() { 
         init_test_logger();
-
         let mut pb = PuddleBuilder::new(0);
         let mut z_clock_sig = 0;
         let large_range = 500;
@@ -315,7 +348,19 @@ mod tests {
         let puddle : Puddle = pb.into();
         let droplet_vec : Vec<Droplet>= puddle.get_cursor(0).expect("This cursor should exist").into_iter().collect();
         assert_eq!(droplet_vec.len(), large_range as usize, "Missing values inside droplet_vec");
-
+        for (time, droplet) in droplet_vec.iter().enumerate() {
+            if time % 2 != 0 {
+                assert!(droplet.is_zx());
+                info!("len is {}", droplet.get_data().len());
+                let data = u16::from_le_bytes(droplet.get_data().try_into().unwrap());
+                assert_eq!(0x0100, data);
+            } else {
+                assert!(!droplet.is_zx());
+                let data = u8::from_le_bytes(droplet.get_data().try_into().unwrap());
+                assert_eq!(0x00, data);
+            }
+            assert_eq!(time,droplet.get_timestamp() as usize);
+        }
     }
 
 }

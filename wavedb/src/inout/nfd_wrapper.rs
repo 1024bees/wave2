@@ -2,7 +2,7 @@ use nfd::Response;
 use std::io;
 use std::path::{Path, PathBuf};
 
-//Taken almost verbatim from Tolstack
+//Taken almost verbatim from Tolstack. Thank you :-) 
 pub async fn open() -> Result<PathBuf, io::Error> {
     let result: nfd::Response =
         match async { return nfd::open_file_dialog(Some("vcd"), None) }.await {

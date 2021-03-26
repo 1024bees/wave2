@@ -27,5 +27,6 @@ bitvec = {version = "0.19.4", features = ["alloc", "serde"] }
 
 [dev-dependencies]
 tempfile = "3"
+rand = "0.8.3"
 
 
