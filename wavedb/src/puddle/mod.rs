@@ -86,7 +86,7 @@ impl Puddle {
         self.base
     }
 
-    pub fn get_base_sigid(&self) -> SignalId{
+    pub fn get_base_sigid(&self) -> SignalId {
         self.base_sigid 
     }
 
@@ -112,6 +112,11 @@ impl Puddle {
             Ok(Droplet{ content: &self.payload[lbound..rbound]} )
 
         }
+    }
+
+
+    pub fn get_signal_width(&self, sig_id: SignalId) -> Option<usize> {
+        self.offset_map.get(&sig_id).map(|pmeta| pmeta.width)
     }
 
     pub fn get_cursor<'a>(&'a self, sig_id: SignalId) -> Result<PCursor<'a>,Waverr> {

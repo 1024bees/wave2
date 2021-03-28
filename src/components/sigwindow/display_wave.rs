@@ -2,7 +2,7 @@ use iced::Color;
 use iced::canvas::Text;
 use std::sync::Arc;
 use wave2_wavedb::storage::in_memory::InMemWave;
-use wave2_wavedb::signals::{ParsedVec,WaveFormat,SignalRepr};
+use wave2_wavedb::formatting::{WaveFormat,format_payload};
 
 /// Mininum x_delta between two "value" changes that must occur before we consider writing the
 /// wave's value on the line
@@ -36,13 +36,13 @@ pub const fn to_color(opts: &WaveDisplayOptions) -> Color {
 }
 
 #[derive(Clone, Debug)]
-pub struct DisplayedWave {
-    wave_content: Arc<InMemWave>,
+pub struct DisplayedWave<'a> {
+    wave_content: Arc<InMemWave<'a>>,
     pub display_conf: Option<WaveDisplayOptions>,
 }
 
 //FIXME: for testing only; this should be removed once sigwindow is stable
-impl Default for DisplayedWave {
+impl<'a> Default for DisplayedWave<'a> {
     fn default() -> Self {
         DisplayedWave {
             wave_content: Arc::new(InMemWave::default()),
@@ -95,12 +95,12 @@ impl std::fmt::Display for WaveColors {
 /// Utility for converting value -> canvas based text.
 /// The text that we are generating exists in the margins between two "wave deltas", so we have to
 /// truncate that value occasionally
-pub fn generate_canvas_text(data: &ParsedVec,display_options: WaveDisplayOptions, bitwidth: usize, space: f32) -> Option<Text> {
+pub fn generate_canvas_text(data: &[u8],display_options: WaveDisplayOptions, bitwidth: usize, space: f32) -> Option<Text> {
     let str_format = display_options.format;
     if space < TEXT_THRESHOLD {
         return None
     }
-    let value_string = data.to_string(str_format,bitwidth);
+    let value_string = format_payload(str_format, data);
     if let Some(value) = value_string {
         let visible_chars = (space / TEXT_SIZE).ceil() as usize;
         let printed_str : &str = if visible_chars < value.len() {

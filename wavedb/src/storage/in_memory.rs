@@ -1,13 +1,14 @@
 use crate::errors::Waverr;
-use crate::puddle::{Puddle,SignalId,PCursor,Toffset};
+use crate::puddle::{Puddle,SignalId,Toffset};
 use std::sync::Arc;
 use log::info;
 
-#[derive(Debug)]
+#[derive(Debug,Default)]
 pub struct InMemWave<'a> {
     name: String,
     signal_id: SignalId,
     puddles: Vec<Arc<Puddle>>,
+    width: Option<u32>,
     ///// The index into the puddles variable for deciding which puddle we should convert into a
     ///// cursor
     ref_holder: std::marker::PhantomData<&'a u8>
@@ -42,6 +43,10 @@ impl<'a> InMemWave<'a> {
             )
     }
 
+    pub fn get_width(&self) -> usize { 
+        self.puddles.iter().find_map(|puddle| puddle.get_signal_width(self.signal_id)).expect("NO WIDTH FUCK")
+    }
+
 
     pub fn new(
         name_str: String,
@@ -52,6 +57,7 @@ impl<'a> InMemWave<'a> {
             name: name_str,
             signal_id,
             puddles,
+            width: None,
             ref_holder: std::marker::PhantomData::default()
         })
     }
