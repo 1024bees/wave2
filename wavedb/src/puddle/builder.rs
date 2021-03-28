@@ -204,7 +204,7 @@ pub mod tests {
         let mut pb = PuddleBuilder::new(base);
         for i in 0..num_ids {
             let id = i;
-            for time in 0..Puddle::puddle_width() {
+            for time in 0..Puddle::max_puddle_width() {
                 pb.add_signal(Command::ChangeVector((i as u32).into(), num_to_vec(time as u64,sig_width)),time+base).unwrap();
             }
         }
@@ -223,7 +223,7 @@ pub mod tests {
             let id = i;
             let width = signal_widths.sample(&mut rand::thread_rng());
             let value_dist = Uniform::from(0..(2^width)-1);
-            for time in 0..Puddle::puddle_width() {
+            for time in 0..Puddle::max_puddle_width() {
                 if freq.sample(&mut rand::thread_rng()) {
                     pb.add_signal(Command::ChangeVector((i as u64).into(),num_to_vec(value_dist.sample(&mut rand::thread_rng()),width as u8)),time+ base).unwrap();
                 }

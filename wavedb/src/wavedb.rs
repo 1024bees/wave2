@@ -2,7 +2,7 @@ use crate::errors::Waverr;
 use crate::hier_map::HierMap;
 use crate::vcd_parser::WaveParser;
 use crate::storage::in_memory::InMemWave;
-use crate::{DEFAULT_SLIZE_SIZE};
+use crate::{MAX_PUDDLE_WIDTH};
 use bincode;
 use serde::{Deserialize, Serialize};
 use sled::Db;
@@ -53,10 +53,10 @@ impl WaveDB {
 
     fn get_time_slices(&self) -> std::iter::StepBy<std::ops::Range<u32>> {
         info!("END TIME IS {}",self.config.time_range.0); 
-        ((self.config.time_range.0 / DEFAULT_SLIZE_SIZE) * DEFAULT_SLIZE_SIZE
-            ..(self.config.time_range.1 / DEFAULT_SLIZE_SIZE + 1)
-                * DEFAULT_SLIZE_SIZE)
-            .step_by(DEFAULT_SLIZE_SIZE as usize)
+        ((self.config.time_range.0 / MAX_PUDDLE_WIDTH) * MAX_PUDDLE_WIDTH
+            ..(self.config.time_range.1 / MAX_PUDDLE_WIDTH + 1)
+                * MAX_PUDDLE_WIDTH)
+            .step_by(MAX_PUDDLE_WIDTH as usize)
     }
 
     fn set_time_range(&mut self, range: (u32, u32)) {
@@ -135,23 +135,23 @@ impl WaveDB {
         }
         let mut first_time = None;
         let mut global_time: u32 = 0;
-        let mut current_range = (global_time, global_time + DEFAULT_SLIZE_SIZE);
+        let mut current_range = (global_time, global_time + MAX_PUDDLE_WIDTH);
         let mut inflight_puddles: HashMap<SignalId, PuddleBuilder> = HashMap::new();
         wdb.hier_map = Arc::new(parser.create_hiermap()?);
         for item in parser {
             match item {
                 Ok(Command::Timestamp(time)) => {
                     let time = time as u32;
-                    if time % DEFAULT_SLIZE_SIZE
-                        < global_time % DEFAULT_SLIZE_SIZE
+                    if time % MAX_PUDDLE_WIDTH
+                        < global_time % MAX_PUDDLE_WIDTH
                     {
                         for (_, puddle) in inflight_puddles.into_iter() {
                             wdb.insert_puddle(puddle.into())?;
                         }
                         inflight_puddles = HashMap::new();
-                        let rounded_time = time - (time % DEFAULT_SLIZE_SIZE);
+                        let rounded_time = time - (time % MAX_PUDDLE_WIDTH);
                         current_range =
-                            (rounded_time, rounded_time + DEFAULT_SLIZE_SIZE)
+                            (rounded_time, rounded_time + MAX_PUDDLE_WIDTH)
                     }
                     if first_time.is_none() {
                         first_time = Some(time);
@@ -340,7 +340,6 @@ mod tests {
         let val : (u32,&[u8]) = var.all_data().nth(0).unwrap();
         info!("len is val.1: {}",val.0);
         //assert!(val.1.len() == 8);
-       
 
         std::fs::remove_dir_all("/tmp/vcddb");
     }

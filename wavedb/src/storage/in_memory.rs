@@ -1,6 +1,7 @@
 use crate::errors::Waverr;
 use crate::puddle::{Puddle,SignalId,PCursor,Toffset};
 use std::sync::Arc;
+use log::info;
 
 #[derive(Debug)]
 pub struct InMemWave<'a> {
@@ -32,11 +33,12 @@ impl<'a> InMemWave<'a> {
         let sigid = self.signal_id;
         Box::new(self.puddles.iter()
             .filter(move |puddle| begin < puddle.puddle_end()  &&  end > puddle.puddle_base())
+            
             .filter_map(move |puddle| puddle.get_cursor(sigid).ok().map(|cursor| (cursor, puddle.puddle_base())))
             .flat_map(|(cursor, base)| cursor.into_iter().zip(std::iter::repeat(base)))
             .map(|(droplet, base)| ( base + droplet.get_timestamp() as Toffset,  droplet.take_data()))
             //TODO: consider pulling this out
-            .filter(move |(time, _)| *time >= begin && *time <= end)
+            .filter(move |(time, _)| *time >= begin && *time < end)
             )
     }
 
@@ -61,6 +63,8 @@ mod tests {
     use super::*;
     use crate::puddle::Droplet;
     use crate::puddle::builder::tests::build_dummy_puddles;
+    use log::info;
+    use std::convert::TryInto;
 
     fn init_test_logger() {
         let _ = env_logger::builder()
@@ -71,13 +75,15 @@ mod tests {
 
     #[test]
     fn sanity_imw() { 
-        let puddles : Vec<Arc<Puddle>>= (0..5).into_iter().map(|idx| build_dummy_puddles(idx * Puddle::puddle_width(),20,16)).collect();
+        let puddles : Vec<Arc<Puddle>>= (0..5).into_iter().map(|idx| build_dummy_puddles(idx * Puddle::max_puddle_width(),20,16)).collect();
         let imw_0 = InMemWave::new("sig_0".into(),0,puddles.clone()).unwrap();
         let first_puddle_fragment : Vec<(u32, &[u8])> =  imw_0.data_in_range(0,1000).collect();
+        
         assert_eq!(first_puddle_fragment.len(),1000);
-
-
-
+        for (time, payload) in first_puddle_fragment {
+            let value = u16::from_le_bytes(payload.try_into().expect("should be u16"));
+            assert_eq!(time as u16,value);
+        }
     }
 
 

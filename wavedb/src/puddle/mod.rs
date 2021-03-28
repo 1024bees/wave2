@@ -63,8 +63,9 @@ pub struct Puddle {
 impl Puddle {
     /// The time width of a puddle; currently statically set, maybe worth setting as part of some
     /// configuration for wavedb
-    pub const fn puddle_width() -> Toffset {
-        10000
+    const TIMESTAMP_BITS: u32 = 12;
+    pub const fn max_puddle_width() -> Toffset {
+        1 << Puddle::TIMESTAMP_BITS
     }
 
     ///TODO: this should be some configuration part of wavedb
@@ -73,7 +74,7 @@ impl Puddle {
     }
 
     pub fn puddle_end(&self) -> Toffset {
-        self.base + Puddle::puddle_width()
+        self.base + Puddle::max_puddle_width()
     }
 
     //TODO: get rid of this god damn it, merge with puddle_base
@@ -89,7 +90,7 @@ impl Puddle {
         self.base_sigid 
     }
 
-    pub fn get_droplet(&self,signal_id: SignalId, poffset : Toffset) -> Result<Droplet, Toffset> {
+    pub fn get_droplet(&self,signal_id: SignalId, poffset : Poffset) -> Result<Droplet, Toffset> {
         let offset_data = self.offset_map.get(&signal_id);
 
         if offset_data.is_none() {
@@ -105,7 +106,7 @@ impl Puddle {
         if pmeta.var_len {
             unimplemented!("i dont wanna deal with this yet")
         } else {
-            let lbound = pmeta.offset as usize;
+            let lbound = poffset + pmeta.offset;
             let rbound = lbound + pmeta.drop_len().expect("Must be statically sized");
 
             Ok(Droplet{ content: &self.payload[lbound..rbound]} )
@@ -226,7 +227,7 @@ impl<'a> Droplet<'a> {
 
     }
     pub fn get_timestamp(&self) -> u16 {
-        (((self.content[1] & 0x0f) as u16) << 8) | self.content[0] as u16
+        (((self.content[1] & 0x3f) as u16) << 8) | self.content[0] as u16
     }
 
     

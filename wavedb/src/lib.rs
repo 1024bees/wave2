@@ -19,5 +19,6 @@ pub mod puddle;
 mod vcd_parser;
 pub mod wavedb;
 
-const DEFAULT_SLIZE_SIZE: u32 = 10000;
+//TODO: maybe replace this eventually
+const MAX_PUDDLE_WIDTH: u32 = puddle::Puddle::max_puddle_width();
 
