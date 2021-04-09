@@ -61,10 +61,9 @@ impl Extend<Value> for RunningPayload {
                         self.data.resize(self.data.len() + data_size,0);
                         self.contains_zx = true;
                         self.data[header_base] |= 0x80;
-                        info!("header base is {}",header_base);
-                        if self.data.len() > 5 {
-                            info!("sanity check {}", self.data[5]);
-                        }
+                        //if self.data.len() > 5 {
+                        //    info!("sanity check {}", self.data[5]);
+                        //}
                     }
                     let zx_byte_offset = byte_offset + data_size;
                     self.data[zx_byte_offset] |= 1 << bit_offset;
@@ -74,9 +73,8 @@ impl Extend<Value> for RunningPayload {
         }
         if bit_offset != 0 {
             self.data[byte_offset] >>= bit_offset;
-            info!("byte_offset is {} ",byte_offset);
+            //info!("byte_offset is {} ",byte_offset);
             if zx_base.is_some() {
-                
                 self.data[byte_offset + data_size] >>= bit_offset;
 
             }
@@ -102,6 +100,7 @@ impl PuddleBuilder {
         match command {
             Command::ChangeScalar(..,val) => {
                 //TODO: optimize
+                running_pload.width = 1;
                 running_pload.extend(vec![val]);
             },
             Command::ChangeVector(..,val) => {
@@ -139,7 +138,7 @@ impl Into<Puddle> for PuddleBuilder {
 
         let payload = self.payloads.into_iter()
             .flat_map(|(key, payload)| {
-                info!("num items is {}",payload.num_items);
+                //info!("num items is {}",payload.num_items);
                 let droplet_descriptor = PMeta {
                     offset,
                     len: payload.num_items,
@@ -152,7 +151,7 @@ impl Into<Puddle> for PuddleBuilder {
                 payload.data.into_iter()
             })
             .collect::<Vec<u8>>();
-        info!("Base sigid is {}",base_sigid);
+        //info!("Base sigid is {}",base_sigid);
         Puddle {
             offset_map,
             prev_sig_map,
@@ -263,7 +262,7 @@ pub mod tests {
         let droplet_vec : Vec<Droplet>= puddle.get_cursor(0).expect("This cursor should exist").into_iter().collect();
         assert_eq!(droplet_vec.len(), small_range as usize, "Missing values inside droplet_vec");
         for (time, droplet) in droplet_vec.iter().enumerate() {
-            info!("data len is {}", droplet.get_data().len());
+            //info!("data len is {}", droplet.get_data().len());
             let data = u8::from_le_bytes(droplet.get_data().try_into().unwrap()) as usize;
             assert_eq!(time % 2, data);
             assert_eq!(time,droplet.get_timestamp() as usize);

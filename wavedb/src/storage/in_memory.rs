@@ -4,14 +4,14 @@ use std::sync::Arc;
 use log::info;
 
 #[derive(Debug,Default)]
-pub struct InMemWave<'a> {
+pub struct InMemWave {
     name: String,
     signal_id: SignalId,
     puddles: Vec<Arc<Puddle>>,
-    width: Option<u32>,
+    //width: Option<u32>,
     ///// The index into the puddles variable for deciding which puddle we should convert into a
     ///// cursor
-    ref_holder: std::marker::PhantomData<&'a u8>
+    //ref_holder: std::marker::PhantomData<&'a u8>
     //live_cursor: Option<PCursor<'a>>
 }
 
@@ -20,8 +20,8 @@ pub struct InMemWave<'a> {
 
 
 ///In memory DS for wave content; created from a Vector of Arcs to puddles
-impl<'a> InMemWave<'a> {
-    pub fn all_data(&'a self) -> Box<dyn Iterator<Item=(u32, &'a[u8])> + 'a> {
+impl InMemWave {
+    pub fn all_data(&self) -> Box<dyn Iterator<Item=(u32, &[u8])> + '_> {
         let sigid = self.signal_id;
         Box::new(self.puddles.iter()
             .filter_map(move |puddle| puddle.get_cursor(sigid).ok().map(|cursor| (cursor, puddle.puddle_base())))
@@ -30,7 +30,7 @@ impl<'a> InMemWave<'a> {
             )
     }
     
-    pub fn data_in_range(&'a self, begin : Toffset, end: Toffset) -> Box<dyn Iterator<Item=(Toffset, &'a[u8])> + 'a>  {
+    pub fn data_in_range(&self, begin : Toffset, end: Toffset) -> Box<dyn Iterator<Item=(Toffset, &[u8])> +  '_ >  {
         let sigid = self.signal_id;
         Box::new(self.puddles.iter()
             .filter(move |puddle| begin < puddle.puddle_end()  &&  end > puddle.puddle_base())
@@ -38,7 +38,6 @@ impl<'a> InMemWave<'a> {
             .filter_map(move |puddle| puddle.get_cursor(sigid).ok().map(|cursor| (cursor, puddle.puddle_base())))
             .flat_map(|(cursor, base)| cursor.into_iter().zip(std::iter::repeat(base)))
             .map(|(droplet, base)| ( base + droplet.get_timestamp() as Toffset,  droplet.take_data()))
-            //TODO: consider pulling this out
             .filter(move |(time, _)| *time >= begin && *time < end)
             )
     }
@@ -47,18 +46,20 @@ impl<'a> InMemWave<'a> {
         self.puddles.iter().find_map(|puddle| puddle.get_signal_width(self.signal_id)).expect("NO WIDTH FUCK")
     }
 
+    pub fn get_name(&self) -> &str {
+        self.name.as_str()
+    }
+
 
     pub fn new(
         name_str: String,
         signal_id: SignalId,
         puddles: Vec<Arc<Puddle>>,
-    ) -> Result<InMemWave<'a>, Waverr> {
+    ) -> Result<InMemWave, Waverr> {
         Ok(InMemWave {
             name: name_str,
             signal_id,
             puddles,
-            width: None,
-            ref_holder: std::marker::PhantomData::default()
         })
     }
 }
@@ -71,6 +72,9 @@ mod tests {
     use crate::puddle::builder::tests::build_dummy_puddles;
     use log::info;
     use std::convert::TryInto;
+    use std::path::{PathBuf,Path};
+    use crate::wavedb::WaveDB;
+
 
     fn init_test_logger() {
         let _ = env_logger::builder()
@@ -91,6 +95,28 @@ mod tests {
             assert_eq!(time as u16,value);
         }
     }
+
+    #[test]
+    fn vga_clock_in_range() { 
+        let mut path_to_wikivcd = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        path_to_wikivcd.push("test_vcds/vga.vcd");
+        //bad but hey... is what it is
+
+        std::fs::remove_dir_all("/tmp/unit_tests/vcddb");
+        let wdb = WaveDB::from_vcd(path_to_wikivcd, Path::new("/tmp/unit_tests/vcddb"))
+            .expect("could not create wavedb");
+
+        let clock_wave = wdb.get_imw("TOP.clock".into()).expect("signal isn't here!");
+        let mut last_time = 0;
+        for (time, payload) in clock_wave.data_in_range(0,40000) {
+            assert!(payload.len() == 1);
+            assert!(last_time <= time);
+            last_time = time;
+        }
+
+        }
+
+
 
 
 

@@ -232,7 +232,7 @@ impl<'a> Droplet<'a> {
 
     }
     pub fn get_timestamp(&self) -> u16 {
-        (((self.content[1] & 0x3f) as u16) << 8) | self.content[0] as u16
+        (((self.content[1] & 0x0f) as u16) << 8) | self.content[0] as u16
     }
 
     

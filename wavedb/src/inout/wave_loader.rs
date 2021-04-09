@@ -4,7 +4,7 @@ use crate::errors::Waverr;
 use crate::wavedb::WaveDB;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
-use std::path::Path;
+use std::path::{Path,PathBuf};
 use std::sync::Arc;
 
 ///Helper to hash type -> String
@@ -28,3 +28,16 @@ pub async fn load_vcd() -> Result<Arc<WdbAPI>, Waverr> {
 
     Ok(Arc::new(WdbAPI::from(wdb)))
 }
+
+pub async fn load_vcd_from_path(path: PathBuf) -> Option<Arc<WdbAPI>> {
+    let output_path = format!("/tmp/wave2/{}", quick_hash(&path));
+    // i am going to be fucking sick
+    let wdb = async { WaveDB::from_vcd(path, Path::new(&output_path)) }.await.ok();
+    if wdb.is_some() {
+        Some(Arc::new(WdbAPI::from(wdb.unwrap())))
+    } else {
+        None
+    }
+}
+
+

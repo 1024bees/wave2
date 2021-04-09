@@ -1,6 +1,6 @@
 use iced::{
-    pane_grid, Application, Command, Container, Element, HorizontalAlignment,
-    Length, PaneGrid, Column, Settings, Text,
+    pane_grid, Application, Column, Command, Container, Element, HorizontalAlignment, Length,
+    PaneGrid, Settings, Text,
 };
 
 use clap::Clap;
@@ -15,6 +15,7 @@ use log::warn;
 use std::path::PathBuf;
 use wave2_wavedb::api::WdbAPI;
 use wave2_wavedb::errors::Waverr;
+use wave2_wavedb::inout::wave_loader::load_vcd_from_path;
 
 #[derive(Clap, Default)]
 #[clap(version = "0.0", author = "Jimmy C <jimmy@1024bees.com>")]
@@ -32,8 +33,23 @@ struct Opts {
 }
 
 impl Opts {
-    async fn load(_opt: Opts) -> Result<(), std::io::Error> {
-        Ok(())
+    fn load(opt: Opts) -> (Wave2, Command<Message>) {
+        match opt {
+            Opts {
+                vcdpath: Some(path),
+                ..
+            } => (
+                Wave2::Loading,
+                Command::perform(
+                    async { Ok(load_vcd_from_path(path).await) },
+                    Message::Loaded,
+                ),
+            ),
+            _ => (
+                Wave2::Loading,
+                Command::perform(async { Ok(None) }, Message::Loaded),
+            ),
+        }
     }
 }
 
@@ -105,7 +121,7 @@ pub enum Message {
     HNMessage(hier_nav::Message),
     MBMessage(menu_bar::Message),
     //IoMessage
-    Loaded(Result<(), std::io::Error>),
+    Loaded(Result<Option<Arc<WdbAPI>>, std::io::Error>),
     LoadWDB(Result<Arc<WdbAPI>, Waverr>),
     //Pane Messages
     PaneMessage(PaneMessage),
@@ -148,10 +164,7 @@ impl Application for Wave2 {
     type Flags = Opts;
 
     fn new(flags: Opts) -> (Wave2, Command<Self::Message>) {
-        (
-            Wave2::Loading,
-            Command::perform(Opts::load(flags), Message::Loaded),
-        )
+        Opts::load(flags)
     }
 
     fn title(&self) -> String {
@@ -162,26 +175,17 @@ impl Application for Wave2 {
         match self {
             Wave2::Loading => {
                 match message {
-                    Message::Loaded(Ok(_)) => {
-                        let sig_viewer =
-                            Content::SigView(sigwindow::SigViewer::default());
-                        let mod_nav = Content::ModNav(
-                            module_nav::ModNavigator::default(),
-                        );
-                        let hier_nav =
-                            Content::HierNav(hier_nav::HierNav::default());
-                        let (mut panes, sv_pane) =
-                            pane_grid::State::new(sig_viewer);
+                    Message::Loaded(Ok(wavedb)) => {
+                        let sig_viewer = Content::SigView(sigwindow::SigViewer::default());
+                        let mod_nav = Content::ModNav(module_nav::ModNavigator::default());
+                        let hier_nav = Content::HierNav(hier_nav::HierNav::default());
+                        let (mut panes, sv_pane) = pane_grid::State::new(sig_viewer);
                         let (mn_pane, _) = panes
                             .split(pane_grid::Axis::Vertical, &sv_pane, mod_nav)
                             .unwrap();
                         panes.swap(&mn_pane, &sv_pane);
                         let (hn_pane, _) = panes
-                            .split(
-                                pane_grid::Axis::Horizontal,
-                                &mn_pane,
-                                hier_nav,
-                            )
+                            .split(pane_grid::Axis::Horizontal, &mn_pane, hier_nav)
                             .unwrap();
                         //TODO: do some like uhhh... cleaning up here
                         //      should probably initialize sizes of panes, etc
@@ -195,21 +199,21 @@ impl Application for Wave2 {
                             menu_bar,
                             wdb_api: None,
                         });
+                        if wavedb.is_some() {
+                            Command::perform(async move { Ok(wavedb.unwrap()) }, Message::LoadWDB)
+                        } else {
+                            Command::none()
+                        }
                     }
-                    _ => {}
+                    _ => Command::none(),
                 }
-                Command::none()
             }
             Wave2::Loaded(state) => {
                 match message {
-                    Message::MBMessage(menu_message) => {
-                        return menu_update(state, menu_message)
+                    Message::MBMessage(menu_message) => return menu_update(state, menu_message),
+                    Message::SVMessage(_) => {
+                        state.panes.get_mut(&state.sv_pane).unwrap().update(message)
                     }
-                    Message::SVMessage(_) => state
-                        .panes
-                        .get_mut(&state.sv_pane)
-                        .unwrap()
-                        .update(message),
                     Message::HNMessage(hn_message) => {
                         match hn_message {
                             hier_nav::Message::SendModule(module_idx) => {
@@ -218,22 +222,15 @@ impl Application for Wave2 {
                                     .panes
                                     .get_mut(&state.hn_pane)
                                     .unwrap()
-                                    .update(Message::HNMessage(
-                                        hn_message.clone(),
-                                    ));
+                                    .update(Message::HNMessage(hn_message.clone()));
 
                                 //FIXME: this work should definitely be done in a command
                                 return Command::perform(
-                                    WdbAPI::get_module_signals(
-                                        state.get_api(),
-                                        module_idx,
-                                    ),
+                                    WdbAPI::get_module_signals(state.get_api(), module_idx),
                                     move |vector| {
-                                        Message::MNMessage(
-                                            module_nav::Message::SignalUpdate(
-                                                vector,
-                                            ),
-                                        )
+                                        Message::MNMessage(module_nav::Message::SignalUpdate(
+                                            vector,
+                                        ))
                                     },
                                 );
                             }
@@ -247,15 +244,8 @@ impl Application for Wave2 {
                     Message::MNMessage(mn_message) => match mn_message {
                         module_nav::Message::AddSig(signal_item) => {
                             return Command::perform(
-                                WdbAPI::get_signals(
-                                    state.get_api(),
-                                    signal_item,
-                                ),
-                                move |wave| {
-                                    Message::SVMessage(
-                                        sigwindow::Message::AddWave(wave),
-                                    )
-                                },
+                                WdbAPI::get_signals(state.get_api(), signal_item),
+                                move |wave| Message::SVMessage(sigwindow::Message::AddWave(wave)),
                             );
                         }
 
@@ -270,35 +260,21 @@ impl Application for Wave2 {
                             state.wdb_api = Some(wdb_api);
                             state.set_file_pending(false);
 
-                            state
-                                .panes
-                                .get_mut(&state.hn_pane)
-                                .unwrap()
-                                .update(Message::HNMessage(
-                                    hier_nav::Message::SetHier(
-                                        state
-                                            .wdb_api
-                                            .as_ref()
-                                            .unwrap()
-                                            .get_hier_map()
-                                            .clone(),
-                                    ),
-                                ));
-                                return Command::perform(
-                                    WdbAPI::bounds(
-                                        state.get_api(),
-                                    ),
-                                    move |bounds| Message::SVMessage(sigwindow::Message::InitializeWW(bounds)));
-
-
-
+                            state.panes.get_mut(&state.hn_pane).unwrap().update(
+                                Message::HNMessage(hier_nav::Message::SetHier(
+                                    state.wdb_api.as_ref().unwrap().get_hier_map().clone(),
+                                )),
+                            );
+                            return Command::perform(
+                                WdbAPI::bounds(state.get_api()),
+                                move |bounds| {
+                                    Message::SVMessage(sigwindow::Message::InitializeWW(bounds))
+                                },
+                            );
                         }
                         Err(waverr) => {
                             state.set_file_pending(false);
-                            warn!(
-                                "{}",
-                                format!("VCD not loaded! err is {:?}", waverr)
-                            )
+                            warn!("{}", format!("VCD not loaded! err is {:?}", waverr))
                         }
                     },
                     _ => {}
@@ -315,25 +291,20 @@ impl Application for Wave2 {
                 panes, menu_bar, ..
             }) => {
                 //all_content.into()
-                let pane_grid =
-                    PaneGrid::new(panes, |_pane, content| {
-                        let title_bar =
-                            pane_grid::TitleBar::new(format!("Focused pane"))
-                                .padding(10);
+                let pane_grid = PaneGrid::new(panes, |_pane, content| {
+                    let title_bar = pane_grid::TitleBar::new(format!("Focused pane")).padding(10);
 
-                        pane_grid::Content::new(content.view())
-                            .title_bar(title_bar)
-                    })
-                    .width(Length::Fill)
-                    .height(Length::Fill)
-                    //FIXME: causes int overflow in the glow backend
-                    //.on_drag(|pane_data| Message::PaneMessage(PaneMessage::Dragged(pane_data)))
-                    .on_resize(10, |resize_data| {
-                        Message::PaneMessage(PaneMessage::Resize(resize_data))
-                    });
+                    pane_grid::Content::new(content.view()).title_bar(title_bar)
+                })
+                .width(Length::Fill)
+                .height(Length::Fill)
+                //FIXME: causes int overflow in the glow backend
+                //.on_drag(|pane_data| Message::PaneMessage(PaneMessage::Dragged(pane_data)))
+                .on_resize(10, |resize_data| {
+                    Message::PaneMessage(PaneMessage::Resize(resize_data))
+                });
 
-                let menu_bar_view =
-                    menu_bar.view().map(|message| Message::MBMessage(message));
+                let menu_bar_view = menu_bar.view().map(|message| Message::MBMessage(message));
 
                 Column::new().push(menu_bar_view).push(pane_grid).into()
             }

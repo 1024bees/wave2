@@ -229,7 +229,7 @@ impl WaveDB {
         &self,
         sig_name: String,
         sig_id: u32,
-    ) -> Result<Arc<InMemWave<'a>>, Arc<Waverr>> {
+    ) -> Result<Arc<InMemWave>, Arc<Waverr>> {
         let puddles = self
             .get_time_slices()
             .map(|start_slice| self.retrieve_puddle(sig_id, start_slice).unwrap())
@@ -240,7 +240,7 @@ impl WaveDB {
             .map(|imw| Arc::new(imw))
     }
 
-    pub fn get_imw<'a>(&self, sig: String) -> Result<Arc<InMemWave<'a>>, Arc<Waverr>> {
+    pub fn get_imw<'a>(&self, sig: String) -> Result<Arc<InMemWave>, Arc<Waverr>> {
         let id = self.get_id(sig.as_str())?;
         self.get_imw_id(sig, id)
     }

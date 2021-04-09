@@ -36,13 +36,13 @@ pub const fn to_color(opts: &WaveDisplayOptions) -> Color {
 }
 
 #[derive(Clone, Debug)]
-pub struct DisplayedWave<'a> {
-    wave_content: Arc<InMemWave<'a>>,
+pub struct DisplayedWave {
+    wave_content: Arc<InMemWave>,
     pub display_conf: Option<WaveDisplayOptions>,
 }
 
 //FIXME: for testing only; this should be removed once sigwindow is stable
-impl<'a> Default for DisplayedWave<'a> {
+impl Default for DisplayedWave {
     fn default() -> Self {
         DisplayedWave {
             wave_content: Arc::new(InMemWave::default()),
@@ -68,7 +68,7 @@ impl From<Arc<InMemWave>> for DisplayedWave {
 
 impl std::fmt::Display for DisplayedWave {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.wave_content)
+        write!(f, "{}", self.wave_content.get_name())
     }
 }
 
@@ -100,20 +100,16 @@ pub fn generate_canvas_text(data: &[u8],display_options: WaveDisplayOptions, bit
     if space < TEXT_THRESHOLD {
         return None
     }
-    let value_string = format_payload(str_format, data);
-    if let Some(value) = value_string {
-        let visible_chars = (space / TEXT_SIZE).ceil() as usize;
-        let printed_str : &str = if visible_chars < value.len() {
-            value.get(0..visible_chars)
-                .expect("Truncating string improperly when generating wavewindow canvas text")
-        } else {
-                value.as_str()
-            };
-        Some(Text::from(printed_str))
+    let value = format_payload(data,str_format);
+    let visible_chars = (space / TEXT_SIZE).ceil() as usize;
+    let printed_str : &str = if visible_chars < value.len() {
+        value.get(0..visible_chars)
+            .expect("Truncating string improperly when generating wavewindow canvas text")
     } else {
-        None
-    }
-    
+            value.as_str()
+        };
+    Some(Text::from(printed_str))
+
 }
 
 

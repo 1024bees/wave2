@@ -174,6 +174,7 @@ impl<'a> WaveWindow<'a> {
         prev_ts: u32,
         _bounds: &Rectangle,
     ) -> f32 {
+        info!("ts is {}, prev_ts is {}",ts,prev_ts);
         (ts - prev_ts) as f32 * self.frame_state.ns_per_unit
     }
 
@@ -262,36 +263,37 @@ impl<'a> WaveWindow<'a> {
                     let display_options = display.display_conf.unwrap_or_default();
                     p.move_to(leftmost_pt);
                     let mut prev_xcoord = self.start_time();
-                    match wave.sig_type {
-                        SigType::Bit => {
+                    let width = wave.get_width();
+                    match width {
+                        1  => {
                             let mut sb_state = SBWaveState::Beginning;
 
-                            for (time, sig_payload) in wave.changes() {
+                            for (time, sig_payload) in wave.data_in_range(self.start_time(), self.end_time()) {
                                 if self.out_of_range(time.clone()) {
                                     break;
                                 }
 
                                 working_pt.x += self.xdelt_from_prev(
-                                    *time,
+                                    time,
                                     prev_xcoord,
                                     &bounds,
                                 );
                                 p.line_to(working_pt);
                                 p.move_to(working_pt);
                                 //TODO: handle z/x case
-                                match (&mut sb_state, sig_payload.get_bv()) {
-                                    (SBWaveState::Beginning, Some(false)) => { 
+                                match (&mut sb_state, sig_payload[0] & 0x1) {
+                                    (SBWaveState::Beginning, 0) => { 
                                         sb_state = SBWaveState::Low;
                                     },
-                                    (SBWaveState::Beginning, Some(true)) => {
+                                    (SBWaveState::Beginning, 1) => {
                                         working_pt.y -= WAVEHEIGHT;
                                         sb_state = SBWaveState::High;
                                     },
-                                    (SBWaveState::High, Some(false)) => {
+                                    (SBWaveState::High, 0) => {
                                         working_pt.y += WAVEHEIGHT;
                                         sb_state = SBWaveState::Low;
                                     },
-                                    (SBWaveState::Low, Some(true)) => {
+                                    (SBWaveState::Low, 1) => {
                                         working_pt.y -= WAVEHEIGHT;
                                         sb_state = SBWaveState::High;
                                     },
@@ -300,7 +302,7 @@ impl<'a> WaveWindow<'a> {
                                     },
 
                                 }
-                                prev_xcoord = *time;
+                                prev_xcoord = time;
                                 p.line_to(working_pt);
                                 p.move_to(working_pt);
                             }
@@ -312,20 +314,21 @@ impl<'a> WaveWindow<'a> {
                             working_pt.x += fin_x_delt;
                             p.line_to(working_pt);
                         }
-                        SigType::Vector(width) => {
+                        _ => {
                             let working_pt_top = Point {
                                 y: working_pt.y - WAVEHEIGHT,
                                 ..working_pt
                             };
                             let mut working_pts = [working_pt_top, working_pt];
-                            for (time, sig_payload) in wave.changes() {
+                            for (time, sig_payload) in wave.data_in_range(self.start_time(), self.end_time()) {
 
-                                if self.out_of_range(time.clone()) {
+                                info!("time is {}",time);
+                                if self.out_of_range(time) {
                                     break;
                                 }
 
                                 let x_delt = self.xdelt_from_prev(
-                                    *time,
+                                    time,
                                     prev_xcoord,
                                     &bounds,
                                 ) - VEC_SHIFT_WIDTH / 2.0;
@@ -352,7 +355,7 @@ impl<'a> WaveWindow<'a> {
                                     p.line_to(*point);
                                     point.y -= WAVEHEIGHT * direction;
                                 }
-                                prev_xcoord = *time
+                                prev_xcoord = time
                             }
                             let fin_x_delt = self.xdelt_from_prev(
                                 self.end_window_time(),
@@ -426,8 +429,6 @@ impl<'a> canvas::Program<Message> for WaveWindow<'a> {
     }
 
     fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
-        
-
         let content =
             self.wave_cache.draw(bounds.size(), |frame: &mut Frame| {
                 self.draw_all(frame, bounds);

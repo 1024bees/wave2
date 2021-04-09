@@ -28,7 +28,8 @@ bit-vec = { version = "0.6", features = ["serde"] }
 wave2_custom_widgets = { version= "0.1", path = "custom_widgets"}
 wave2_wavedb = { version= "0.1", path = "wavedb"}
 
-
+[profile.release]
+debug = 2
 
 [dev-dependencies]
 tempfile = "3"
