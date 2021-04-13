@@ -133,19 +133,19 @@ where
         self
     }
 
-    /// Sets the padding of the [`Cell`].
+    /// Optionally sets the padding of the [`Cell`].
     ///
     /// [`Cell`]: struct.Cell.html
-    pub fn padding(mut self, padding: u16) -> Self {
-        self.padding = padding;
+    pub fn padding(mut self, padding: Option<u16>) -> Self {
+        self.padding = padding.unwrap_or(self.padding);
         self
     }
 
-    /// Sets the text size of the [`Cell`].
+    /// Optionally sets the text size of the [`Cell`].
     ///
     /// [`Cell`]: struct.Cell.html
-    pub fn text_size(mut self, size: u16) -> Self {
-        self.text_size = Some(size);
+    pub fn text_size(mut self, size: Option<u16>) -> Self {
+        self.text_size = size;
         self
     }
 
@@ -275,7 +275,7 @@ where
                         mouse::Click::new(cursor_position, *self.last_click);
                     match click.kind() {
                         mouse::click::Kind::Single => {
-                            info!("Single click event");
+                            info!("Single click event, padding is: {}, text_size is: {}", self.padding, self.text_size.clone().unwrap_or(12));
                             if let Some(ref click_generator) = self.on_click {
                                 messages.push(click_generator(self.item));
                             }
