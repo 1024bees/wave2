@@ -7,8 +7,8 @@ edition = "2018"
 
 [dependencies]
 tokio = "0.2.18"
-iced = { version="0.2.0", features = ["glow", "glow_canvas","tokio"] }
-iced_native = {version="0.3.0"} 
+iced = { version="0.3.0", features = ["glow", "glow_canvas","tokio"] }
+iced_native = {version="*"}
 iced_graphics = "*"
 env = "*"
 nfd = "*"

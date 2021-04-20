@@ -1,7 +1,7 @@
 use super::display_wave::{DisplayedWave, WaveDisplayOptions};
 use super::wavewindow;
 use crate::components::shared::cell_list::{CellList, ListNodeState};
-use iced::{Column, Container, Element, Row, Space};
+use iced::{Column, Container, Element, Row, Space, Text};
 use log::info;
 use std::sync::Arc;
 use strum_macros;
@@ -56,10 +56,8 @@ pub struct SigViewer {
 impl Default for SigViewer {
     fn default() -> Self {
         SigViewer {
-            waves_state: CellList::default()
-                .set_cell_padding(3)
-                .set_text_size(13)
-                .set_spacing(wavewindow::BUFFER_PX as u16),
+            waves_state: CellList::default().set_cell_padding(4).set_text_size(11),
+            //.set_spacing(wavewindow::BUFFER_PX as u16),
             wavewindow: wavewindow::WaveWindowState::default(),
             live_waves: Vec::default(),
             selected: Option::default(),
@@ -153,9 +151,13 @@ impl SigViewer {
         let cl = waves_state.view(click_func, double_click);
 
         let pick_list = Column::new()
-            .push(Space::with_height(iced::Length::Units(
-                (wavewindow::TS_FONT_SIZE) as u16,
-            )))
+            .push(
+                Text::new("Active signals")
+                    .height(iced::Length::Units(
+                        (wavewindow::TS_FONT_SIZE + wavewindow::BUFFER_PX) as u16,
+                    ))
+                    .size(wavewindow::TS_FONT_SIZE as u16),
+            )
             .push(cl)
             .width(iced::Length::Fill)
             .height(iced::Length::Fill)

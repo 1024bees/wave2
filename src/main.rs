@@ -1,5 +1,5 @@
 use iced::{
-    pane_grid, Application, Column, Command, Container, Element, HorizontalAlignment, Length,
+    pane_grid, Application, Clipboard, Column, Command, Container, Element, HorizontalAlignment, Length,
     PaneGrid, Settings, Text,
 };
 
@@ -171,7 +171,7 @@ impl Application for Wave2 {
         String::from("Wave2")
     }
 
-    fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
+    fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Self::Message> {
         match self {
             Wave2::Loading => {
                 match message {
@@ -292,7 +292,7 @@ impl Application for Wave2 {
             }) => {
                 //all_content.into()
                 let pane_grid = PaneGrid::new(panes, |_pane, content| {
-                    let title_bar = pane_grid::TitleBar::new(format!("Focused pane")).padding(10);
+                    let title_bar = pane_grid::TitleBar::new(Text::new(format!("Focused pane"))).padding(10);
 
                     pane_grid::Content::new(content.view()).title_bar(title_bar)
                 })

@@ -1,18 +1,15 @@
 use iced::{
-    canvas::{self, Canvas, Cursor, Event, Frame, Geometry, Path, Stroke},
+    canvas::{self, event, Canvas, Cursor, Event, Frame, Geometry, Path, Stroke},
     mouse, Color, Element, HorizontalAlignment, Length, Point, Rectangle,
 };
 
 use super::display_wave::{generate_canvas_text, DisplayedWave, SBWaveState};
-use iced_native::event;
 use log::info;
 use wave2_custom_widgets::widget::hscroll;
 use wave2_custom_widgets::widget::hscroll::HScroll;
 
-use wave2_wavedb::signals::SigType;
-
-pub const BUFFER_PX: f32 = 4.0;
-pub const WAVEHEIGHT: f32 = 19.0;
+pub const BUFFER_PX: f32 = 1.5;
+pub const WAVEHEIGHT: f32 = 16.0;
 pub const VEC_SHIFT_WIDTH: f32 = 4.0;
 pub const TS_FONT_SIZE: f32 = 12.0;
 
@@ -83,7 +80,7 @@ impl WaveWindowState {
 
         val.push(
             Canvas::new(WaveWindow {
-                signals: signals,
+                signals,
                 frame_state: &mut self.frame_state,
                 wave_cache: &self.cache,
                 cursor_cache: &self.cursor_cache,
@@ -228,7 +225,7 @@ impl<'a> WaveWindow<'a> {
     //TODO: only redraw "dirty" signals
     fn draw_all(&self, frame: &mut Frame, bounds: Rectangle) {
         let mut leftmost_pt = Point::default();
-        leftmost_pt.y += 1.5 * WAVEHEIGHT + BUFFER_PX;
+        leftmost_pt.y += WAVEHEIGHT + 2.0 * BUFFER_PX + TS_FONT_SIZE;
         let background = Path::rectangle(Point::default(), bounds.size());
         frame.fill(&background, Color::BLACK);
         let wave_list: Vec<Path> = self
@@ -334,7 +331,7 @@ impl<'a> WaveWindow<'a> {
                             }
                         }
                     }
-                    leftmost_pt.y += WAVEHEIGHT + BUFFER_PX;
+                    leftmost_pt.y += WAVEHEIGHT + 2.0 * BUFFER_PX;
                 })
             })
             .collect();

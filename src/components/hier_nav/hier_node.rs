@@ -10,7 +10,7 @@ use wave2_wavedb::hier_map::{HierMap, ModuleItem};
 
 
 
-
+const PADDING : u16 = 1;
 
 #[derive(Debug, Clone, Default)]
 struct ModuleWrapper {
@@ -158,6 +158,7 @@ impl HierNode {
             expanded_button,
             Text::new(if expanded_val { "-" } else { "+" }),
         )
+        .padding(PADDING)
         .on_press(Message::Toggle(payload.hier_idx));
 
         //TODO: fixme, placeholder message closure

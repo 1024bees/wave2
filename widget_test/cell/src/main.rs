@@ -6,8 +6,7 @@ use iced::{
 use env_logger;
 use log::info;
 use wave2_custom_widgets::traits::CellOption;
-use wave2_custom_widgets::widget::cell;
-use wave2_custom_widgets::widget::cell::Cell;
+use wave2_custom_widgets::widget::cell::{self,Cell};
 pub fn main() -> Result<(), iced::Error> {
     env_logger::init();
     info!("TEST");

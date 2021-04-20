@@ -1,14 +1,13 @@
 use iced_native::{
-    layout, mouse, overlay, event,
+    event, layout, mouse, overlay,
     overlay::menu::{self, Menu},
-    scrollable, text, Clipboard, Element, Event, Hasher, Layout, Length, Point,
-    Rectangle, Size, Widget,
+    scrollable, text, Clipboard, Element, Event, Hasher, Layout, Length, Point, Rectangle, Size,
+    Widget,
 };
 
-
 use crate::traits::CellOption;
-use std::marker::PhantomData;
 use log::info;
+use std::marker::PhantomData;
 
 /// A widget to represent a singular "Cell"
 ///
@@ -18,7 +17,7 @@ use log::info;
 pub struct Cell<'a, T, O, Message: 'static, Renderer: self::Renderer>
 where
     T: ToString + Clone,
-    O: CellOption<Message=Message>,
+    O: CellOption<Message = Message>,
 {
     menu: &'a mut menu::State,
     menu_open: &'a mut bool,
@@ -76,11 +75,10 @@ impl<O> Default for State<O> {
     }
 }
 
-impl<'a, T: 'a, O: 'a, Message, Renderer: self::Renderer>
-    Cell<'a, T, O, Message, Renderer>
+impl<'a, T: 'a, O: 'a, Message, Renderer: self::Renderer> Cell<'a, T, O, Message, Renderer>
 where
     T: ToString + Clone,
-    O: CellOption<Message=Message>,
+    O: CellOption<Message = Message>,
 {
     /// Creates a new [`Cell`] with the given [`State`], a list of options,
     /// the current selected value(s), and the message to produce when option(s) is / are
@@ -88,10 +86,7 @@ where
     ///
     /// [`Cell`]: struct.Cell.html
     /// [`State`]: struct.State.html
-    pub fn new(
-        state: &'a mut State<O>,
-        item: &'a T,
-    ) -> Self {
+    pub fn new(state: &'a mut State<O>, item: &'a T) -> Self {
         let State {
             menu,
             menu_open,
@@ -160,10 +155,7 @@ where
     /// Sets the style of the [`Cell`].
     ///
     /// [`Cell`]: struct.Cell.html
-    pub fn style(
-        mut self,
-        style: impl Into<<Renderer as self::Renderer>::Style>,
-    ) -> Self {
+    pub fn style(mut self, style: impl Into<<Renderer as self::Renderer>::Style>) -> Self {
         self.style = style.into();
         self
     }
@@ -181,10 +173,7 @@ where
     /// Closure to generate the message when the Cell is left clicked
     ///
     /// [`Cell`]: struct.Cell.html
-    pub fn on_click(
-        mut self,
-        on_click: Box<dyn Fn(&'a T) -> Message + 'static>,
-    ) -> Self {
+    pub fn on_click(mut self, on_click: Box<dyn Fn(&'a T) -> Message + 'static>) -> Self {
         self.on_click = Some(on_click);
         self
     }
@@ -192,10 +181,7 @@ where
     /// Closure to generate the message when the Cell is left clicked
     ///
     /// [`Cell`]: struct.Cell.html
-    pub fn on_double_click(
-        mut self,
-        dbl_click: Box<dyn Fn(&'a T) -> Message + 'static>,
-    ) -> Self {
+    pub fn on_double_click(mut self, dbl_click: Box<dyn Fn(&'a T) -> Message + 'static>) -> Self {
         self.on_double_click = Some(dbl_click);
         self
     }
@@ -205,9 +191,9 @@ impl<'a, T: 'a, O: 'a, Message, Renderer> Widget<Message, Renderer>
     for Cell<'a, T, O, Message, Renderer>
 where
     T: Clone + ToString,
-    O: CellOption<Message=Message>,
+    O: CellOption<Message = Message>,
     Message: 'static,
-    Renderer: self::Renderer + scrollable::Renderer + 'a,
+    Renderer: self::Renderer +  text::Renderer + menu::Renderer + 'a,
 {
     fn width(&self) -> Length {
         Length::Shrink
@@ -217,19 +203,14 @@ where
         Length::Shrink
     }
 
-    fn layout(
-        &self,
-        renderer: &Renderer,
-        limits: &layout::Limits,
-    ) -> layout::Node {
+    fn layout(&self, renderer: &Renderer, limits: &layout::Limits) -> layout::Node {
         use std::f32;
 
         let limits = limits.width(Length::Fill).height(Length::Shrink);
         let text_size = self.text_size.unwrap_or(renderer.default_size());
 
         let size = {
-            let intrinsic =
-                Size::new(0.0, f32::from(text_size + self.padding * 2));
+            let intrinsic = Size::new(0.0, f32::from(text_size + self.padding * 2));
 
             limits.resolve(intrinsic)
         };
@@ -255,9 +236,9 @@ where
         event: Event,
         layout: Layout<'_>,
         cursor_position: Point,
-        messages: &mut Vec<Message>,
         _renderer: &Renderer,
-        _clipboard: Option<&dyn Clipboard>,
+        _clipboard: &mut dyn Clipboard,
+        messages: &mut Vec<Message>, 
     ) -> event::Status {
         let bounds = layout.bounds();
 
@@ -271,22 +252,22 @@ where
                     *self.menu_last_selection = None;
                     return event::Status::Captured;
                 } else if bounds.contains(cursor_position) {
-                    let click =
-                        mouse::Click::new(cursor_position, *self.last_click);
+                    let click = mouse::Click::new(cursor_position, *self.last_click);
                     match click.kind() {
                         mouse::click::Kind::Single => {
-                            info!("Single click event, padding is: {}, text_size is: {}", self.padding, self.text_size.clone().unwrap_or(12));
+                            info!(
+                                "Single click event, padding is: {}, text_size is: {}",
+                                self.padding,
+                                self.text_size.clone().unwrap_or(12)
+                            );
                             if let Some(ref click_generator) = self.on_click {
                                 messages.push(click_generator(self.item));
                             }
                         }
-                        mouse::click::Kind::Double
-                        | mouse::click::Kind::Triple => {
+                        mouse::click::Kind::Double | mouse::click::Kind::Triple => {
                             info!("Double+ click event");
 
-                            if let Some(ref dbl_click_gen) =
-                                self.on_double_click
-                            {
+                            if let Some(ref dbl_click_gen) = self.on_double_click {
                                 messages.push(dbl_click_gen(self.item));
                             }
                         }
@@ -335,7 +316,7 @@ where
         _defaults: &Renderer::Defaults,
         layout: Layout<'_>,
         cursor_position: Point,
-        _viewport : &Rectangle,
+        _viewport: &Rectangle,
     ) -> Renderer::Output {
         //TODO: redo this all
         self::Renderer::draw(
@@ -351,10 +332,7 @@ where
         )
     }
 
-    fn overlay(
-        &mut self,
-        layout: Layout<'_>,
-    ) -> Option<overlay::Element<'_, Message, Renderer>> {
+    fn overlay(&mut self, layout: Layout<'_>) -> Option<overlay::Element<'_, Message, Renderer>> {
         if *self.menu_open {
             let bounds = layout.bounds();
 
@@ -404,9 +382,7 @@ pub trait Renderer: text::Renderer + menu::Renderer {
     ///
     /// [`Menu`]: ../../overlay/menu/struct.Menu.html
     /// [`Cell`]: struct.Cell.html
-    fn menu_style(
-        style: &<Self as Renderer>::Style,
-    ) -> <Self as menu::Renderer>::Style;
+    fn menu_style(style: &<Self as Renderer>::Style) -> <Self as menu::Renderer>::Style;
 
     /// Draws a [`Cell`].
     ///
@@ -424,16 +400,30 @@ pub trait Renderer: text::Renderer + menu::Renderer {
     ) -> Self::Output;
 }
 
-impl<'a, T: 'a, O: 'a, Message, Renderer> Into<Element<'a, Message, Renderer>>
-    for Cell<'a, T, O, Message, Renderer>
+impl<'a, T, O, Message, Renderer> From<Cell<'a, T, O, Message, Renderer>>
+    for Element<'a, Message, Renderer>
 where
-    T: Clone + ToString,
-    O: CellOption<Message=Message>,
-
+    T: Clone + ToString + 'a,
+    O: CellOption<Message = Message> + 'a,
     Renderer: self::Renderer + 'a,
     Message: 'static,
 {
-    fn into(self) -> Element<'a, Message, Renderer> {
-        Element::new(self)
+    fn from(cell: Cell<'a,T,O,Message,Renderer>) -> Element<'a, Message, Renderer> {
+        Element::new(cell)
     }
 }
+
+
+
+//impl<'a, T, O, Message, Renderer> Into<Element<'a, Message, Renderer>>
+//    for Cell<'a, T, O, Message, Renderer>
+//where
+//    T: Clone + ToString + 'a,
+//    O: CellOption<Message = Message> + 'a,
+//    Renderer: self::Renderer + 'a,
+//    Message: 'static,
+//{
+//    fn into(self) -> Element<'a, Message, Renderer> {
+//        Element::new(self)
+//    }
+//}

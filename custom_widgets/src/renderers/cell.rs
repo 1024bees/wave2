@@ -20,7 +20,7 @@ where
 {
     type Style = Box<dyn StyleSheet>;
 
-    const DEFAULT_PADDING: u16 = 5;
+    const DEFAULT_PADDING: u16 = 1;
 
     fn menu_style(style: &Box<dyn StyleSheet>) -> MenuStyle {
         style.options()
@@ -89,7 +89,7 @@ where
             content: item.to_string(),
             bounds: Rectangle {
                 x: bounds.x + f32::from(padding),
-                y: bounds.center_y(),
+                y: bounds.center_y() + f32::from(padding),
                 width: f32::INFINITY,
                 ..bounds
             },

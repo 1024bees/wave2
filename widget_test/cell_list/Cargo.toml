@@ -9,10 +9,6 @@ publish = false
 wave2 = { path = "../.."}
 wave2_custom_widgets = { path = "../../custom_widgets"}
 tokio = "0.2.18"
-iced = { git = "https://github.com/hecrj/iced", rev="4f2962d73f3bdeeca8a11817e404c45e91e2c2cc", features = ["glow", "glow_canvas","tokio"] }
-iced_glutin = {version = "*"}
-iced_native = {git = "https://github.com/hecrj/iced", rev="4f2962d73f3bdeeca8a11817e404c45e91e2c2cc"}
-iced_wgpu = {git = "https://github.com/hecrj/iced", rev="4f2962d73f3bdeeca8a11817e404c45e91e2c2cc"}
-iced_graphics = {git = "https://github.com/hecrj/iced", rev="4f2962d73f3bdeeca8a11817e404c45e91e2c2cc"}
+iced = { version="0.3.0", features = ["glow", "glow_canvas","tokio"] }
 env_logger = "*"
 log = "*"

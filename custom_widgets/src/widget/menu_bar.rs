@@ -194,9 +194,9 @@ where
         event: Event,
         layout: Layout<'_>,
         cursor_position: Point,
-        _messages: &mut Vec<Message>,
         renderer: &Renderer,
-        _clipboard: Option<&dyn Clipboard>,
+        _clipboard: &mut dyn Clipboard,
+        _messages: &mut Vec<Message>,
     ) -> event::Status {
         let bounds = layout.bounds();
         let text_size = self.text_size.unwrap_or(renderer.default_size());

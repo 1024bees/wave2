@@ -3,7 +3,7 @@
 use iced_native::container;
 use iced_native::event::{self, Event};
 use iced_native::layout;
-use iced::mouse;
+use iced_native::mouse;
 use iced_native::overlay;
 use iced_native::scrollable;
 use iced_native::text;
@@ -218,17 +218,17 @@ where
         event: Event,
         layout: Layout<'_>,
         cursor_position: Point,
-        messages: &mut Vec<Message>,
         renderer: &Renderer,
-        clipboard: Option<&dyn Clipboard>,
+        clipboard: &mut dyn Clipboard,
+        messages: &mut Vec<Message>,
     ) -> event::Status {
         self.container.on_event(
             event.clone(),
             layout,
             cursor_position,
-            messages,
             renderer,
             clipboard,
+            messages,
         )
     }
 
@@ -317,9 +317,10 @@ where
         event: Event,
         layout: Layout<'_>,
         cursor_position: Point,
-        messages: &mut Vec<Message>,
         renderer: &Renderer,
-        _clipboard: Option<&dyn Clipboard>,
+        _clipboard: &mut dyn Clipboard,
+        messages: &mut Vec<Message>,
+        
     ) -> event::Status {
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
