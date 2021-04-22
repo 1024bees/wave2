@@ -116,15 +116,14 @@ impl ModNavigator {
         let scrollable = Scrollable::new(scroll_x).push(
             Container::new(viewed_signals)
                 .height(Length::Shrink)
-                .width(Length::Fill)
+                .width(Length::Shrink)
                 .center_x(),
         );
 
         Container::new(scrollable)
             .height(Length::Fill)
+            .width(Length::Fill)
             .center_y()
-            .max_width(200)
-            .max_height(400)
             .into()
     }
 }

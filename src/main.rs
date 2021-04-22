@@ -1,6 +1,6 @@
 use iced::{
-    pane_grid, Application, Clipboard, Column, Command, Container, Element, HorizontalAlignment, Length,
-    PaneGrid, Settings, Text,
+    pane_grid, Application, Clipboard, Column, Command, Container, Element, HorizontalAlignment,
+    Length, PaneGrid, Settings, Text,
 };
 
 use clap::Clap;
@@ -8,7 +8,7 @@ use std::sync::Arc;
 pub mod components;
 mod config;
 use components::hier_nav::hier_nav;
-use components::{menu_bar, module_nav, sigwindow::sigwindow};
+use components::{menu_bar, module_nav, sigwindow::sigwindow, style};
 use config::menu_update;
 use env_logger;
 use log::warn;
@@ -69,6 +69,7 @@ pub struct State {
     sv_pane: pane_grid::Pane,
     mn_pane: pane_grid::Pane,
     hn_pane: pane_grid::Pane,
+    focused_pane: Option<pane_grid::Pane>,
     menu_bar: menu_bar::GlobalMenuBar,
     wdb_api: Option<Arc<WdbAPI>>,
 }
@@ -100,6 +101,16 @@ enum Content {
     SigView(sigwindow::SigViewer),
     ModNav(module_nav::ModNavigator),
     HierNav(hier_nav::HierNav),
+}
+
+impl ToString for Content {
+    fn to_string(&self) -> String {
+        match self {
+            Content::SigView(_) => String::from("Signal viewer"),
+            Content::ModNav(_) => String::from("Signal navigator"),
+            Content::HierNav(_) => String::from("Hierarchy navigator"),
+        }
+    }
 }
 
 enum Wave2 {
@@ -171,7 +182,11 @@ impl Application for Wave2 {
         String::from("Wave2")
     }
 
-    fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Self::Message> {
+    fn update(
+        &mut self,
+        message: Self::Message,
+        _clipboard: &mut Clipboard,
+    ) -> Command<Self::Message> {
         match self {
             Wave2::Loading => {
                 match message {
@@ -180,13 +195,15 @@ impl Application for Wave2 {
                         let mod_nav = Content::ModNav(module_nav::ModNavigator::default());
                         let hier_nav = Content::HierNav(hier_nav::HierNav::default());
                         let (mut panes, sv_pane) = pane_grid::State::new(sig_viewer);
-                        let (mn_pane, _) = panes
+                        let (mn_pane, split) = panes
                             .split(pane_grid::Axis::Vertical, &sv_pane, mod_nav)
                             .unwrap();
                         panes.swap(&mn_pane, &sv_pane);
+                        panes.resize(&split, 0.2);
                         let (hn_pane, _) = panes
                             .split(pane_grid::Axis::Horizontal, &mn_pane, hier_nav)
                             .unwrap();
+                        panes.swap(&hn_pane, &mn_pane);
                         //TODO: do some like uhhh... cleaning up here
                         //      should probably initialize sizes of panes, etc
 
@@ -197,6 +214,7 @@ impl Application for Wave2 {
                             mn_pane,
                             hn_pane,
                             menu_bar,
+                            focused_pane: None,
                             wdb_api: None,
                         });
                         if wavedb.is_some() {
@@ -212,6 +230,7 @@ impl Application for Wave2 {
                 match message {
                     Message::MBMessage(menu_message) => return menu_update(state, menu_message),
                     Message::SVMessage(_) => {
+                        state.focused_pane = Some(state.sv_pane);
                         state.panes.get_mut(&state.sv_pane).unwrap().update(message)
                     }
                     Message::HNMessage(hn_message) => {
@@ -234,11 +253,14 @@ impl Application for Wave2 {
                                     },
                                 );
                             }
-                            _ => state
-                                .panes
-                                .get_mut(&state.hn_pane)
-                                .unwrap()
-                                .update(Message::HNMessage(hn_message)),
+                            _ => {
+                                state.focused_pane = Some(state.hn_pane);
+                                state
+                                    .panes
+                                    .get_mut(&state.hn_pane)
+                                    .unwrap()
+                                    .update(Message::HNMessage(hn_message))
+                            }
                         }
                     }
                     Message::MNMessage(mn_message) => match mn_message {
@@ -249,11 +271,14 @@ impl Application for Wave2 {
                             );
                         }
 
-                        _ => state
-                            .panes
-                            .get_mut(&state.mn_pane)
-                            .unwrap()
-                            .update(Message::MNMessage(mn_message)),
+                        _ => {
+                            state.focused_pane = Some(state.mn_pane);
+                            state
+                                .panes
+                                .get_mut(&state.mn_pane)
+                                .unwrap()
+                                .update(Message::MNMessage(mn_message))
+                        }
                     },
                     Message::LoadWDB(payload) => match payload {
                         Ok(wdb_api) => {
@@ -277,6 +302,11 @@ impl Application for Wave2 {
                             warn!("{}", format!("VCD not loaded! err is {:?}", waverr))
                         }
                     },
+                    Message::PaneMessage(pane_message) => match pane_message {
+                        PaneMessage::Resize(pane_grid::ResizeEvent { split, ratio }) => {
+                            state.panes.resize(&split, ratio);
+                        }
+                    },
                     _ => {}
                 }
                 Command::none()
@@ -288,13 +318,22 @@ impl Application for Wave2 {
         match self {
             Wave2::Loading => loading_message(),
             Wave2::Loaded(State {
-                panes, menu_bar, ..
+                panes,
+                menu_bar,
+                focused_pane,
+                ..
             }) => {
                 //all_content.into()
-                let pane_grid = PaneGrid::new(panes, |_pane, content| {
-                    let title_bar = pane_grid::TitleBar::new(Text::new(format!("Focused pane"))).padding(10);
 
-                    pane_grid::Content::new(content.view()).title_bar(title_bar)
+                let pane_grid = PaneGrid::new(panes, |pane, content| {
+                    //let title_bar = pane_grid::TitleBar::new(Text::new(format!("Focused pane"))).padding(3);
+                    let is_focused = focused_pane
+                        .as_ref()
+                        .map(|focused| focused.clone() == pane)
+                        .unwrap_or(false);
+
+                    pane_grid::Content::new(content.view()).style(style::Pane { is_focused })
+                    //.title_bar(title_bar)
                 })
                 .width(Length::Fill)
                 .height(Length::Fill)
@@ -302,7 +341,8 @@ impl Application for Wave2 {
                 //.on_drag(|pane_data| Message::PaneMessage(PaneMessage::Dragged(pane_data)))
                 .on_resize(10, |resize_data| {
                     Message::PaneMessage(PaneMessage::Resize(resize_data))
-                });
+                })
+                .spacing(3);
 
                 let menu_bar_view = menu_bar.view().map(|message| Message::MBMessage(message));
 

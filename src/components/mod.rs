@@ -4,3 +4,4 @@ pub mod module_nav;
 pub mod sigwindow;
 pub mod widget_bar;
 pub mod shared;
+pub mod style;
