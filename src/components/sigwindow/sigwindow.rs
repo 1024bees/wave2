@@ -1,7 +1,7 @@
 use super::display_wave::{DisplayedWave, WaveDisplayOptions};
 use super::wavewindow;
 use crate::components::shared::cell_list::{CellList, ListNodeState};
-use iced::{Column, Container, Element, Row, Space, Text};
+use iced::{pane_grid, Column, Container, Element, Row, Space, Text};
 use log::info;
 use std::sync::Arc;
 use strum_macros;
@@ -47,18 +47,50 @@ pub enum Message {
 }
 
 pub struct SigViewer {
-    waves_state: CellList<DisplayedWave, WaveOptions>,
-    wavewindow: wavewindow::WaveWindowState,
+    //waves_state: CellList<DisplayedWave, WaveOptions>,
+    //wavewindow: wavewindow::WaveWindowState,
+    content: pane_grid::State<SigContent>,
+    wv_pane: pane_grid::Pane,
+    sl_pane: pane_grid::Pane,
     live_waves: Vec<DisplayedWave>,
     selected: Option<Vec<usize>>,
 }
 
+pub enum SigContent {
+    SignalList(CellList<DisplayedWave, WaveOptions>),
+    WaveView(wavewindow::WaveWindowState),
+}
+
+impl SigContent {
+    fn unwrap_wave_view(&mut self) -> &mut wavewindow::WaveWindowState {
+        match self {
+            SigContent::WaveView(&mut ww) => ww,
+            _ => panic!("Unsupported! We are unwrapping a waveview that is not a waveview")
+        }
+    }
+    fn unwrap_signal_list(&mut self) -> &mut CellList<DisplayedWave, WaveOptions> {
+        match self {
+            SigContent::SignalList(&mut sl) => sl,
+            _ => panic!("Unsupported! We are unwrapping a signal list that is not a waveview")
+        }
+    }
+
+}
+
 impl Default for SigViewer {
     fn default() -> Self {
+        let signal_list =
+            SigContent::SignalList(CellList::default().set_cell_padding(4).set_text_size(11));
+        let wave_view = SigContent::WaveView(wavewindow::WaveWindowState::default());
+        let (mut content, sl_pane) = pane_grid::State::new(signal_list);
+        let (wv_pane, _) = panes
+            .split(pane_grid::Axis::Vertical, &wv_pane, wave_view)
+            .unwrap();
+
         SigViewer {
-            waves_state: CellList::default().set_cell_padding(4).set_text_size(11),
-            //.set_spacing(wavewindow::BUFFER_PX as u16),
-            wavewindow: wavewindow::WaveWindowState::default(),
+            content,
+            wv_pane,
+            sl_pane,
             live_waves: Vec::default(),
             selected: Option::default(),
         }
@@ -67,6 +99,9 @@ impl Default for SigViewer {
 
 impl SigViewer {
     pub fn update(&mut self, message: Message) {
+        let waves_state =  self.content.get_mut(self.sl_pane).map(|content| content.unwrap_signal_list()).unwrap();
+        let wavewindow = self.content.get_mut(self.sl_pane).map(|content| content.unwrap_signal_list()).unwrap();
+
         match message {
             Message::AddWave(imw_res) => match imw_res {
                 Ok(imw) => {
@@ -120,8 +155,7 @@ impl SigViewer {
     }
     pub fn view(&mut self) -> Element<Message> {
         let SigViewer {
-            waves_state,
-            wavewindow,
+            content,
             live_waves,
             ..
         } = self;
