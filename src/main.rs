@@ -8,6 +8,7 @@ use std::sync::Arc;
 pub mod components;
 mod config;
 use components::hier_nav::hier_nav;
+use components::sigwindow::wavewindow;
 use components::{menu_bar, module_nav, sigwindow::sigwindow, style};
 use config::menu_update;
 use env_logger;
@@ -69,6 +70,7 @@ pub struct State {
     sv_pane: pane_grid::Pane,
     mn_pane: pane_grid::Pane,
     hn_pane: pane_grid::Pane,
+    ww_pane: pane_grid::Pane,
     focused_pane: Option<pane_grid::Pane>,
     menu_bar: menu_bar::GlobalMenuBar,
     wdb_api: Option<Arc<WdbAPI>>,
@@ -101,6 +103,7 @@ enum Content {
     SigView(sigwindow::SigViewer),
     ModNav(module_nav::ModNavigator),
     HierNav(hier_nav::HierNav),
+    WaveWindow(wavewindow::WaveWindowState),
 }
 
 impl ToString for Content {
@@ -109,6 +112,7 @@ impl ToString for Content {
             Content::SigView(_) => String::from("Signal viewer"),
             Content::ModNav(_) => String::from("Signal navigator"),
             Content::HierNav(_) => String::from("Hierarchy navigator"),
+            Content::WaveWindow(_) => String::from("Waves"),
         }
     }
 }
@@ -130,6 +134,7 @@ pub enum Message {
     SVMessage(sigwindow::Message),
     MNMessage(module_nav::Message),
     HNMessage(hier_nav::Message),
+    WWMessage(wavewindow::Message),
     MBMessage(menu_bar::Message),
     //IoMessage
     Loaded(Result<Option<Arc<WdbAPI>>, std::io::Error>),
@@ -165,6 +170,7 @@ impl Content {
             Content::ModNav(module_nav) => module_nav
                 .view()
                 .map(move |message| Message::MNMessage(message)),
+            Content::WaveWindow(ww) => ww.view(&[]).map(move |message| Message::WWMessage(message)),
         }
     }
 }
@@ -194,12 +200,19 @@ impl Application for Wave2 {
                         let sig_viewer = Content::SigView(sigwindow::SigViewer::default());
                         let mod_nav = Content::ModNav(module_nav::ModNavigator::default());
                         let hier_nav = Content::HierNav(hier_nav::HierNav::default());
+                        let wavewindow =
+                            Content::WaveWindow(wavewindow::WaveWindowState::default());
                         let (mut panes, sv_pane) = pane_grid::State::new(sig_viewer);
+
                         let (mn_pane, split) = panes
                             .split(pane_grid::Axis::Vertical, &sv_pane, mod_nav)
                             .unwrap();
                         panes.swap(&mn_pane, &sv_pane);
                         panes.resize(&split, 0.2);
+                        let (ww_pane, ww_split) = panes
+                            .split(pane_grid::Axis::Vertical, &sv_pane, wavewindow)
+                            .unwrap();
+                        panes.resize(&ww_split, 0.3);
                         let (hn_pane, _) = panes
                             .split(pane_grid::Axis::Horizontal, &mn_pane, hier_nav)
                             .unwrap();
@@ -213,6 +226,7 @@ impl Application for Wave2 {
                             sv_pane,
                             mn_pane,
                             hn_pane,
+                            ww_pane,
                             menu_bar,
                             focused_pane: None,
                             wdb_api: None,

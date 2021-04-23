@@ -77,7 +77,6 @@ impl Default for FrameState {
 impl WaveWindowState {
     pub fn view<'a>(&'a mut self, signals: &'a [DisplayedWave]) -> Element<'a, Message> {
         let val = HScroll::new(&mut self.scroll_state).scrollbar_width(10);
-
         val.push(
             Canvas::new(WaveWindow {
                 signals,
@@ -90,6 +89,7 @@ impl WaveWindowState {
         )
         .width(Length::Shrink)
         .height(Length::Fill)
+        .padding(10)
         .into()
     }
 
@@ -98,7 +98,6 @@ impl WaveWindowState {
             Message::UpdateCursor(cursor_location) => {
                 self.frame_state.cursor_location = cursor_location;
                 self.redraw_cursor();
-                info!("Drawing cursor");
             }
             Message::UpdateOffset(offset) => {
                 self.frame_state.offset = offset;

@@ -73,7 +73,7 @@ impl SigViewer {
                     self.live_waves.push(DisplayedWave::from(imw));
                     self.waves_state
                         .push(self.live_waves.last().unwrap().clone());
-                    self.wavewindow.request_redraw();
+                    //self.wavewindow.request_redraw();
                 }
                 Err(err) => {
                     info!("Cannot create InMemWave, err is {:#?}", err);
@@ -88,7 +88,7 @@ impl SigViewer {
                         self.live_waves.remove(idx);
                         self.waves_state.remove(idx);
                     }
-                    self.wavewindow.request_redraw();
+                    //self.wavewindow.request_redraw();
                 }
                 self.selected = None;
             }
@@ -127,14 +127,9 @@ impl SigViewer {
         } = self;
 
         //TODO: move message logic out of wavewindow
-        let ww = wavewindow
-            .view(&live_waves[..])
-            .map(move |message| Message::WWMessage(message));
-
-        let wave_view = Container::new(ww)
-            .width(iced::Length::Fill)
-            .height(iced::Length::Fill)
-            .padding(20);
+        //let ww = wavewindow
+        //    .view(&live_waves[..])
+        //    .map(move |message| Message::WWMessage(message));
 
         fn click_func(
             node_state: ListNodeState,
@@ -168,7 +163,6 @@ impl SigViewer {
         Container::new(
             Row::new()
                 .push(pick_list)
-                .push(wave_view)
                 .height(iced::Length::Fill),
         )
         .into()
