@@ -179,6 +179,10 @@ where
         self.spacing = padding;
         self
     }
+    pub fn clear(&mut self) {
+        self.nodes.clear();
+    }
+
 }
 
 impl<T, O> Default for CellList<T, O> {

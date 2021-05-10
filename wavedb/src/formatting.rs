@@ -1,4 +1,6 @@
-#[derive(Clone,Copy, Debug)]
+use crate::puddle::Droplet;
+
+#[derive(Clone, Copy, Debug)]
 ///Represents ways to format ParsedVec into String
 pub enum WaveFormat {
     Decimal,
@@ -6,7 +8,6 @@ pub enum WaveFormat {
     Octal,
     SDecimal,
 }
-
 
 impl WaveFormat {
     ///The number of bits per digit for this particular radix
@@ -19,6 +20,44 @@ impl WaveFormat {
     }
 }
 
-pub fn format_payload(payload : &[u8], format: WaveFormat) -> String {
-    String::from("deadbeef")
+fn split_zx_and_payload<'a>(drop: Droplet<'a>,bitwidth: usize) -> (&'a[u8], &'a[u8]) {
+    let bitwidth_idx = (bitwidth as f32 / 8.0).ceil() as usize;
+    drop.take_data().split_at(bitwidth_idx)
+}
+
+
+pub fn format_payload<'a>(
+    drop: Droplet<'a>,
+    format: WaveFormat,
+    bitwidth: usize,
+    visibile_chars: usize,
+) -> String {
+    match format {
+        WaveFormat::Hex => {
+            if drop.is_zx() {
+                let (payload, zx) = split_zx_and_payload(drop,bitwidth);
+                payload.iter().zip(zx.iter()).rev().map(|(chunk,zx)| {
+                    match zx {
+                        0 => { format!("{:x?}",chunk) }
+                        0x01..=0x0f => { unimplemented!()},
+                        0x10..=0xf0 => {unimplemented!()},
+                        _ => {unimplemented!()},
+                    }
+                }).collect()
+
+
+
+
+            } else {
+                drop.take_data().iter().rev().map(|chunk| {
+                    format!("{:x?}",chunk)
+                }).collect()
+            }
+
+        },
+        _ => {
+            unimplemented!()
+        }
+    }
+
 }

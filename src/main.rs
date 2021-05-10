@@ -8,8 +8,8 @@ use std::sync::Arc;
 pub mod components;
 mod config;
 use components::hier_nav::hier_nav;
-use components::sigwindow::wavewindow;
-use components::{menu_bar, module_nav, sigwindow::sigwindow, style};
+use components::signals::wavewindow;
+use components::{menu_bar, module_nav, signals::{sigwindow,self}, style};
 use config::menu_update;
 use env_logger;
 use log::warn;
@@ -63,6 +63,7 @@ fn main() {
     };
     env_logger::init();
     Wave2::run(settings).expect("Fatal error during initialization");
+
 }
 
 pub struct State {
@@ -122,6 +123,8 @@ enum Wave2 {
     Loaded(State),
 }
 
+
+
 #[derive(Debug)]
 pub enum PaneMessage {
     //Dragged(pane_grid::DragEvent),
@@ -131,10 +134,9 @@ pub enum PaneMessage {
 #[derive(Debug)]
 pub enum Message {
     // Component messages
-    SVMessage(sigwindow::Message),
     MNMessage(module_nav::Message),
     HNMessage(hier_nav::Message),
-    WWMessage(wavewindow::Message),
+    SignalsMessage(signals::Message),
     MBMessage(menu_bar::Message),
     //IoMessage
     Loaded(Result<Option<Arc<WdbAPI>>, std::io::Error>),
@@ -149,8 +151,11 @@ impl Content {
             (Content::HierNav(hier_mod), Message::HNMessage(message)) => {
                 hier_mod.update(message.clone())
             }
-            (Content::SigView(sig_view), Message::SVMessage(message)) => {
+            (Content::SigView(sig_view), Message::SignalsMessage(message)) => {
                 sig_view.update(message.clone())
+            }
+            (Content::WaveWindow(wavewindow), Message::SignalsMessage(message)) => {
+                wavewindow.update(message.clone())
             }
             (Content::ModNav(module_nav), Message::MNMessage(message)) => {
                 module_nav.update(message.clone())
@@ -166,11 +171,11 @@ impl Content {
                 .map(move |message| Message::HNMessage(message)),
             Content::SigView(sig_view) => sig_view
                 .view()
-                .map(move |message| Message::SVMessage(message)),
+                .map(move |message| Message::SignalsMessage(message)),
             Content::ModNav(module_nav) => module_nav
                 .view()
                 .map(move |message| Message::MNMessage(message)),
-            Content::WaveWindow(ww) => ww.view(&[]).map(move |message| Message::WWMessage(message)),
+            Content::WaveWindow(ww) => ww.view().map(move |message| Message::SignalsMessage(message)),
         }
     }
 }
@@ -243,9 +248,11 @@ impl Application for Wave2 {
             Wave2::Loaded(state) => {
                 match message {
                     Message::MBMessage(menu_message) => return menu_update(state, menu_message),
-                    Message::SVMessage(_) => {
+                    Message::SignalsMessage(inner_message) => {
                         state.focused_pane = Some(state.sv_pane);
-                        state.panes.get_mut(&state.sv_pane).unwrap().update(message)
+                        state.panes.get_mut(&state.sv_pane).unwrap().update(Message::SignalsMessage(inner_message.clone()));
+                        state.panes.get_mut(&state.ww_pane).unwrap().update(Message::SignalsMessage(inner_message.clone()));
+
                     }
                     Message::HNMessage(hn_message) => {
                         match hn_message {
@@ -281,7 +288,7 @@ impl Application for Wave2 {
                         module_nav::Message::AddSig(signal_item) => {
                             return Command::perform(
                                 WdbAPI::get_signals(state.get_api(), signal_item),
-                                move |wave| Message::SVMessage(sigwindow::Message::AddWave(wave)),
+                                move |wave| Message::SignalsMessage(signals::Message::AddWave(wave)),
                             );
                         }
 
@@ -307,7 +314,7 @@ impl Application for Wave2 {
                             return Command::perform(
                                 WdbAPI::bounds(state.get_api()),
                                 move |bounds| {
-                                    Message::SVMessage(sigwindow::Message::InitializeWW(bounds))
+                                    Message::SignalsMessage(signals::Message::UpdateBounds(bounds))
                                 },
                             );
                         }

@@ -16,14 +16,12 @@ log = "0.4.0"
 env_logger = "0.7.1"
 bincode = "*"
 vcd = {git = "https://github.com/1024bees/rust-vcd", rev="48186f52f5cc5d6b012240e6c97f2cc7b9ddfb9f"}
-sled = "*"
 serde = "*"
 cached = "*"
 toml = "*"
 strum = "0.19"
 strum_macros = "0.19"
 clap = "3.0.0-beta.1"
-bit-vec = { version = "0.6", features = ["serde"] }
 
 wave2_custom_widgets = { version= "0.1", path = "custom_widgets"}
 wave2_wavedb = { version= "0.1", path = "wavedb"}
@@ -35,8 +33,7 @@ debug = 2
 tempfile = "3"
 
 [workspace]
-members = [ "widget_test/wavewindow",
-            "widget_test/cell_list",
+members = [ "widget_test/cell_list",
             "widget_test/cell",
             "widget_test/hscroll",
             "widget_test/menu_bar",

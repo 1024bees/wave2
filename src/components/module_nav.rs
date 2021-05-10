@@ -1,5 +1,5 @@
 use iced::{scrollable, Container, Element, Length, Scrollable};
-use log::{error};
+use log::error;
 use std::sync::Arc;
 use strum_macros;
 use wave2_custom_widgets::traits::CellOption;
@@ -16,8 +16,6 @@ impl SigOptions {
     const ALL: [SigOptions; 1] = [SigOptions::Add];
 }
 
-
-
 impl CellOption for SigOptions {
     type Message = Message;
 
@@ -27,13 +25,10 @@ impl CellOption for SigOptions {
 
     fn to_message(&self) -> Self::Message {
         match self {
-            SigOptions::Add => Message::AddSelected
+            SigOptions::Add => Message::AddSelected,
         }
     }
-
-
 }
-
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -41,35 +36,23 @@ pub enum Message {
     AddSig(SignalItem),
     ClickedItem(usize),
     //Messages from SigOptions
-    AddSelected
+    AddSelected,
 }
-
-
-
 
 ///Responsible for navigating signals within a module
 #[derive(Default)]
 pub struct ModNavigator {
-    signals: CellList<SignalItem,SigOptions>,
+    signals: CellList<SignalItem, SigOptions>,
     selected_offset: Option<usize>,
     scroll_x: scrollable::State,
 }
-
-
-
 
 impl ModNavigator {
     pub fn update(&mut self, message: Message) {
         match message {
             Message::SignalUpdate(payload) => {
-                self.signals = Arc::try_unwrap(payload).map_or_else(
-                    |e| {
-                        CellList::new(e.as_ref().clone())
-                    },
-                    |o| {
-                        CellList::new(o)
-                    },
-                );
+                self.signals = Arc::try_unwrap(payload)
+                    .map_or_else(|e| CellList::new(e.as_ref().clone()), |o| CellList::new(o));
 
                 self.selected_offset = None;
             }
@@ -81,9 +64,7 @@ impl ModNavigator {
                 self.signals.toggle_selected(offset, true);
                 self.selected_offset = Some(offset);
             }
-            Message::AddSelected => {
-                
-            }
+            Message::AddSelected => {}
             _ => {
                 error!("Not implimented yet!");
             }
@@ -94,24 +75,17 @@ impl ModNavigator {
             signals, scroll_x, ..
         } = self;
 
-
-        
-        fn click_func(node_state: ListNodeState) -> Box<dyn Fn(&SignalItem) -> Message + 'static > {
-            return Box::new(move |_| Message::ClickedItem(node_state.offset))
+        fn click_func(node_state: ListNodeState) -> Box<dyn Fn(&SignalItem) -> Message + 'static> {
+            return Box::new(move |_| Message::ClickedItem(node_state.offset));
         }
 
-        fn double_click(_node_state: ListNodeState) -> Box<dyn Fn(&SignalItem) -> Message +'static > {
-            return Box::new(|sig_item| Message::AddSig(sig_item.clone()))
+        fn double_click(
+            _node_state: ListNodeState,
+        ) -> Box<dyn Fn(&SignalItem) -> Message + 'static> {
+            return Box::new(|sig_item| Message::AddSig(sig_item.clone()));
         }
 
-
-
-        let viewed_signals = signals.view(
-            click_func,
-            double_click,
-            );
-
-
+        let viewed_signals = signals.view(click_func, double_click);
 
         let scrollable = Scrollable::new(scroll_x).push(
             Container::new(viewed_signals)

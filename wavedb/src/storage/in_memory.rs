@@ -1,6 +1,5 @@
 use crate::errors::Waverr;
-use crate::puddle::{Puddle, SignalId, Toffset};
-use log::info;
+use crate::puddle::{Puddle, SignalId, Toffset,Droplet};
 use std::sync::Arc;
 
 #[derive(Debug, Default)]
@@ -38,11 +37,51 @@ impl InMemWave {
         )
     }
 
+    //pub fn data_in_range(
+    //    &self,
+    //    begin: Toffset,
+    //    end: Toffset,
+    //) -> Box<dyn Iterator<Item = (Toffset, &[u8])> + '_> {
+    //    let sigid = self.signal_id;
+    //    Box::new(
+    //        self.puddles
+    //            .iter()
+    //            .filter(move |puddle| begin < puddle.puddle_end() && end > puddle.puddle_base())
+    //            .filter_map(move |puddle| {
+    //                puddle
+    //                    .get_cursor(sigid)
+    //                    .ok()
+    //                    .map(|cursor| (cursor, puddle.puddle_base()))
+    //            })
+    //            .flat_map(|(cursor, base)| cursor.into_iter().zip(std::iter::repeat(base)))
+    //            .map(|(droplet, base)| {
+    //                (
+    //                    base + droplet.get_timestamp() as Toffset,
+    //                    droplet.take_data(),
+    //                )
+    //            })
+    //            .filter(move |(time, _)| *time >= begin && *time < end),
+    //    )
+    //}
+
+    //FIXME: is there a way to like.. minimize the boxing going on here? 
     pub fn data_in_range(
         &self,
         begin: Toffset,
-        end: Toffset,
+        end: Toffset
     ) -> Box<dyn Iterator<Item = (Toffset, &[u8])> + '_> {
+        Box::new(self.droplets_in_range(begin,end).map(|(base, droplet)| { (base, droplet.take_data())}))
+    }
+
+
+
+
+    //fixme; could probably template and 
+    pub fn droplets_in_range(
+        &self,
+        begin: Toffset,
+        end: Toffset,
+    ) -> Box<dyn Iterator<Item = (Toffset, Droplet<'_>)> + '_> {
         let sigid = self.signal_id;
         Box::new(
             self.puddles
@@ -58,12 +97,15 @@ impl InMemWave {
                 .map(|(droplet, base)| {
                     (
                         base + droplet.get_timestamp() as Toffset,
-                        droplet.take_data(),
+                        droplet
                     )
                 })
                 .filter(move |(time, _)| *time >= begin && *time < end),
         )
     }
+
+
+
 
     pub fn get_width(&self) -> usize {
         self.puddles
@@ -96,7 +138,6 @@ mod tests {
     use crate::puddle::builder::tests::build_dummy_puddles;
     use crate::puddle::Droplet;
     use crate::wavedb::WaveDB;
-    use log::info;
     use std::convert::TryInto;
     use std::path::{Path, PathBuf};
 

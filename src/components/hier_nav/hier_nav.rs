@@ -1,11 +1,10 @@
 use crate::components::hier_nav::hier_node::HierRoot;
 use iced::{scrollable, Container, Element, Scrollable};
+use log::info;
 use std::sync::Arc;
 use strum_macros;
-use wave2_wavedb::hier_map::HierMap;
-use log::info;
 use wave2_custom_widgets::traits::CellOption;
-
+use wave2_wavedb::hier_map::HierMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, strum_macros::Display)]
 pub enum HierOptions {
@@ -21,13 +20,10 @@ impl CellOption for HierOptions {
 
     fn to_message(&self) -> Self::Message {
         match self {
-            HierOptions::Expand => Message::ExpandLive
+            HierOptions::Expand => Message::ExpandLive,
         }
-
     }
-
 }
-
 
 impl HierOptions {
     //TODO: create ALL macro
@@ -60,7 +56,6 @@ pub enum Message {
     /// Attempts to toggle the current seleted module. If it the module does not contain a
     /// submodule, we silently do nothing
     ExpandLive,
-
 }
 
 impl HierNav {
@@ -90,14 +85,13 @@ impl HierNav {
                 if self.live_module.is_some() {
                     self.hier_root.toggle_selected(module_idx);
                 }
-            },
+            }
             Message::ExpandLive => {
                 if let Some(live_module_idx) = self.live_module.as_ref() {
                     self.hier_root.update_expander(live_module_idx.clone())
                 } else {
                     info!("Trying to expand when no module is live")
                 }
-                
             }
         }
     }

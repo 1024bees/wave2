@@ -16,5 +16,4 @@ syn = "1.0"
 strum_macros = "0.19"
 
 
-[dev-dependencies]
-wave2_custom_widgets = {path = "../../custom_widgets"}
+

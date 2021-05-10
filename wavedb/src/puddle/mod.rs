@@ -245,7 +245,7 @@ impl<'a> Droplet<'a> {
     }
 
    
-    fn is_zx(&self) -> bool {
+    pub fn is_zx(&self) -> bool {
         (self.content[1] & 0x80) != 0
     }
 
