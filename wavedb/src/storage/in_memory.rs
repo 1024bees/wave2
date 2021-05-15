@@ -1,5 +1,5 @@
 use crate::errors::Waverr;
-use crate::puddle::{Puddle, SignalId, Toffset,Droplet};
+use crate::puddle::{Droplet, Puddle, SignalId, Toffset};
 use std::sync::Arc;
 
 #[derive(Debug, Default)]
@@ -64,19 +64,19 @@ impl InMemWave {
     //    )
     //}
 
-    //FIXME: is there a way to like.. minimize the boxing going on here? 
+    //FIXME: is there a way to like.. minimize the boxing going on here?
     pub fn data_in_range(
         &self,
         begin: Toffset,
-        end: Toffset
+        end: Toffset,
     ) -> Box<dyn Iterator<Item = (Toffset, &[u8])> + '_> {
-        Box::new(self.droplets_in_range(begin,end).map(|(base, droplet)| { (base, droplet.take_data())}))
+        Box::new(
+            self.droplets_in_range(begin, end)
+                .map(|(base, droplet)| (base, droplet.take_data())),
+        )
     }
 
-
-
-
-    //fixme; could probably template and 
+    //fixme; could probably template and
     pub fn droplets_in_range(
         &self,
         begin: Toffset,
@@ -94,18 +94,10 @@ impl InMemWave {
                         .map(|cursor| (cursor, puddle.puddle_base()))
                 })
                 .flat_map(|(cursor, base)| cursor.into_iter().zip(std::iter::repeat(base)))
-                .map(|(droplet, base)| {
-                    (
-                        base + droplet.get_timestamp() as Toffset,
-                        droplet
-                    )
-                })
+                .map(|(droplet, base)| (base + droplet.get_timestamp() as Toffset, droplet))
                 .filter(move |(time, _)| *time >= begin && *time < end),
         )
     }
-
-
-
 
     pub fn get_width(&self) -> usize {
         self.puddles

@@ -7,7 +7,7 @@ use crate::errors::Waverr;
 use log::info;
 
 pub mod builder;
-mod utils;
+pub mod utils;
 pub mod testing_utils;
 
 
@@ -178,6 +178,54 @@ impl<'a> Iterator for PCursor<'a> {
 
     }
 
+}
+
+/**
+ * By default, signals are directly represented in a puddle by numeric values. However we want to
+ * support 4 state simulations with x's (unknown values) and z's (undriven signals)
+ *
+ *
+ * We do this by having an optional 2bit encoding for signals, with the following mapping 
+ *
+ * 00 -> 0
+ * 01 -> 1
+ * 10 -> Z
+ * 11 -> X
+ *
+ *
+ * TwoBitSignal wraps this 
+ *
+ **/
+
+pub enum TwoBitSignal {
+    Zero,
+    One,
+    Z,
+    X
+}
+
+
+impl From<(bool,bool)> for TwoBitSignal {
+    fn from(zx_and_sig: (bool, bool)) -> TwoBitSignal {
+        match zx_and_sig {
+            (false,false) => TwoBitSignal::Zero,
+            (true,false) => TwoBitSignal::One,
+            (false,true) => TwoBitSignal::Z,
+            (true,true) => TwoBitSignal::X,
+
+        }
+    }
+}
+
+impl Into<char> for TwoBitSignal {
+    fn into(self) -> char {
+        match self {
+            Self::One => '1',
+            Self::Zero => '0',
+            Self::X => 'x',
+            Self::Z => 'z',
+        }
+    }
 }
 
 
