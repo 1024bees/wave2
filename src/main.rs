@@ -46,10 +46,13 @@ impl Opts {
                     Message::Loaded,
                 ),
             ),
-            _ => (
+            _ => { 
+                log::info!("BAD BOY");
+                (
                 Wave2::Loading,
                 Command::perform(async { Ok(None) }, Message::Loaded),
-            ),
+                )
+            },
         }
     }
 }

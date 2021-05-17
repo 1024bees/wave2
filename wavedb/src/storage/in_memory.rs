@@ -174,4 +174,32 @@ mod tests {
             last_time = time;
         }
     }
+
+    #[test]
+    fn vga_x_addr() {
+        let mut path_to_wikivcd = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        path_to_wikivcd.push("test_vcds/vga.vcd");
+        //bad but hey... is what it is
+
+        std::fs::remove_dir_all("/tmp/unit_tests/vcddb2");
+        let wdb = WaveDB::from_vcd(path_to_wikivcd, Path::new("/tmp/unit_tests/vcddb2"))
+            .expect("could not create wavedb");
+
+        let clock_wave = wdb.get_imw("TOP.x_addr".into()).expect("signal isn't here!");
+        let mut expected_val = 0;
+        for (time, payload) in clock_wave.data_in_range(0, 10000) {
+            log::info!("payload is {:?}",payload);
+            log::info!("time is {:?}", time);
+            let val : u16= u16::from_le_bytes(payload.try_into().expect("should be a 9bit val, convertible into u16"));
+            if val == 0 {
+                expected_val = 0;
+            }
+            //assert_eq!(expected_val, val);
+            expected_val +=1;
+        }
+        assert!(false);
+    }
+
+
+
 }

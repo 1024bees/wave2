@@ -10,18 +10,6 @@ pub enum WaveFormat {
     SDecimal,
 }
 
-impl WaveFormat {
-    ///The number of bits per digit for this particular radix
-    fn num_bits(&self) -> f32 {
-        match self {
-            WaveFormat::Hex => 4.0,
-            WaveFormat::Octal => 3.0,
-            WaveFormat::Decimal | WaveFormat::SDecimal => 3.32,
-            WaveFormat::Binary => 1.0,
-        }
-    }
-}
-
 fn split_zx_and_payload<'a>(drop: Droplet<'a>, bitwidth: usize) -> (&'a [u8], &'a [u8]) {
     let bitwidth_idx = (bitwidth as f32 / 8.0).ceil() as usize;
     drop.take_data().split_at(bitwidth_idx)
@@ -122,7 +110,6 @@ pub fn format_payload<'a>(
             unimplemented!()
         }
     };
-    println!("gen str is {}", gen_str);
     gen_str.truncate(visible_chars);
     gen_str
 }

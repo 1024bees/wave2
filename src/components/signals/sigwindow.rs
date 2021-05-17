@@ -119,13 +119,13 @@ impl SigViewer {
         let cl = waves_state.view(click_func, double_click);
 
         let pick_list = Column::new()
-            .push(
-                Text::new("Active signals")
-                    .height(iced::Length::Units(
-                        (wavewindow::TS_FONT_SIZE + wavewindow::BUFFER_PX) as u16,
-                    ))
-                    .size(wavewindow::TS_FONT_SIZE as u16),
-            )
+            //.push(
+            //    Text::new("Active signals")
+            //        .height(iced::Length::Units(
+            //            (wavewindow::TS_FONT_SIZE + wavewindow::BUFFER_PX) as u16,
+            //        ))
+            //        .size(wavewindow::TS_FONT_SIZE as u16),
+            //)
             .push(cl)
             .width(iced::Length::Fill)
             .height(iced::Length::Fill)

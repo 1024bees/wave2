@@ -1,11 +1,9 @@
 use super::utils::get_id;
 use super::{PMeta, Poffset, Puddle, SignalId, Toffset};
 use crate::errors::Waverr;
-use crate::signals::SigType;
 use log::info;
 use std::collections::HashMap;
-use std::convert::TryFrom;
-use std::convert::TryInto;
+use std::convert::{TryFrom,TryInto};
 use vcd::{Command, Value};
 
 /// Transient payload; this is the temporary container that is accumulated into as
@@ -13,7 +11,7 @@ use vcd::{Command, Value};
 /// parallel
 #[derive(Default)]
 struct RunningPayload {
-    data: Vec<u8>,
+    pub data: Vec<u8>,
     num_items: u16,
     width: usize,
     contains_zx: bool,
@@ -104,7 +102,17 @@ impl PuddleBuilder {
             }
             Command::ChangeVector(.., val) => {
                 running_pload.width = usize::try_from(val.len()).unwrap();
-                running_pload.extend(val);
+                if timestamp < 5000 && id == 12 {
+                    info!("id is {:?}, time is {:?}",id,timestamp);
+                    info!("val is {:?}",val);
+                }
+                running_pload.extend(val.into_iter().rev());
+                if timestamp < 5000 && id == 12 {
+                    info!("added value is {:?}",&running_pload.data[running_pload.data.len()-2..]);
+                }
+
+
+
             }
             Command::ChangeReal(.., val) => {
                 running_pload.extend(val.to_le_bytes().iter().cloned());

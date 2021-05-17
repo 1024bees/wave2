@@ -4,10 +4,10 @@ use iced::{
 };
 
 use super::display_wave::{generate_canvas_text, DisplayedWave, SBWaveState};
+use super::Message;
 use log::info;
 use wave2_custom_widgets::widget::hscroll;
 use wave2_custom_widgets::widget::hscroll::HScroll;
-use super::Message;
 
 pub const BUFFER_PX: f32 = 1.5;
 pub const WAVEHEIGHT: f32 = 16.0;
@@ -31,8 +31,6 @@ const ORANGE: Color = Color::from_rgba(
     0x87 as f32 / 255.0,
     0.4,
 );
-
-
 
 pub struct WaveWindow<'a> {
     signals: &'a [DisplayedWave],
@@ -102,17 +100,17 @@ impl WaveWindowState {
             Message::UpdateBounds((start, end)) => {
                 self.frame_state.start_time = start;
                 self.frame_state.end_time = end;
-            },
-            Message::AddWave(imw) => {
-                match imw {
-                    Ok(wave) => { 
-                        self.live_waves.push(DisplayedWave::from(wave));
-                        self.request_redraw();
-                    }
-                    Err(err) => log::info!("Failed to add wave with err {:?}",err),
+            }
+            Message::AddWave(imw) => match imw {
+                Ok(wave) => {
+                    self.live_waves.push(DisplayedWave::from(wave));
+                    self.request_redraw();
                 }
+                Err(err) => log::info!("Failed to add wave with err {:?}", err),
             },
-            _ => { log::info!("Not covered"); },
+            _ => {
+                log::info!("Not covered");
+            }
         }
     }
 
@@ -233,6 +231,7 @@ impl<'a> WaveWindow<'a> {
         let mut leftmost_pt = Point::default();
         leftmost_pt.y += WAVEHEIGHT + 2.0 * BUFFER_PX + TS_FONT_SIZE;
         let background = Path::rectangle(Point::default(), bounds.size());
+        let mut text_vec = Vec::new();
         frame.fill(&background, Color::BLACK);
         let wave_list: Vec<Path> = self
             .signals
@@ -305,7 +304,7 @@ impl<'a> WaveWindow<'a> {
                                 let x_delt = self.xdelt_from_prev(time, prev_xcoord, &bounds)
                                     - VEC_SHIFT_WIDTH / 2.0;
 
-                                let text = generate_canvas_text(
+                                let mut value_text = generate_canvas_text(
                                     sig_payload,
                                     display_options,
                                     width,
@@ -326,8 +325,22 @@ impl<'a> WaveWindow<'a> {
                                     p.line_to(*point);
                                     point.y -= WAVEHEIGHT * direction;
                                 }
+                                value_text = value_text.map(|mut value| {
+                                    value.position = working_pts[0];
+                                    value.color = Color::WHITE;
+                                    value.size = 12.0;
+                                    value
+                                });
+
+                                //FIXME: seems like this closure is very overloaded 
+                                //       think of a way to pull this out
+                                if let Some(text) = value_text {
+                                    text_vec.push(text);
+                                }
+
                                 prev_xcoord = time
                             }
+                            // This draws a line towards the end of frame
                             let fin_x_delt =
                                 self.xdelt_from_prev(self.end_window_time(), prev_xcoord, &bounds);
                             for point in working_pts.iter_mut() {
@@ -344,12 +357,14 @@ impl<'a> WaveWindow<'a> {
 
         //TODO: cache wavelist in the case of append only?
 
+        for text in text_vec {
+            frame.fill_text(text);
+        }
         for waves in wave_list {
             frame.stroke(&waves, Stroke::default().with_width(1.0).with_color(GREEN));
         }
     }
 }
-
 
 impl<'a> canvas::Program<Message> for WaveWindow<'a> {
     fn update(

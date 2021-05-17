@@ -8,9 +8,9 @@ use wave2_wavedb::puddle::{Droplet};
 
 /// Mininum x_delta between two "value" changes that must occur before we consider writing the
 /// wave's value on the line
-const TEXT_THRESHOLD: f32 = 20.0;
+const TEXT_THRESHOLD: f32 = 12.0;
 
-const TEXT_SIZE: f32 = 15.0;
+const TEXT_SIZE: f32 = 12.0;
 
 #[derive(Clone, Copy, Debug)]
 pub struct WaveDisplayOptions {
@@ -100,20 +100,15 @@ pub fn generate_canvas_text(
     space: f32,
 ) -> Option<Text> {
     let str_format = display_options.format;
-    if space < TEXT_THRESHOLD {
+    if space < TEXT_SIZE {
         return None;
     }
     let visible_chars = (space / TEXT_SIZE).ceil() as usize;
+    log::info!("payload is {:?}", data.get_data());
+
     let value = format_payload(data, str_format,bitwidth,visible_chars);
-    
-    let printed_str: &str = if visible_chars < value.len() {
-        value
-            .get(0..visible_chars)
-            .expect("Truncating string improperly when generating wavewindow canvas text")
-    } else {
-        value.as_str()
-    };
-    Some(Text::from(printed_str))
+   log::info!("string value is {}",value);
+    Some(Text::from(value))
 }
 
 #[derive(Clone, Debug)]
