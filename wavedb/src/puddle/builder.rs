@@ -36,15 +36,15 @@ impl Extend<Value> for RunningPayload {
         let mut zx_base: Option<usize> = None;
         let header_base = self.data.len() - 1;
         //FIXME: SINFUL BEYOND COMPARE. BY GOD THIS WILL BE PAINFUL ONE DAY
+        let base = self.data.len();
         self.data.resize(self.data.len() + data_size, 0);
-        let base = self.data.len() - 1;
         let (mut bit_offset, mut byte_offset) = (0, 0);
 
         // Vec<Value> are organized as MSB first. This is similar to big endian, but values are
         // recorded at bit granularity, so they must be reversed as well.
         for (bidx, value) in iter.into_iter().enumerate() {
-            bit_offset = !bidx & 0x7;
-            byte_offset = base - (bidx >> 3);
+            bit_offset = bidx & 0x7;
+            byte_offset = base + (bidx >> 3);
             match value {
                 Value::V1 => self.data[byte_offset] |= 1 << bit_offset,
                 Value::X | Value::Z => {
@@ -64,13 +64,6 @@ impl Extend<Value> for RunningPayload {
                     self.data[zx_byte_offset] |= 1 << bit_offset;
                 }
                 Value::V0 => (),
-            }
-        }
-        if bit_offset != 0 {
-            self.data[byte_offset] >>= bit_offset;
-            //info!("byte_offset is {} ",byte_offset);
-            if zx_base.is_some() {
-                self.data[byte_offset + data_size] >>= bit_offset;
             }
         }
     }
@@ -102,17 +95,7 @@ impl PuddleBuilder {
             }
             Command::ChangeVector(.., val) => {
                 running_pload.width = usize::try_from(val.len()).unwrap();
-                if timestamp < 5000 && id == 12 {
-                    info!("id is {:?}, time is {:?}",id,timestamp);
-                    info!("val is {:?}",val);
-                }
                 running_pload.extend(val.into_iter().rev());
-                if timestamp < 5000 && id == 12 {
-                    info!("added value is {:?}",&running_pload.data[running_pload.data.len()-2..]);
-                }
-
-
-
             }
             Command::ChangeReal(.., val) => {
                 running_pload.extend(val.to_le_bytes().iter().cloned());
@@ -179,6 +162,7 @@ pub mod tests {
     use rand::distributions::{Distribution, Uniform};
     use rand::seq::SliceRandom;
     use std::sync::Arc;
+    use vcd::Value;
 
     fn num_to_vec(in_value: u64, len: u8) -> Vec<Value> {
         (0..len)
@@ -298,6 +282,7 @@ pub mod tests {
         }
     }
 
+
     #[test]
     #[allow(unused_must_use)]
     fn puddle_builder_wide() {
@@ -326,10 +311,48 @@ pub mod tests {
         );
         for (time, droplet) in droplet_vec.iter().enumerate() {
             let data = u64::from_le_bytes(droplet.get_data().try_into().unwrap());
+            log::info!("data is {:0>16x}",data);
             assert_eq!(0xdeadbeefdeadbeef, data);
             assert_eq!(time, droplet.get_timestamp() as usize);
         }
     }
+
+    #[test]
+    #[allow(unused_must_use)]
+    fn puddle_builder_non_pow_2() {
+        init_test_logger();
+
+        let mut pb = PuddleBuilder::new(0);
+        let large_range = 50;
+
+    
+        for i in 0..large_range {
+            pb.add_signal(
+                Command::ChangeVector((0 as u32).into(), num_to_vec(5,10)),
+                i,
+            )
+            .unwrap();
+        }
+        let puddle: Puddle = pb.into();
+        let droplet_vec: Vec<Droplet> = puddle
+            .get_cursor(0)
+            .expect("This cursor should exist")
+            .into_iter()
+            .collect();
+        assert_eq!(
+            droplet_vec.len(),
+            large_range as usize,
+            "Missing values inside droplet_vec"
+        );
+        for (time, droplet) in droplet_vec.iter().enumerate() {
+            let data = u16::from_le_bytes(droplet.get_data().try_into().unwrap());
+            assert_eq!(0x5, data);
+            assert_eq!(time, droplet.get_timestamp() as usize);
+        }
+    }
+
+
+
 
     #[test]
     #[allow(unused_must_use)]

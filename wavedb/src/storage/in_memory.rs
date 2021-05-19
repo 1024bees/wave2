@@ -194,10 +194,9 @@ mod tests {
             if val == 0 {
                 expected_val = 0;
             }
-            //assert_eq!(expected_val, val);
+            assert_eq!(expected_val, val);
             expected_val +=1;
         }
-        assert!(false);
     }
 
 
