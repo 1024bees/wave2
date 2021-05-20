@@ -83,7 +83,7 @@ impl PuddleBuilder {
         let running_pload = self
             .payloads
             .entry(id as u32)
-            .or_insert(RunningPayload::default());
+            .or_insert_with(RunningPayload::default);
         running_pload.extend(time_delta.to_le_bytes().iter().cloned());
         match command {
             Command::ChangeScalar(.., val) => {
@@ -92,14 +92,14 @@ impl PuddleBuilder {
                 running_pload.extend(vec![val]);
             }
             Command::ChangeVector(.., val) => {
-                running_pload.width = usize::try_from(val.len()).unwrap();
+                running_pload.width = val.len();
                 running_pload.extend(val.into_iter().rev());
             }
             Command::ChangeReal(.., val) => {
                 running_pload.extend(val.to_le_bytes().iter().cloned());
             }
             Command::ChangeString(.., string) => {
-                running_pload.extend(string.as_bytes().into_iter().cloned());
+                running_pload.extend(string.as_bytes().iter().cloned());
             }
             _ => return Err(Waverr::VcdCommandErr(command)),
         }
@@ -108,22 +108,22 @@ impl PuddleBuilder {
     }
 }
 
-impl Into<Puddle> for PuddleBuilder {
-    fn into(self) -> Puddle {
+impl From<PuddleBuilder> for Puddle {
+    fn from(puddle_builder: PuddleBuilder) -> Puddle {
         let mut offset: Poffset = 0;
         let mut offset_map = HashMap::default();
         let prev_sig_map = HashMap::default();
         let next_sig_map = HashMap::default();
 
         //TODO: merge this in with the payloads into iter. me just lazy hehe!
-        let base_sigid = self
+        let base_sigid = puddle_builder
             .payloads
             .iter()
             .min_by_key(|entry| entry.0)
             .map(|entry| entry.0 - entry.0 % Puddle::signals_per_puddle())
             .unwrap();
 
-        let payload = self
+        let payload = puddle_builder
             .payloads
             .into_iter()
             .flat_map(|(key, payload)| {
@@ -133,7 +133,6 @@ impl Into<Puddle> for PuddleBuilder {
                     len: payload.num_items,
                     width: payload.width,
                     var_len: payload.contains_zx,
-                    ..PMeta::default()
                 };
                 offset_map.insert(key, droplet_descriptor);
                 offset += payload.data.len();
@@ -145,7 +144,7 @@ impl Into<Puddle> for PuddleBuilder {
             offset_map,
             prev_sig_map,
             next_sig_map,
-            base: self.base,
+            base: puddle_builder.base,
             base_sigid,
             payload,
         }
@@ -159,8 +158,8 @@ pub mod tests {
     use crate::puddle::Droplet;
     use rand::distributions::{Distribution, Uniform};
     use rand::seq::SliceRandom;
+    use std::convert::{TryFrom, TryInto};
     use std::sync::Arc;
-    use std::convert::{TryFrom,TryInto};
     use vcd::Value;
 
     fn num_to_vec(in_value: u64, len: u8) -> Vec<Value> {
@@ -168,7 +167,7 @@ pub mod tests {
             .filter_map(|bit| {
                 ((in_value & (1 << bit)) != 0)
                     .then(|| Value::V1)
-                    .or_else(|| Some(Value::V0))
+                    .or(Some(Value::V0))
             })
             .rev()
             .collect()
@@ -256,7 +255,7 @@ pub mod tests {
         let small_range = 400;
         for i in 0..small_range {
             pb.add_signal(
-                Command::ChangeVector((0 as u32).into(), num_to_vec(clock_sig, 1)),
+                Command::ChangeVector(0_u32.into(), num_to_vec(clock_sig, 1)),
                 i,
             )
             .unwrap();
@@ -281,7 +280,6 @@ pub mod tests {
         }
     }
 
-
     #[test]
     #[allow(unused_must_use)]
     fn puddle_builder_wide() {
@@ -292,7 +290,7 @@ pub mod tests {
 
         for i in 0..large_range {
             pb.add_signal(
-                Command::ChangeVector((0 as u32).into(), num_to_vec(0xdeadbeefdeadbeef, 64)),
+                Command::ChangeVector(0_u32.into(), num_to_vec(0xdeadbeefdeadbeef, 64)),
                 i,
             )
             .unwrap();
@@ -310,7 +308,7 @@ pub mod tests {
         );
         for (time, droplet) in droplet_vec.iter().enumerate() {
             let data = u64::from_le_bytes(droplet.get_data().try_into().unwrap());
-            log::info!("data is {:0>16x}",data);
+            log::info!("data is {:0>16x}", data);
             assert_eq!(0xdeadbeefdeadbeef, data);
             assert_eq!(time, droplet.get_timestamp() as usize);
         }
@@ -324,13 +322,9 @@ pub mod tests {
         let mut pb = PuddleBuilder::new(0);
         let large_range = 50;
 
-    
         for i in 0..large_range {
-            pb.add_signal(
-                Command::ChangeVector((0 as u32).into(), num_to_vec(5,10)),
-                i,
-            )
-            .unwrap();
+            pb.add_signal(Command::ChangeVector(0_u32.into(), num_to_vec(5, 10)), i)
+                .unwrap();
         }
         let puddle: Puddle = pb.into();
         let droplet_vec: Vec<Droplet> = puddle
@@ -350,9 +344,6 @@ pub mod tests {
         }
     }
 
-
-
-
     #[test]
     #[allow(unused_must_use)]
     fn puddle_builder_x_single() {
@@ -364,7 +355,7 @@ pub mod tests {
 
         for i in 0..large_range {
             pb.add_signal(
-                Command::ChangeVector((0 as u32).into(), zx_vec_builder(0, x_clock_sig, 0, 1)),
+                Command::ChangeVector(0_u32.into(), zx_vec_builder(0, x_clock_sig, 0, 1)),
                 i,
             )
             .unwrap();
@@ -406,7 +397,7 @@ pub mod tests {
 
         for i in 0..large_range {
             pb.add_signal(
-                Command::ChangeVector((0 as u32).into(), zx_vec_builder(0, 0, z_clock_sig, 1)),
+                Command::ChangeVector(0_u32.into(), zx_vec_builder(0, 0, z_clock_sig, 1)),
                 i,
             )
             .unwrap();

@@ -11,8 +11,8 @@ impl<'a> Droplet<'a> {
 }
 
 
-pub fn test_droplet<'a>(input_val : &'a[u8]) -> Droplet<'a> {
-    Droplet::test_new(input_val.into())
+pub fn test_droplet(input_val : &[u8]) -> Droplet<'_> {
+    Droplet::test_new(input_val)
 }
 
 

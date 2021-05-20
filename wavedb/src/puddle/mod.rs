@@ -85,9 +85,8 @@ impl Puddle {
         let offset_data = self.offset_map.get(&signal_id);
 
         if offset_data.is_none() {
-            let toffset = self.next_sig_map.get(&signal_id)
-                .expect("next_sig_map is missing a signal id. TODO: maybe downgrade to recoverable error")
-                .clone();
+            let toffset = *self.next_sig_map.get(&signal_id)
+                .expect("next_sig_map is missing a signal id. TODO: maybe downgrade to recoverable error");
             return Err(toffset);
         }
 
@@ -109,7 +108,7 @@ impl Puddle {
         self.offset_map.get(&sig_id).map(|pmeta| pmeta.width)
     }
 
-    pub fn get_cursor<'a>(&'a self, sig_id: SignalId) -> Result<PCursor<'a>, Waverr> {
+    pub fn get_cursor(&self, sig_id: SignalId) -> Result<PCursor<'_>, Waverr> {
         let meta_handle = self.offset_map.get(&sig_id).ok_or(Waverr::PCursorErr {
             id: sig_id,
             context: "No content for this signal",
@@ -146,7 +145,7 @@ impl<'a> Iterator for PCursor<'a> {
         }
 
         if self.pidx >= self.plen {
-            return None;
+            None
         } else if self.meta_handle.var_len {
             if Droplet::is_zx_from_bytes(
                 &self.payload_handle[self.poffset..self.poffset + Droplet::header_width()],
@@ -220,13 +219,13 @@ impl From<(bool, bool)> for TwoBitSignal {
     }
 }
 
-impl Into<char> for TwoBitSignal {
-    fn into(self) -> char {
-        match self {
-            Self::One => '1',
-            Self::Zero => '0',
-            Self::X => 'x',
-            Self::Z => 'z',
+impl From<TwoBitSignal> for char{
+    fn from(tbs: TwoBitSignal) -> char {
+        match tbs {
+            TwoBitSignal::One => '1',
+            TwoBitSignal::Zero => '0',
+            TwoBitSignal::X => 'x',
+            TwoBitSignal::Z => 'z',
         }
     }
 }
@@ -320,30 +319,28 @@ impl<'a> PCursor<'a> {
 
     pub fn set_time(&mut self, offset: Toffset) -> Result<(), Toffset> {
         if offset > self.puddle_handle.puddle_end() {
-            let next_signal = self
+            let next_signal = *self
                 .puddle_handle
                 .next_sig_map
                 .get(&self.sig_id)
-                .expect("TODO: Message")
-                .clone();
+                .expect("TODO: Message");
             if next_signal >= offset {
                 //move to last signal in current puddle
-                return Ok(());
+                Ok(())
             } else {
-                return Err(next_signal);
+                Err(next_signal)
             }
         } else if offset < self.puddle_handle.base {
-            let prev_signal = self
+            let prev_signal = *self
                 .puddle_handle
                 .prev_sig_map
                 .get(&self.sig_id)
-                .expect("TODO: Message")
-                .clone();
+                .expect("TODO: Message");
             if prev_signal >= offset {
                 //move to last signal in current puddle
-                return Ok(());
+                Ok(())
             } else {
-                return Err(prev_signal);
+                Err(prev_signal)
             }
         } else {
             if self.meta_handle.var_len {
@@ -395,12 +392,11 @@ impl<'a> PCursor<'a> {
                 self.meta_handle.width() as Poffset,
             ))
         } else {
-            Err(self
+            Err(*self
                 .puddle_handle
                 .next_sig_map
                 .get(&self.sig_id)
-                .unwrap()
-                .clone())
+                .unwrap())
         }
     }
 
@@ -417,12 +413,11 @@ impl<'a> PCursor<'a> {
                 self.meta_handle.width() as Poffset,
             ))
         } else {
-            Err(self
+            Err(*self
                 .puddle_handle
                 .next_sig_map
                 .get(&self.sig_id)
-                .unwrap()
-                .clone())
+                .unwrap())
         }
     }
 }

@@ -33,11 +33,11 @@ pub struct WaveDb {
 impl WaveDb {
     fn new(db_name: String, db_path: Option<&Path>) -> WaveDb {
         WaveDb {
-            db: sled::open(db_path.unwrap_or(db_name.as_ref())).unwrap(),
+            db: sled::open(db_path.unwrap_or_else(||db_name.as_ref())).unwrap(),
             hier_map: Arc::default(),
             puddle_cache: HashMap::default(),
             config: WdbConfig {
-                db_name: db_name.clone(),
+                db_name,
                 ..WdbConfig::default()
             },
         }
@@ -68,7 +68,7 @@ impl WaveDb {
             Ok(())
         } else {
             //TODO: maybe make specific error for this?
-            Err(Waverr::WdbCfgErr("Config not found in WaveDB".into()))
+            Err(Waverr::WdbCfgErr("Config not found in WaveDB"))
         }
     }
 
@@ -94,7 +94,7 @@ impl WaveDb {
     }
 
     pub fn get_bounds(&self) -> (u32,u32) {
-        self.config.time_range.clone()
+        self.config.time_range
     }
 
     pub fn was_recovered(&self) -> bool {
@@ -162,7 +162,7 @@ impl WaveDb {
                         //TODO: add a get id function to the vcd lib that returns an option
                         Command::ChangeScalar(id,.. ) | Command::ChangeVector(id,..) | Command::ChangeReal(id,..) | Command::ChangeString(id,..) => {
                             let base_id = id.0 as u32 - id.0 as u32 % Puddle::signals_per_puddle();
-                            let puddle_builder = inflight_puddles.entry(base_id).or_insert(PuddleBuilder::new(current_range.0));
+                            let puddle_builder = inflight_puddles.entry(base_id).or_insert_with(||PuddleBuilder::new(current_range.0));
                             puddle_builder.add_signal(command, global_time)?;
                         }
                         Command::Begin(_) => {},
@@ -223,7 +223,7 @@ impl WaveDb {
         })
     }
 
-    pub fn get_imw_id<'a>(
+    pub fn get_imw_id(
         &self,
         sig_name: String,
         sig_id: u32,
@@ -234,11 +234,11 @@ impl WaveDb {
             .collect();
 
         InMemWave::new(sig_name, sig_id, puddles)
-            .map_err(|err| Arc::new(err))
-            .map(|imw| Arc::new(imw))
+            .map_err(Arc::new)
+            .map(Arc::new)
     }
 
-    pub fn get_imw<'a>(&self, sig: String) -> Result<Arc<InMemWave>, Arc<Waverr>> {
+    pub fn get_imw(&self, sig: String) -> Result<Arc<InMemWave>, Arc<Waverr>> {
         let id = self.get_id(sig.as_str())?;
         self.get_imw_id(sig, id)
     }
@@ -335,7 +335,7 @@ mod tests {
 
         let var = wdb.get_imw("TOP.clock".into()).expect("signal doesn't exist and it definitely should!!");
 
-        let val : (u32,&[u8]) = var.all_data().nth(0).unwrap();
+        let val : (u32,&[u8]) = var.all_data().next().unwrap();
         info!("len is val.1: {}",val.0);
         //assert!(val.1.len() == 8);
 

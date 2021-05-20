@@ -10,13 +10,13 @@ pub enum WaveFormat {
     SDecimal,
 }
 
-fn split_zx_and_payload<'a>(drop: Droplet<'a>, bitwidth: usize) -> (&'a [u8], &'a [u8]) {
+fn split_zx_and_payload(drop: Droplet<'_>, bitwidth: usize) -> (&'_ [u8], &'_ [u8]) {
     let bitwidth_idx = (bitwidth as f32 / 8.0).ceil() as usize;
     drop.take_data().split_at(bitwidth_idx)
 }
 
-pub fn format_payload<'a>(
-    drop: Droplet<'a>,
+pub fn format_payload(
+    drop: Droplet,
     format: WaveFormat,
     bitwidth: usize,
     visible_chars: usize,
@@ -77,8 +77,8 @@ pub fn format_payload<'a>(
                         }
                         _ => {
                             let zx_iter = utils::ZxIter::new(
-                                zx.clone().reverse_bits(),
-                                chunk.clone().reverse_bits(),
+                                (*zx).reverse_bits(),
+                                (*chunk).reverse_bits(),
                                 if idx == 0 {
                                     (8 - (bitwidth % 8) as u8) % 8
                                 } else {

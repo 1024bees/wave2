@@ -212,12 +212,7 @@ impl From<vcd::Var> for SignalItem {
 
 impl ModuleItem {
     fn new(name: String, parent: Option<usize>, self_idx: usize) -> Self {
-        ModuleItem {
-            name,
-            parent,
-            self_idx,
-            ..ModuleItem::default()
-        }
+        ModuleItem { name, self_idx, parent, ..ModuleItem::default() }
     }
     fn add_sig(&mut self, sig_item: SignalItem) {
         self.signals.push(sig_item);

@@ -120,7 +120,7 @@ mod tests {
             .into_iter()
             .map(|idx| build_dummy_puddles(idx * Puddle::max_puddle_width(), 20, 16))
             .collect();
-        let imw_0 = InMemWave::new("sig_0".into(), 0, puddles.clone()).unwrap();
+        let imw_0 = InMemWave::new("sig_0".into(), 0, puddles).unwrap();
         let first_puddle_fragment: Vec<(u32, &[u8])> = imw_0.data_in_range(0, 1000).collect();
 
         assert_eq!(first_puddle_fragment.len(), 1000);

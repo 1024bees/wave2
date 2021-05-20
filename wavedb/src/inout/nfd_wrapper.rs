@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 //Taken almost verbatim from Tolstack. Thank you :-) 
 pub async fn open() -> Result<PathBuf, io::Error> {
     let result: nfd::Response =
-        match async { return nfd::open_file_dialog(Some("vcd"), None) }.await {
+        match async { nfd::open_file_dialog(Some("vcd"), None) }.await {
             Ok(result) => result,
             Err(_) => {
                 return Err(io::Error::new(
@@ -35,11 +35,11 @@ pub async fn open() -> Result<PathBuf, io::Error> {
     result.push(Path::new(&file_string));
 
     if result.exists() {
-        return Ok(result);
+        Ok(result)
     } else {
-        return Err(io::Error::new(
+        Err(io::Error::new(
             io::ErrorKind::NotFound,
             "File does not exist",
-        ));
+        ))
     }
 }
