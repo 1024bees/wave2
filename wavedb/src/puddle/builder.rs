@@ -1,9 +1,8 @@
 use super::utils::get_id;
 use super::{PMeta, Poffset, Puddle, SignalId, Toffset};
 use crate::errors::Waverr;
-use log::info;
 use std::collections::HashMap;
-use std::convert::{TryFrom,TryInto};
+use std::convert::TryFrom;
 use vcd::{Command, Value};
 
 /// Transient payload; this is the temporary container that is accumulated into as
@@ -38,13 +37,12 @@ impl Extend<Value> for RunningPayload {
         //FIXME: SINFUL BEYOND COMPARE. BY GOD THIS WILL BE PAINFUL ONE DAY
         let base = self.data.len();
         self.data.resize(self.data.len() + data_size, 0);
-        let (mut bit_offset, mut byte_offset) = (0, 0);
 
         // Vec<Value> are organized as MSB first. This is similar to big endian, but values are
         // recorded at bit granularity, so they must be reversed as well.
         for (bidx, value) in iter.into_iter().enumerate() {
-            bit_offset = bidx & 0x7;
-            byte_offset = base + (bidx >> 3);
+            let bit_offset = bidx & 0x7;
+            let byte_offset = base + (bidx >> 3);
             match value {
                 Value::V1 => self.data[byte_offset] |= 1 << bit_offset,
                 Value::X | Value::Z => {
@@ -162,6 +160,7 @@ pub mod tests {
     use rand::distributions::{Distribution, Uniform};
     use rand::seq::SliceRandom;
     use std::sync::Arc;
+    use std::convert::{TryFrom,TryInto};
     use vcd::Value;
 
     fn num_to_vec(in_value: u64, len: u8) -> Vec<Value> {
@@ -385,7 +384,6 @@ pub mod tests {
         for (time, droplet) in droplet_vec.iter().enumerate() {
             if time % 2 != 0 {
                 assert!(droplet.is_zx());
-                info!("len is {}", droplet.get_data().len());
 
                 let data = u16::from_le_bytes(droplet.get_data().try_into().unwrap());
                 assert_eq!(0x0101, data);
@@ -428,7 +426,6 @@ pub mod tests {
         for (time, droplet) in droplet_vec.iter().enumerate() {
             if time % 2 != 0 {
                 assert!(droplet.is_zx());
-                info!("len is {}", droplet.get_data().len());
                 let data = u16::from_le_bytes(droplet.get_data().try_into().unwrap());
                 assert_eq!(0x0100, data);
             } else {

@@ -3,7 +3,6 @@ use crate::widget::menu_bar;
 use iced_graphics::backend::{self, Backend};
 use iced_native::text::Renderer as TextRenderer;
 use iced_graphics::{Primitive, Renderer};
-use log::info;
 use iced_native::{
     mouse, Color, HorizontalAlignment, Point, Rectangle, Size, VerticalAlignment,
 };

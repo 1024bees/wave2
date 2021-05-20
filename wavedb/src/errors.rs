@@ -8,7 +8,7 @@ Uses [`thiserror`] to derive different error types as they appear
 !*/
 use std::io;
 use thiserror::Error;
-use crate::puddle::{SignalId,Toffset};
+use crate::puddle::SignalId;
 
 ///Generic error type for any error that can manifest within wavedb or wave2
 #[derive(Debug, Error)]

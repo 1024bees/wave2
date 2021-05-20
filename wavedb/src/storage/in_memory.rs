@@ -37,32 +37,6 @@ impl InMemWave {
         )
     }
 
-    //pub fn data_in_range(
-    //    &self,
-    //    begin: Toffset,
-    //    end: Toffset,
-    //) -> Box<dyn Iterator<Item = (Toffset, &[u8])> + '_> {
-    //    let sigid = self.signal_id;
-    //    Box::new(
-    //        self.puddles
-    //            .iter()
-    //            .filter(move |puddle| begin < puddle.puddle_end() && end > puddle.puddle_base())
-    //            .filter_map(move |puddle| {
-    //                puddle
-    //                    .get_cursor(sigid)
-    //                    .ok()
-    //                    .map(|cursor| (cursor, puddle.puddle_base()))
-    //            })
-    //            .flat_map(|(cursor, base)| cursor.into_iter().zip(std::iter::repeat(base)))
-    //            .map(|(droplet, base)| {
-    //                (
-    //                    base + droplet.get_timestamp() as Toffset,
-    //                    droplet.take_data(),
-    //                )
-    //            })
-    //            .filter(move |(time, _)| *time >= begin && *time < end),
-    //    )
-    //}
 
     //FIXME: is there a way to like.. minimize the boxing going on here?
     pub fn data_in_range(
@@ -160,11 +134,9 @@ mod tests {
     fn vga_clock_in_range() {
         let mut path_to_wikivcd = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path_to_wikivcd.push("test_vcds/vga.vcd");
-        //bad but hey... is what it is
+        let db = tempfile::TempDir::new().expect("Temp file could not be created! Shucks");
 
-        std::fs::remove_dir_all("/tmp/unit_tests/vcddb");
-        let wdb = WaveDB::from_vcd(path_to_wikivcd, Path::new("/tmp/unit_tests/vcddb"))
-            .expect("could not create wavedb");
+        let wdb = WaveDB::from_vcd(path_to_wikivcd, db.path()).expect("could not create wavedb");
 
         let clock_wave = wdb.get_imw("TOP.clock".into()).expect("signal isn't here!");
         let mut last_time = 0;
@@ -180,25 +152,27 @@ mod tests {
         let mut path_to_wikivcd = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path_to_wikivcd.push("test_vcds/vga.vcd");
         //bad but hey... is what it is
+        let db = tempfile::TempDir::new().expect("Temp file could not be created! Shucks");
 
-        std::fs::remove_dir_all("/tmp/unit_tests/vcddb2");
-        let wdb = WaveDB::from_vcd(path_to_wikivcd, Path::new("/tmp/unit_tests/vcddb2"))
-            .expect("could not create wavedb");
+        let wdb = WaveDB::from_vcd(path_to_wikivcd, db.path()).expect("could not create wavedb");
 
-        let clock_wave = wdb.get_imw("TOP.x_addr".into()).expect("signal isn't here!");
+        let clock_wave = wdb
+            .get_imw("TOP.x_addr".into())
+            .expect("signal isn't here!");
         let mut expected_val = 0;
         for (time, payload) in clock_wave.data_in_range(0, 10000) {
-            log::info!("payload is {:?}",payload);
+            log::info!("payload is {:?}", payload);
             log::info!("time is {:?}", time);
-            let val : u16= u16::from_le_bytes(payload.try_into().expect("should be a 9bit val, convertible into u16"));
+            let val: u16 = u16::from_le_bytes(
+                payload
+                    .try_into()
+                    .expect("should be a 9bit val, convertible into u16"),
+            );
             if val == 0 {
                 expected_val = 0;
             }
             assert_eq!(expected_val, val);
-            expected_val +=1;
+            expected_val += 1;
         }
     }
-
-
-
 }

@@ -1,10 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::iter::Iterator;
 use crate::errors::Waverr;
 
-use log::info;
 
 pub mod builder;
 pub mod utils;

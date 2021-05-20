@@ -2,7 +2,7 @@ use crate::errors::Waverr;
 use crate::hier_map::HierMap;
 use crate::vcd_parser::WaveParser;
 use crate::storage::in_memory::InMemWave;
-use crate::{MAX_PUDDLE_WIDTH};
+use crate::MAX_PUDDLE_WIDTH;
 use bincode;
 use serde::{Deserialize, Serialize};
 use sled::Db;
@@ -11,7 +11,7 @@ use std::path::*;
 use std::sync::Arc;
 use toml;
 use vcd::Command;
-use crate::puddle::{Puddle,SignalId,Toffset};
+use crate::puddle::{Puddle,SignalId};
 use crate::puddle::builder::PuddleBuilder;
 use log::info;
 #[derive(Serialize, Deserialize, Debug, Default)]

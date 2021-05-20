@@ -1,7 +1,7 @@
 use iced_native::{
     event, layout, mouse, overlay,
     overlay::menu::{self, Menu},
-    scrollable, text, Clipboard, Element, Event, Hasher, Layout, Length, Point, Rectangle, Size,
+    text, Clipboard, Element, Event, Hasher, Layout, Length, Point, Rectangle, Size,
     Widget,
 };
 
@@ -104,7 +104,7 @@ where
             menu_point,
             hovered_option,
             selected,
-            item: item,
+            item,
             options: PhantomData::default(),
             menu_hovered_option,
             menu_last_selection,

@@ -1,4 +1,4 @@
-use iced::{Container, Element, Text,Length};
+use iced::{Container, Element};
 
 use wave2_custom_widgets::widget::menu_bar::{self,MenuBar,MenuBarOption,MenuOption};
 use wave2_custom_widgets::traits::{MenuOption,MenuBarOption};

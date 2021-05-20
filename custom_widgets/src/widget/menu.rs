@@ -1,12 +1,10 @@
 //! Build and show dropdown menus.
 
-use iced_native::container;
 use iced_native::event::{self, Event};
 use iced_native::layout;
 use iced_native::mouse;
 use iced_native::overlay;
 use iced_native::scrollable;
-use iced_native::text;
 use iced_native::{
     Clipboard, Container, Element, Hasher, Layout, Length, Point, Rectangle,
     Size, Vector, Widget, Scrollable
@@ -15,7 +13,7 @@ use iced_native::{
 use super::menu_bar::MenuOption;
 
 
-use iced_native::overlay::menu::{self as iced_menu, Menu as IcedMenu};
+use iced_native::overlay::menu as iced_menu;
 
 //TODO, FIXME: We are currently hardcoding menu behaviour. This is.. not good. Think of a way to
 //better encode this, especially with key bindings
@@ -157,9 +155,9 @@ where
 
         Self {
             container,
-            width: width,
+            width,
             target_height,
-            style: style,
+            style,
         }
     }
 }

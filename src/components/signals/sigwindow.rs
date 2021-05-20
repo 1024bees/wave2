@@ -1,7 +1,6 @@
 use super::display_wave::DisplayedWave;
-use super::wavewindow;
 use crate::components::shared::cell_list::{CellList, ListNodeState};
-use iced::{Column, Container, Element, Row, Text};
+use iced::{Column, Container, Element, Row};
 use strum_macros;
 use wave2_custom_widgets::traits::CellOption;
 use super::Message;
