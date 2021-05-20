@@ -17,7 +17,7 @@ pub enum Waverr {
     #[error(
         "VCDError found, issue is `{0}`. TODO: make a better error enum here!"
     )]
-    VCDErr(&'static str),
+    VcdErr(&'static str),
     ///TODO: depricated, remove
     #[error("Wdb Bucket error for bucket id : {id:?}, ts : {ts_range:?}. context: {context:?}")]
     BucketErr {
@@ -58,9 +58,9 @@ pub enum Waverr {
     )]
     HierMapError(&'static str),
     #[error("Some IOErr `{0}`")]
-    IOError(io::Error),
+    IoErr(io::Error),
     #[error("Some cfg err `{0}`")]
-    WDBCfgErr(&'static str),
+    WdbCfgErr(&'static str),
     #[error("Generic error. This should be removed. Refactor this now")]
     GenericErr(&'static str),
 }

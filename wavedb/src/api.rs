@@ -1,5 +1,5 @@
 use crate::errors::Waverr;
-use crate::wavedb::WaveDB;
+use crate::wavedb::WaveDb;
 use crate::storage::in_memory::InMemWave;
 
 use crate::hier_map::{HierMap, SignalItem};
@@ -10,8 +10,8 @@ use std::sync::Arc;
 
 /// Interface provided to wave2 for querying signal hierarchy
 #[derive(Debug)]
-pub struct WdbAPI {
-    wdb: WaveDB,
+pub struct WdbApi {
+    wdb: WaveDb,
 }
 
 ///Helper to hash type -> String
@@ -23,19 +23,19 @@ fn quick_hash<T: Hash>(t: &T) -> String {
     rs
 }
 
-impl From<WaveDB> for WdbAPI {
-    fn from(indb: WaveDB) -> WdbAPI {
-        WdbAPI { wdb: indb }
+impl From<WaveDb> for WdbApi {
+    fn from(indb: WaveDb) -> WdbApi {
+        WdbApi { wdb: indb }
     }
 }
 
 ///External API for WaveDB instances
-impl WdbAPI {
+impl WdbApi {
     /// We clone self when calling
-    pub fn open_from_vcd(path_to_vcd: &str) -> Result<WdbAPI, Waverr> {
+    pub fn open_from_vcd(path_to_vcd: &str) -> Result<WdbApi, Waverr> {
         let wdb_path = format!("/tmp/wavedb/{}/wdb", quick_hash(&path_to_vcd));
-        Ok(WdbAPI {
-            wdb: WaveDB::from_vcd(
+        Ok(WdbApi {
+            wdb: WaveDb::from_vcd(
                 path_to_vcd.into(),
                 Path::new(wdb_path.as_str()),
             )?,
@@ -43,11 +43,11 @@ impl WdbAPI {
     }
 
     pub fn get_hier_map(&self) -> Arc<HierMap> {
-        self.wdb.get_hier_map().clone()
+        self.wdb.get_hier_map()
     }
 
     pub async fn get_signals(
-        api: Arc<WdbAPI>,
+        api: Arc<WdbApi>,
         signal: SignalItem,
     ) -> Result<Arc<InMemWave>, Arc<Waverr>> {
         let (sig_name, sig_id) = SignalItem::destructure(signal);
@@ -56,7 +56,7 @@ impl WdbAPI {
 
     /// Get the names of all signals that exist within this module (that are visible to wavedb)
     pub async fn get_module_signals(
-        api: Arc<WdbAPI>,
+        api: Arc<WdbApi>,
         module_idx: usize,
     ) -> Arc<Vec<SignalItem>> {
         Arc::new(api.as_ref().wdb.hier_map.get_module_signals_vec(module_idx))
@@ -65,7 +65,7 @@ impl WdbAPI {
 
     /// Get the starting and ending time of the signal dump represented by this WaveDB
     pub async fn bounds(
-        api: Arc<WdbAPI>,
+        api: Arc<WdbApi>,
     ) -> (u32,u32) {
         api.wdb.get_bounds()
     }

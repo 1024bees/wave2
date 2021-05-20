@@ -14,7 +14,7 @@ use config::menu_update;
 use env_logger;
 use log::warn;
 use std::path::PathBuf;
-use wave2_wavedb::api::WdbAPI;
+use wave2_wavedb::api::WdbApi;
 use wave2_wavedb::errors::Waverr;
 use wave2_wavedb::inout::wave_loader::load_vcd_from_path;
 
@@ -77,7 +77,7 @@ pub struct State {
     ww_pane: pane_grid::Pane,
     focused_pane: Option<pane_grid::Pane>,
     menu_bar: menu_bar::GlobalMenuBar,
-    wdb_api: Option<Arc<WdbAPI>>,
+    wdb_api: Option<Arc<WdbApi>>,
 }
 
 impl State {
@@ -89,7 +89,7 @@ impl State {
         self.menu_bar.get_pending_file()
     }
 
-    fn get_api(&self) -> Arc<WdbAPI> {
+    fn get_api(&self) -> Arc<WdbApi> {
         self.wdb_api.as_ref().unwrap().clone()
     }
 }
@@ -142,8 +142,8 @@ pub enum Message {
     SignalsMessage(signals::Message),
     MBMessage(menu_bar::Message),
     //IoMessage
-    Loaded(Result<Option<Arc<WdbAPI>>, std::io::Error>),
-    LoadWDB(Result<Arc<WdbAPI>, Waverr>),
+    Loaded(Result<Option<Arc<WdbApi>>, std::io::Error>),
+    LoadWDB(Result<Arc<WdbApi>, Waverr>),
     //Pane Messages
     PaneMessage(PaneMessage),
 }
@@ -269,7 +269,7 @@ impl Application for Wave2 {
 
                                 //FIXME: this work should definitely be done in a command
                                 return Command::perform(
-                                    WdbAPI::get_module_signals(state.get_api(), module_idx),
+                                    WdbApi::get_module_signals(state.get_api(), module_idx),
                                     move |vector| {
                                         Message::MNMessage(module_nav::Message::SignalUpdate(
                                             vector,
@@ -290,7 +290,7 @@ impl Application for Wave2 {
                     Message::MNMessage(mn_message) => match mn_message {
                         module_nav::Message::AddSig(signal_item) => {
                             return Command::perform(
-                                WdbAPI::get_signals(state.get_api(), signal_item),
+                                WdbApi::get_signals(state.get_api(), signal_item),
                                 move |wave| Message::SignalsMessage(signals::Message::AddWave(wave)),
                             );
                         }
@@ -315,7 +315,7 @@ impl Application for Wave2 {
                                 )),
                             );
                             return Command::perform(
-                                WdbAPI::bounds(state.get_api()),
+                                WdbApi::bounds(state.get_api()),
                                 move |bounds| {
                                     Message::SignalsMessage(signals::Message::UpdateBounds(bounds))
                                 },

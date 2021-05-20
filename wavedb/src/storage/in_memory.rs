@@ -103,7 +103,7 @@ mod tests {
     use super::*;
     use crate::puddle::builder::tests::build_dummy_puddles;
     use crate::puddle::Droplet;
-    use crate::wavedb::WaveDB;
+    use crate::wavedb::WaveDb;
     use std::convert::TryInto;
     use std::path::{Path, PathBuf};
 
@@ -136,7 +136,7 @@ mod tests {
         path_to_wikivcd.push("test_vcds/vga.vcd");
         let db = tempfile::TempDir::new().expect("Temp file could not be created! Shucks");
 
-        let wdb = WaveDB::from_vcd(path_to_wikivcd, db.path()).expect("could not create wavedb");
+        let wdb = WaveDb::from_vcd(path_to_wikivcd, db.path()).expect("could not create wavedb");
 
         let clock_wave = wdb.get_imw("TOP.clock".into()).expect("signal isn't here!");
         let mut last_time = 0;
@@ -154,7 +154,7 @@ mod tests {
         //bad but hey... is what it is
         let db = tempfile::TempDir::new().expect("Temp file could not be created! Shucks");
 
-        let wdb = WaveDB::from_vcd(path_to_wikivcd, db.path()).expect("could not create wavedb");
+        let wdb = WaveDb::from_vcd(path_to_wikivcd, db.path()).expect("could not create wavedb");
 
         let clock_wave = wdb
             .get_imw("TOP.x_addr".into())

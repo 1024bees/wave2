@@ -3,19 +3,17 @@ use crate::hier_map::HierMap;
 use crate::vcd_parser::WaveParser;
 use crate::storage::in_memory::InMemWave;
 use crate::MAX_PUDDLE_WIDTH;
-use bincode;
 use serde::{Deserialize, Serialize};
 use sled::Db;
 use std::collections::HashMap;
 use std::path::*;
 use std::sync::Arc;
-use toml;
 use vcd::Command;
 use crate::puddle::{Puddle,SignalId};
 use crate::puddle::builder::PuddleBuilder;
 use log::info;
 #[derive(Serialize, Deserialize, Debug, Default)]
-struct WDBConfig {
+struct WdbConfig {
     db_name: String,
     time_range: (u32, u32),
 }
@@ -24,23 +22,23 @@ struct WDBConfig {
 ///
 ///slize_size determines the bounding of size of the timestamp range in each bucket
 #[derive(Debug)]
-pub struct WaveDB {
+pub struct WaveDb {
     db: Db,
     //TODO: think about what should be wanted from a cfg file
-    config: WDBConfig,
+    config: WdbConfig,
     puddle_cache: HashMap<SignalId,Arc<Puddle>>,
     pub hier_map: Arc<HierMap>,
 }
 
-impl WaveDB {
-    fn new(db_name: String, db_path: Option<&Path>) -> WaveDB {
-        WaveDB {
+impl WaveDb {
+    fn new(db_name: String, db_path: Option<&Path>) -> WaveDb {
+        WaveDb {
             db: sled::open(db_path.unwrap_or(db_name.as_ref())).unwrap(),
             hier_map: Arc::default(),
             puddle_cache: HashMap::default(),
-            config: WDBConfig {
+            config: WdbConfig {
                 db_name: db_name.clone(),
-                ..WDBConfig::default()
+                ..WdbConfig::default()
             },
         }
     }
@@ -65,12 +63,12 @@ impl WaveDB {
 
     fn load_config(&mut self) -> Result<(), Waverr> {
         if let Ok(Some(rawbytes)) = self.db.get("config") {
-            let config: WDBConfig = toml::from_slice(rawbytes.as_ref())?;
+            let config: WdbConfig = toml::from_slice(rawbytes.as_ref())?;
             self.config = config;
             Ok(())
         } else {
             //TODO: maybe make specific error for this?
-            Err(Waverr::WDBCfgErr("Config not found in WaveDB".into()))
+            Err(Waverr::WdbCfgErr("Config not found in WaveDB".into()))
         }
     }
 
@@ -91,7 +89,7 @@ impl WaveDB {
             self.hier_map = Arc::new(bincode::deserialize(rawbytes.as_ref())?);
             Ok(())
         } else {
-            Err(Waverr::WDBCfgErr("HierMap not found in WaveDB"))
+            Err(Waverr::WdbCfgErr("HierMap not found in WaveDB"))
         }
     }
 
@@ -103,8 +101,8 @@ impl WaveDB {
         self.db.was_recovered()
     }
 
-    pub fn open_wdb(wdb_path: &Path) -> Result<WaveDB, Waverr> {
-        let mut wdb = WaveDB::new("TempName".into(), Some(wdb_path));
+    pub fn open_wdb(wdb_path: &Path) -> Result<WaveDb, Waverr> {
+        let mut wdb = WaveDb::new("TempName".into(), Some(wdb_path));
         wdb.load_config()?;
         wdb.load_idmap()?;
         Ok(wdb)
@@ -118,7 +116,7 @@ impl WaveDB {
     pub fn from_vcd(
         vcd_file_path: PathBuf,
         wdb_path: &Path,
-    ) -> Result<WaveDB, Waverr> {
+    ) -> Result<WaveDb, Waverr> {
         let mut parser = WaveParser::new(vcd_file_path.clone())?;
         let wdb_name = {
             if let Some(vcd_file) = vcd_file_path.file_stem() {
@@ -127,7 +125,7 @@ impl WaveDB {
                 vcd_file_path.to_str().unwrap().to_string()
             }
         };
-        let mut wdb = WaveDB::new(wdb_name, Some(wdb_path));
+        let mut wdb = WaveDb::new(wdb_name, Some(wdb_path));
         if wdb.was_recovered() {
             wdb.load_config()?;
             wdb.load_idmap()?;
@@ -173,7 +171,7 @@ impl WaveDB {
                     }
                 }
                 Err(_) => {
-                    return Err(Waverr::VCDErr("Malformed vcd"));
+                    return Err(Waverr::VcdErr("Malformed vcd"));
                 }
             }
         }
@@ -294,10 +292,10 @@ mod tests {
         //bad but hey... is what it is
         std::fs::remove_dir_all("/tmp/rng");
         let wdb =
-            WaveDB::from_vcd(path_to_wikivcd.clone(), Path::new("/tmp/rng"));
+            WaveDb::from_vcd(path_to_wikivcd.clone(), Path::new("/tmp/rng"));
         let actualdb = match wdb {
             Ok(wdb) => wdb,
-            Err(errors::Waverr::VCDErr(vcdmess)) => {
+            Err(errors::Waverr::VcdErr(vcdmess)) => {
                 panic!("{} is the vcd error message", vcdmess)
             }
             Err(Waverr::GenericErr(message)) => {
@@ -309,10 +307,10 @@ mod tests {
         drop(actualdb);
 
         // we need to test what happens when we're loading wdb from disk
-        let wdb2 = WaveDB::from_vcd(path_to_wikivcd, Path::new("/tmp/rng"));
+        let wdb2 = WaveDb::from_vcd(path_to_wikivcd, Path::new("/tmp/rng"));
         let actualdb = match wdb2 {
             Ok(wdb2) => wdb2,
-            Err(errors::Waverr::VCDErr(vcdmess)) => {
+            Err(errors::Waverr::VcdErr(vcdmess)) => {
                 panic!("{} is the vcd error message", vcdmess)
             }
             Err(Waverr::GenericErr(message)) => {
@@ -332,7 +330,7 @@ mod tests {
         path_to_wikivcd.push("test_vcds/vga.vcd");
         //bad but hey... is what it is
         std::fs::remove_dir_all("/tmp/vcddb");
-        let wdb = WaveDB::from_vcd(path_to_wikivcd, Path::new("/tmp/vcddb"))
+        let wdb = WaveDb::from_vcd(path_to_wikivcd, Path::new("/tmp/vcddb"))
             .expect("could not create wavedb");
 
         let var = wdb.get_imw("TOP.clock".into()).expect("signal doesn't exist and it definitely should!!");

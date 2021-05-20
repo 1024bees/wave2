@@ -23,7 +23,7 @@ impl WaveParser<io::BufReader<File>> {
             rv.populate_header();
             Ok(rv)
         } else {
-            Err(errors::Waverr::VCDErr("Could not open VCD!"))
+            Err(errors::Waverr::VcdErr("Could not open VCD!"))
         }
     }
 }
@@ -39,7 +39,7 @@ impl<R: io::Read> WaveParser<R> {
         if let Some(header) = self.header.take() {
             Ok(HierMap::from(header))
         } else {
-            Err(errors::Waverr::VCDErr("Header is not found from vcd!"))
+            Err(errors::Waverr::VcdErr("Header is not found from vcd!"))
         }
     }
 }

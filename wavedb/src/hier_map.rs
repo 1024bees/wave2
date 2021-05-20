@@ -19,17 +19,14 @@ impl HierMap {
                 return Ok(idx);
             }
         }
-        return Err(Waverr::HierMapError(
+        Err(Waverr::HierMapError(
             "Incorrect path; top level module is not in top_indices",
-        ));
+        ))
     }
 
-    pub fn set_path_abs<S: Into<String>>(
-        &self,
-        in_path: S,
-    ) -> Result<usize, Waverr> {
+    pub fn set_path_abs<S: Into<String>>(&self, in_path: S) -> Result<usize, Waverr> {
         let path = in_path.into();
-        let module_list: Vec<&str> = path.split(".").collect();
+        let module_list: Vec<&str> = path.split('.').collect();
 
         let mut idx = if let Some(top_module) = module_list.first() {
             self.get_starting_idx(*top_module)?
@@ -41,16 +38,20 @@ impl HierMap {
 
         for mod_name in module_list[1..].iter() {
             let cm: &ModuleItem = &self.module_list[idx];
+            let mut found_module = false;
             for child in cm.submodules.iter().cloned() {
                 idx = if self.module_list[child].name == *mod_name {
+                    found_module = true;
                     child
                 } else {
                     idx
                 };
-                continue;
             }
-            return Err(Waverr::HierMapError("Cannot find module in abs path"));
+            if !found_module {
+                return Err(Waverr::HierMapError("Could not find input path"));
+            }
         }
+
         Ok(idx)
     }
 
@@ -61,7 +62,7 @@ impl HierMap {
     ) -> Result<usize, Waverr> {
         let rel_path: String = in_path.into();
         let mut idx = starting_idx;
-        let module_list: Vec<&str> = rel_path.split(".").collect();
+        let module_list: Vec<&str> = rel_path.split('.').collect();
 
         for mod_name in module_list.iter() {
             let cm: &ModuleItem = &self.module_list[idx];
@@ -69,7 +70,6 @@ impl HierMap {
                 if self.module_list[child].name == *mod_name {
                     idx = child;
                 }
-                continue;
             }
         }
         if idx == starting_idx {
@@ -96,10 +96,7 @@ impl HierMap {
 
     /// Get the signals of the "live" module. This is exposed to wave2 app
     /// for filling in the signal navigator
-    pub fn get_module_signals_vec(
-        &self,
-        live_module: usize,
-    ) -> Vec<SignalItem> {
+    pub fn get_module_signals_vec(&self, live_module: usize) -> Vec<SignalItem> {
         self.module_list[live_module].signals.clone()
     }
 
@@ -128,18 +125,12 @@ impl HierMap {
     pub fn idx_to_path(&self, in_idx: usize) -> String {
         let mut idx = in_idx;
         let mut path = self.module_list[idx].name.clone();
-        loop {
-            if let Some(pidx) = self.module_list[idx].parent {
-                path = format!(
-                    "{}.{}",
-                    self.module_list[pidx].name.as_str(),
-                    path
-                );
-                idx = pidx;
-            } else {
-                break;
-            }
+
+        while let Some(pidx) = self.module_list[idx].parent {
+            path = format!("{}.{}", self.module_list[pidx].name.as_str(), path);
+            idx = pidx;
         }
+
         path
     }
 }
@@ -160,10 +151,7 @@ impl From<vcd::Header> for HierMap {
             for item in items.into_iter() {
                 match item {
                     ScopeItem::Var(variable) => {
-                        debug_assert_ne!(
-                            None, parent_mod,
-                            "Scopeless variables are forbidden"
-                        );
+                        debug_assert_ne!(None, parent_mod, "Scopeless variables are forbidden");
                         map[livemod_ref].add_sig(SignalItem::from(variable));
                     }
                     ScopeItem::Scope(scope) => {
@@ -335,8 +323,7 @@ mod tests {
         let new_live_module = hm.set_path_relative("vga", live_module);
         assert!(new_live_module.is_ok(), "Path exists!");
 
-        let num_children =
-            hm.get_module_signals(new_live_module.unwrap()).len();
+        let num_children = hm.get_module_signals(new_live_module.unwrap()).len();
         assert_eq!(num_children, 30);
     }
 }
