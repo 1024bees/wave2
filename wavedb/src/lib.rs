@@ -21,5 +21,5 @@ pub mod wavedb;
 pub mod formatting;
 
 //TODO: maybe replace this eventually
-const MAX_PUDDLE_WIDTH: u32 = puddle::Puddle::max_puddle_width();
+const MAX_PUDDLE_WIDTH: u32 = puddle::Puddle::max_puddle_length();
 

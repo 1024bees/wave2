@@ -7,11 +7,6 @@ pub struct InMemWave {
     name: String,
     signal_id: SignalId,
     puddles: Vec<Arc<Puddle>>,
-    //width: Option<u32>,
-    ///// The index into the puddles variable for deciding which puddle we should convert into a
-    ///// cursor
-    //ref_holder: std::marker::PhantomData<&'a u8>
-    //live_cursor: Option<PCursor<'a>>
 }
 
 ///In memory DS for wave content; created from a Vector of Arcs to puddles
@@ -37,7 +32,6 @@ impl InMemWave {
         )
     }
 
-
     //FIXME: is there a way to like.. minimize the boxing going on here?
     pub fn data_in_range(
         &self,
@@ -49,6 +43,61 @@ impl InMemWave {
                 .map(|(base, droplet)| (base, droplet.take_data())),
         )
     }
+
+    fn get_idx(&self, time: Toffset) -> Option<usize> {
+        self.puddles
+            .iter()
+            .position(|puddle| puddle.puddle_base() == time & !(Puddle::max_puddle_length() - 1))
+    }
+
+
+
+    pub fn get_prev_time(&self, time: Toffset) -> Option<(Toffset, &'_ [u8])> {
+        let idx = self.get_idx(time)?;
+        let sigid = self.signal_id;
+        self.puddles[0..idx+1]
+            .iter()
+            .rev()
+            .filter_map(move |puddle| {
+                puddle
+                    .get_cursor(sigid)
+                    .ok()
+                    .map(|cursor| (cursor, puddle.puddle_base()))
+            })
+            .flat_map(|(cursor, base)| cursor.into_iter().zip(std::iter::repeat(base)))
+            .map(|(droplet, base)| {
+                (
+                    base + droplet.get_timestamp() as Toffset,
+                    droplet.take_data(),
+                )
+            })
+            .next()
+    }
+
+
+    pub fn get_next_time(&self, time: Toffset) -> Option<(Toffset, &'_ [u8])> {
+        let idx = self.get_idx(time)?;
+        let sigid = self.signal_id;
+        self.puddles[idx..]
+            .iter()
+            .filter_map(move |puddle| {
+                puddle
+                    .get_cursor(sigid)
+                    .ok()
+                    .map(|cursor| (cursor, puddle.puddle_base()))
+            })
+            .flat_map(|(cursor, base)| cursor.into_iter().zip(std::iter::repeat(base)))
+            .map(|(droplet, base)| {
+                (
+                    base + droplet.get_timestamp() as Toffset,
+                    droplet.take_data(),
+                )
+            })
+            .filter(|(time, _)| time > time)
+            .next()
+    }
+
+
 
     //fixme; could probably template and
     pub fn droplets_in_range(
@@ -118,7 +167,7 @@ mod tests {
     fn sanity_imw() {
         let puddles: Vec<Arc<Puddle>> = (0..5)
             .into_iter()
-            .map(|idx| build_dummy_puddles(idx * Puddle::max_puddle_width(), 20, 16))
+            .map(|idx| build_dummy_puddles(idx * Puddle::max_puddle_length(), 20, 16))
             .collect();
         let imw_0 = InMemWave::new("sig_0".into(), 0, puddles).unwrap();
         let first_puddle_fragment: Vec<(u32, &[u8])> = imw_0.data_in_range(0, 1000).collect();

@@ -55,7 +55,7 @@ impl Puddle {
     /// The time width of a puddle; currently statically set, maybe worth setting as part of some
     /// configuration for wavedb
     const TIMESTAMP_BITS: u32 = 12;
-    pub const fn max_puddle_width() -> Toffset {
+    pub const fn max_puddle_length() -> Toffset {
         1 << Puddle::TIMESTAMP_BITS
     }
 
@@ -65,7 +65,7 @@ impl Puddle {
     }
 
     pub fn puddle_end(&self) -> Toffset {
-        self.base + Puddle::max_puddle_width()
+        self.base + Puddle::max_puddle_length()
     }
 
     //TODO: get rid of this god damn it, merge with puddle_base
@@ -85,8 +85,9 @@ impl Puddle {
         let offset_data = self.offset_map.get(&signal_id);
 
         if offset_data.is_none() {
-            let toffset = *self.next_sig_map.get(&signal_id)
-                .expect("next_sig_map is missing a signal id. TODO: maybe downgrade to recoverable error");
+            let toffset = *self.next_sig_map.get(&signal_id).expect(
+                "next_sig_map is missing a signal id. TODO: maybe downgrade to recoverable error",
+            );
             return Err(toffset);
         }
 
@@ -124,6 +125,7 @@ pub struct PCursor<'a> {
     poffset: Poffset,
     /// index into the current puddle; keeps track if we need to go to the next puddle
     pidx: u16,
+    pidx_back: u16,
     /// length of the puddle; if pidx equals this number, we have to go to the next puddle
     plen: u16,
     /// this slice should contain the ENTIRE puddle payload
@@ -184,6 +186,12 @@ impl<'a> Iterator for PCursor<'a> {
     }
 }
 
+impl<'a> DoubleEndedIterator for PCursor<'a> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        None
+    }
+}
+
 /**
  * By default, signals are directly represented in a puddle by numeric values. However we want to
  * support 4 state simulations with x's (unknown values) and z's (undriven signals)
@@ -219,7 +227,7 @@ impl From<(bool, bool)> for TwoBitSignal {
     }
 }
 
-impl From<TwoBitSignal> for char{
+impl From<TwoBitSignal> for char {
     fn from(tbs: TwoBitSignal) -> char {
         match tbs {
             TwoBitSignal::One => '1',
@@ -309,6 +317,7 @@ impl<'a> PCursor<'a> {
         PCursor {
             sig_id,
             pidx: 0,
+            pidx_back: meta_handle.len - 1,
             poffset: meta_handle.offset,
             plen: meta_handle.len,
             meta_handle,
@@ -378,6 +387,39 @@ impl<'a> PCursor<'a> {
         }
     }
 
+    /// Set index of cursor, get droplet at that index
+    pub fn set_index(&mut self, pidx: u16) -> Option<Droplet> {
+        fn get_droplet<'a>(cursor: &mut PCursor<'a>, sig_width: usize) -> Option<Droplet<'a>> {
+            Some(Droplet {
+                content: &cursor.payload_handle[cursor.poffset..cursor.poffset + sig_width],
+            })
+        }
+
+        if pidx >= self.plen {
+            self.pidx = pidx;
+            return None;
+        }
+
+        if self.meta_handle.var_len {
+            if pidx < self.pidx {
+                self.pidx = 0;
+                self.poffset = self.meta_handle.offset;
+            }
+
+            while pidx != self.pidx {
+                self.poffset += self.get_sigwidth();
+                self.pidx += 1;
+            }
+            let sig_width = self.get_sigwidth();
+            get_droplet(self, sig_width)
+        } else {
+            let sig_width = self.get_sigwidth();
+            self.poffset = self.meta_handle.offset + (pidx as usize * sig_width);
+            self.pidx = pidx;
+            get_droplet(self, sig_width)
+        }
+    }
+
     /// Move the cursor to point to the next droplet
     pub fn next_change(&mut self) -> Result<Droplet, Toffset> {
         if self.meta_handle.var_len {
@@ -392,11 +434,7 @@ impl<'a> PCursor<'a> {
                 self.meta_handle.width() as Poffset,
             ))
         } else {
-            Err(*self
-                .puddle_handle
-                .next_sig_map
-                .get(&self.sig_id)
-                .unwrap())
+            Err(*self.puddle_handle.next_sig_map.get(&self.sig_id).unwrap())
         }
     }
 
@@ -413,11 +451,31 @@ impl<'a> PCursor<'a> {
                 self.meta_handle.width() as Poffset,
             ))
         } else {
-            Err(*self
-                .puddle_handle
-                .next_sig_map
-                .get(&self.sig_id)
-                .unwrap())
+            Err(*self.puddle_handle.next_sig_map.get(&self.sig_id).unwrap())
+        }
+    }
+
+    fn get_sigwidth(&mut self) -> usize {
+        if Droplet::is_var_from_bytes(self.payload_handle) {
+            unimplemented!()
+        } else if Droplet::is_zx_from_bytes(
+            &self.payload_handle[self.poffset..self.poffset + Droplet::header_width()],
+        ) {
+            2 * (self.meta_handle.width() / 8
+                + if self.meta_handle.width() % 8 != 0 {
+                    1
+                } else {
+                    0
+                })
+                + Droplet::header_width()
+        } else {
+            self.meta_handle.width() / 8
+                + Droplet::header_width()
+                + if self.meta_handle.width() % 8 != 0 {
+                    1
+                } else {
+                    0
+                }
         }
     }
 }
