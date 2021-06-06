@@ -32,7 +32,7 @@ impl InMemWave {
         )
     }
 
-    //FIXME: is there a way to like.. minimize the boxing going on here?
+    //FIXME: is there a way to .. minimize the boxing going on here?
     pub fn data_in_range(
         &self,
         begin: Toffset,
@@ -50,12 +50,10 @@ impl InMemWave {
             .position(|puddle| puddle.puddle_base() == time & !(Puddle::max_puddle_length() - 1))
     }
 
-
-
     pub fn get_prev_time(&self, time: Toffset) -> Option<(Toffset, &'_ [u8])> {
         let idx = self.get_idx(time)?;
         let sigid = self.signal_id;
-        self.puddles[0..idx+1]
+        self.puddles[0..idx + 1]
             .iter()
             .rev()
             .filter_map(move |puddle| {
@@ -64,16 +62,16 @@ impl InMemWave {
                     .ok()
                     .map(|cursor| (cursor, puddle.puddle_base()))
             })
-            .flat_map(|(cursor, base)| cursor.into_iter().zip(std::iter::repeat(base)))
+            .flat_map(|(cursor, base)| cursor.into_iter().rev().zip(std::iter::repeat(base)))
             .map(|(droplet, base)| {
                 (
                     base + droplet.get_timestamp() as Toffset,
                     droplet.take_data(),
                 )
             })
+            .filter(|(droplet_timestamp, _)| *droplet_timestamp < time)
             .next()
     }
-
 
     pub fn get_next_time(&self, time: Toffset) -> Option<(Toffset, &'_ [u8])> {
         let idx = self.get_idx(time)?;
@@ -93,11 +91,9 @@ impl InMemWave {
                     droplet.take_data(),
                 )
             })
-            .filter(|(time, _)| time > time)
+            .filter(|(droplet_timestamp, _)| *droplet_timestamp > time)
             .next()
     }
-
-
 
     //fixme; could probably template and
     pub fn droplets_in_range(
@@ -163,6 +159,15 @@ mod tests {
             .try_init();
     }
 
+    /// Utility to create vga wavedb object
+    fn create_vga_wdb() -> WaveDb {
+        let mut path_to_wikivcd = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        path_to_wikivcd.push("test_vcds/vga.vcd");
+        let db = tempfile::TempDir::new().expect("Temp file could not be created! Shucks");
+
+        WaveDb::from_vcd(path_to_wikivcd, db.path()).expect("could not create wavedb")
+    }
+
     #[test]
     fn sanity_imw() {
         let puddles: Vec<Arc<Puddle>> = (0..5)
@@ -181,12 +186,7 @@ mod tests {
 
     #[test]
     fn vga_clock_in_range() {
-        let mut path_to_wikivcd = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        path_to_wikivcd.push("test_vcds/vga.vcd");
-        let db = tempfile::TempDir::new().expect("Temp file could not be created! Shucks");
-
-        let wdb = WaveDb::from_vcd(path_to_wikivcd, db.path()).expect("could not create wavedb");
-
+        let wdb = create_vga_wdb();
         let clock_wave = wdb.get_imw("TOP.clock".into()).expect("signal isn't here!");
         let mut last_time = 0;
         for (time, payload) in clock_wave.data_in_range(0, 40000) {
@@ -197,13 +197,8 @@ mod tests {
     }
 
     #[test]
-    fn vga_x_addr() {
-        let mut path_to_wikivcd = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        path_to_wikivcd.push("test_vcds/vga.vcd");
-        //bad but hey... is what it is
-        let db = tempfile::TempDir::new().expect("Temp file could not be created! Shucks");
-
-        let wdb = WaveDb::from_vcd(path_to_wikivcd, db.path()).expect("could not create wavedb");
+    fn vga_x_addr_data_in_range() {
+        let wdb = create_vga_wdb();
 
         let clock_wave = wdb
             .get_imw("TOP.x_addr".into())

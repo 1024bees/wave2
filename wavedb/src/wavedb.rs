@@ -46,8 +46,10 @@ impl WaveDb {
 
 
     fn get_id(&self, sig: &str) -> Result<u32, Waverr> {
-        self.hier_map.path_to_id(sig)
+        self.hier_map.path_to_signalref(sig).map(|signal| signal.id())
     }
+
+    fn get_id_and_width(&self, sig: &str) -> Result(<(u32, u32),Waverr>)
 
     fn get_time_slices(&self) -> std::iter::StepBy<std::ops::Range<u32>> {
         info!("END TIME IS {}",self.config.time_range.0); 

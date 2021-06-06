@@ -103,7 +103,7 @@ impl HierMap {
     /// Map absolute path -> signal id
     /// This is to support the older API of an ID map, where raw paths can map directly
     /// to signal ids
-    pub fn path_to_id(&self, abs_path: &str) -> Result<u32, Waverr> {
+    pub fn path_to_signalref(&self, abs_path: &str) -> Result<&SignalItem, Waverr> {
         if let Some(base_path_idx) = abs_path.rfind('.') {
             let module_idx = self.set_path_abs(&abs_path[..base_path_idx])?;
             let sig_name = &abs_path[base_path_idx + 1..];
@@ -113,7 +113,7 @@ impl HierMap {
                 .find(|signal| signal.name() == sig_name)
                 .map_or(
                     Err(Waverr::HierMapError("Malformed path passed in")),
-                    |signal| Ok(signal.id()),
+                    |signal| Ok(signal),
                 );
 
             rv
@@ -206,13 +206,18 @@ pub struct ModuleItem {
 
 impl From<vcd::Var> for SignalItem {
     fn from(var: vcd::Var) -> SignalItem {
-        SignalItem(var.reference, var.code.0 as u32)
+        SignalItem::new(var.reference, var.code.0 as u32, var.size)
     }
 }
 
 impl ModuleItem {
     fn new(name: String, parent: Option<usize>, self_idx: usize) -> Self {
-        ModuleItem { name, self_idx, parent, ..ModuleItem::default() }
+        ModuleItem {
+            name,
+            self_idx,
+            parent,
+            ..ModuleItem::default()
+        }
     }
     fn add_sig(&mut self, sig_item: SignalItem) {
         self.signals.push(sig_item);
@@ -226,23 +231,39 @@ impl ModuleItem {
 //
 
 #[derive(Deserialize, Serialize, Debug, Default, Clone)]
-pub struct SignalItem(String, u32);
+pub struct SignalItem {
+    name: String,
+    id: u32,
+    width: u32,
+}
 
 impl SignalItem {
+    pub fn new(name: String, id: u32,  width: u32) -> Self {
+        Self {
+            name,
+            id,
+            width,
+        }
+    }
     pub fn name(&self) -> &str {
-        self.0.as_str()
+        self.name.as_str()
     }
     pub fn id(&self) -> u32 {
-        self.1
+        self.id
     }
     pub fn destructure(item: SignalItem) -> (String, u32) {
-        (item.0, item.1)
+        (item.name, item.id)
     }
 }
 
 impl ToString for SignalItem {
     fn to_string(&self) -> String {
-        self.0.clone()
+        if self.width != 1 {
+            format!("{} [{}:0]",self.name,self.width-1)
+        } else {
+            format!("{}",self.name)
+
+        }
     }
 }
 #[allow(dead_code, unused_macros, unused_imports)]
