@@ -46,12 +46,11 @@ impl WdbApi {
         self.wdb.get_hier_map()
     }
 
-    pub async fn get_signals(
+    pub async fn get_signal(
         api: Arc<WdbApi>,
         signal: SignalItem,
     ) -> Result<Arc<InMemWave>, Arc<Waverr>> {
-        let (sig_name, sig_id) = SignalItem::destructure(signal);
-        api.wdb.get_imw_id(sig_name, sig_id)
+        api.wdb.get_imw_sigitem(signal)
     }
 
     /// Get the names of all signals that exist within this module (that are visible to wavedb)

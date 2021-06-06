@@ -232,9 +232,9 @@ impl ModuleItem {
 
 #[derive(Deserialize, Serialize, Debug, Default, Clone)]
 pub struct SignalItem {
-    name: String,
-    id: u32,
-    width: u32,
+    pub(crate) name: String,
+    pub(crate) id: u32,
+    pub(crate) width: u32,
 }
 
 impl SignalItem {
@@ -251,6 +251,11 @@ impl SignalItem {
     pub fn id(&self) -> u32 {
         self.id
     }
+    
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+
     pub fn destructure(item: SignalItem) -> (String, u32) {
         (item.name, item.id)
     }

@@ -1,17 +1,17 @@
 use crate::errors::Waverr;
-use crate::hier_map::HierMap;
-use crate::vcd_parser::WaveParser;
+use crate::hier_map::{HierMap, SignalItem};
+use crate::puddle::builder::PuddleBuilder;
+use crate::puddle::{Puddle, SignalId};
 use crate::storage::in_memory::InMemWave;
+use crate::vcd_parser::WaveParser;
 use crate::MAX_PUDDLE_WIDTH;
+use log::info;
 use serde::{Deserialize, Serialize};
 use sled::Db;
 use std::collections::HashMap;
 use std::path::*;
 use std::sync::Arc;
 use vcd::Command;
-use crate::puddle::{Puddle,SignalId};
-use crate::puddle::builder::PuddleBuilder;
-use log::info;
 #[derive(Serialize, Deserialize, Debug, Default)]
 struct WdbConfig {
     db_name: String,
@@ -26,14 +26,14 @@ pub struct WaveDb {
     db: Db,
     //TODO: think about what should be wanted from a cfg file
     config: WdbConfig,
-    puddle_cache: HashMap<SignalId,Arc<Puddle>>,
+    puddle_cache: HashMap<SignalId, Arc<Puddle>>,
     pub hier_map: Arc<HierMap>,
 }
 
 impl WaveDb {
     fn new(db_name: String, db_path: Option<&Path>) -> WaveDb {
         WaveDb {
-            db: sled::open(db_path.unwrap_or_else(||db_name.as_ref())).unwrap(),
+            db: sled::open(db_path.unwrap_or_else(|| db_name.as_ref())).unwrap(),
             hier_map: Arc::default(),
             puddle_cache: HashMap::default(),
             config: WdbConfig {
@@ -43,19 +43,16 @@ impl WaveDb {
         }
     }
 
-
-
-    fn get_id(&self, sig: &str) -> Result<u32, Waverr> {
-        self.hier_map.path_to_signalref(sig).map(|signal| signal.id())
+    fn get_sigitem(&self, sig: &str) -> Result<SignalItem, Waverr> {
+        self.hier_map
+            .path_to_signalref(sig)
+            .map(|signal| signal.clone())
     }
 
-    fn get_id_and_width(&self, sig: &str) -> Result(<(u32, u32),Waverr>)
-
     fn get_time_slices(&self) -> std::iter::StepBy<std::ops::Range<u32>> {
-        info!("END TIME IS {}",self.config.time_range.0); 
+        info!("END TIME IS {}", self.config.time_range.0);
         ((self.config.time_range.0 / MAX_PUDDLE_WIDTH) * MAX_PUDDLE_WIDTH
-            ..(self.config.time_range.1 / MAX_PUDDLE_WIDTH + 1)
-                * MAX_PUDDLE_WIDTH)
+            ..(self.config.time_range.1 / MAX_PUDDLE_WIDTH + 1) * MAX_PUDDLE_WIDTH)
             .step_by(MAX_PUDDLE_WIDTH as usize)
     }
 
@@ -95,7 +92,7 @@ impl WaveDb {
         }
     }
 
-    pub fn get_bounds(&self) -> (u32,u32) {
+    pub fn get_bounds(&self) -> (u32, u32) {
         self.config.time_range
     }
 
@@ -115,10 +112,7 @@ impl WaveDb {
     }
 
     //TODO: parallelize this
-    pub fn from_vcd(
-        vcd_file_path: PathBuf,
-        wdb_path: &Path,
-    ) -> Result<WaveDb, Waverr> {
+    pub fn from_vcd(vcd_file_path: PathBuf, wdb_path: &Path) -> Result<WaveDb, Waverr> {
         let mut parser = WaveParser::new(vcd_file_path.clone())?;
         let wdb_name = {
             if let Some(vcd_file) = vcd_file_path.file_stem() {
@@ -142,16 +136,13 @@ impl WaveDb {
             match item {
                 Ok(Command::Timestamp(time)) => {
                     let time = time as u32;
-                    if time % MAX_PUDDLE_WIDTH
-                        < global_time % MAX_PUDDLE_WIDTH
-                    {
+                    if time % MAX_PUDDLE_WIDTH < global_time % MAX_PUDDLE_WIDTH {
                         for (_, puddle) in inflight_puddles.into_iter() {
                             wdb.insert_puddle(puddle.into())?;
                         }
                         inflight_puddles = HashMap::new();
                         let rounded_time = time - (time % MAX_PUDDLE_WIDTH);
-                        current_range =
-                            (rounded_time, rounded_time + MAX_PUDDLE_WIDTH)
+                        current_range = (rounded_time, rounded_time + MAX_PUDDLE_WIDTH)
                     }
                     if first_time.is_none() {
                         first_time = Some(time);
@@ -162,14 +153,19 @@ impl WaveDb {
                 Ok(command) => {
                     match command {
                         //TODO: add a get id function to the vcd lib that returns an option
-                        Command::ChangeScalar(id,.. ) | Command::ChangeVector(id,..) | Command::ChangeReal(id,..) | Command::ChangeString(id,..) => {
+                        Command::ChangeScalar(id, ..)
+                        | Command::ChangeVector(id, ..)
+                        | Command::ChangeReal(id, ..)
+                        | Command::ChangeString(id, ..) => {
                             let base_id = id.0 as u32 - id.0 as u32 % Puddle::signals_per_puddle();
-                            let puddle_builder = inflight_puddles.entry(base_id).or_insert_with(||PuddleBuilder::new(current_range.0));
+                            let puddle_builder = inflight_puddles
+                                .entry(base_id)
+                                .or_insert_with(|| PuddleBuilder::new(current_range.0));
                             puddle_builder.add_signal(command, global_time)?;
                         }
-                        Command::Begin(_) => {},
-                        Command::End(_) => {},
-                        _ => return Err(Waverr::VcdCommandErr(command))
+                        Command::Begin(_) => {}
+                        Command::End(_) => {}
+                        _ => return Err(Waverr::VcdCommandErr(command)),
                     }
                 }
                 Err(_) => {
@@ -181,7 +177,10 @@ impl WaveDb {
             wdb.insert_puddle(puddle.into())?;
         }
 
-        wdb.set_time_range((first_time.expect("No timestamp present in VCD!"), global_time));
+        wdb.set_time_range((
+            first_time.expect("No timestamp present in VCD!"),
+            global_time,
+        ));
         wdb.dump_config()?;
         wdb.save_idmap()?;
         wdb.db.flush()?;
@@ -192,13 +191,16 @@ impl WaveDb {
         let tree: sled::Tree = self.db.open_tree(puddle.get_btree_idx().to_le_bytes())?;
         let serialized = serde_json::to_string(&puddle)?;
 
-        info!("Inserted a puddle at index {:?} with key {:?}",puddle.get_btree_idx(),puddle.get_base_sigid());
-        if let Ok(Some(_)) =
-            tree.insert(puddle.get_base_sigid().to_le_bytes(), serialized.as_str())
+        info!(
+            "Inserted a puddle at index {:?} with key {:?}",
+            puddle.get_btree_idx(),
+            puddle.get_base_sigid()
+        );
+        if let Ok(Some(_)) = tree.insert(puddle.get_base_sigid().to_le_bytes(), serialized.as_str())
         {
             // is problematic; implies that this value was previously set and we are
             // overwriting it. We should write only once per bucket
-            return Err(Waverr::PuddleErr{
+            return Err(Waverr::PuddleErr {
                 time: puddle.get_btree_idx(),
                 base_sigid: puddle.get_base_sigid(),
                 context: "This puddle already exists! We should never double insert",
@@ -207,60 +209,57 @@ impl WaveDb {
         Ok(())
     }
 
-    fn retrieve_puddle(
-        &self,
-        id: u32,
-        ts_start: u32,
-    ) -> Result<Arc<Puddle>, Waverr> {
+    fn retrieve_puddle(&self, id: u32, ts_start: u32) -> Result<Arc<Puddle>, Waverr> {
         let tree = self.db.open_tree(ts_start.to_le_bytes())?;
         let base_id = id - id % Puddle::signals_per_puddle();
         if let Some(puddle) = tree.get(base_id.to_le_bytes())? {
             let puddle: Puddle = serde_json::from_slice(puddle.as_ref())?;
             return Ok(Arc::new(puddle));
         }
-        Err(Waverr::PuddleErr{
+        Err(Waverr::PuddleErr {
             time: ts_start,
             base_sigid: base_id,
             context: "failed to retrieve puddle",
         })
     }
 
-    pub fn get_imw_id(
-        &self,
-        sig_name: String,
-        sig_id: u32,
-    ) -> Result<Arc<InMemWave>, Arc<Waverr>> {
+    pub fn get_imw_sigitem(&self, sigitem: SignalItem) -> Result<Arc<InMemWave>, Arc<Waverr>> {
+        let SignalItem {
+            name: sig_name,
+            id: sig_id,
+            width,
+        } = sigitem;
+
         let puddles = self
             .get_time_slices()
             .map(|start_slice| self.retrieve_puddle(sig_id, start_slice).unwrap())
             .collect();
 
-        InMemWave::new(sig_name, sig_id, puddles)
+        InMemWave::new(sig_name, sig_id, width, puddles)
             .map_err(Arc::new)
             .map(Arc::new)
     }
 
     pub fn get_imw(&self, sig: String) -> Result<Arc<InMemWave>, Arc<Waverr>> {
-        let id = self.get_id(sig.as_str())?;
-        self.get_imw_id(sig, id)
+        let sigitem = self.get_sigitem(sig.as_str())?;
+        self.get_imw_sigitem(sigitem)
     }
-
 }
 
 #[cfg(test)]
 #[allow(dead_code, unused_macros, unused_imports, unused_variables)]
 mod tests {
-    use crate::wavedb::*;
-    use std::path::*;
     use crate::signals::SigType;
+    use crate::wavedb::*;
     use crate::*;
     use log::info;
+    use std::path::*;
 
     fn init_test_logger() {
         let _ = env_logger::builder()
             .filter_level(log::LevelFilter::Info)
             .is_test(true)
-            .try_init(); 
+            .try_init();
     }
 
     //#[test]
@@ -283,7 +282,6 @@ mod tests {
     //    }
     //}
 
-
     #[test]
     #[allow(unused_must_use)]
     fn wdb_from_wikivcd() {
@@ -293,8 +291,7 @@ mod tests {
         path_to_wikivcd.push("test_vcds/wikipedia.vcd");
         //bad but hey... is what it is
         std::fs::remove_dir_all("/tmp/rng");
-        let wdb =
-            WaveDb::from_vcd(path_to_wikivcd.clone(), Path::new("/tmp/rng"));
+        let wdb = WaveDb::from_vcd(path_to_wikivcd.clone(), Path::new("/tmp/rng"));
         let actualdb = match wdb {
             Ok(wdb) => wdb,
             Err(errors::Waverr::VcdErr(vcdmess)) => {
@@ -303,7 +300,7 @@ mod tests {
             Err(Waverr::GenericErr(message)) => {
                 panic!("Unhandled error case: {} ", message)
             }
-            Err(err) => panic!("Unhandled error case: {:?}",err),
+            Err(err) => panic!("Unhandled error case: {:?}", err),
         };
         let var = actualdb.get_imw("logic.data".into()).unwrap();
         drop(actualdb);
@@ -318,7 +315,7 @@ mod tests {
             Err(Waverr::GenericErr(message)) => {
                 panic!("Unhandled error case: {} ", message)
             }
-            Err(err) => panic!("Unhandled error case: {:?}",err),
+            Err(err) => panic!("Unhandled error case: {:?}", err),
         };
         let var = actualdb.get_imw("logic.en".into()).unwrap();
     }
@@ -335,13 +332,14 @@ mod tests {
         let wdb = WaveDb::from_vcd(path_to_wikivcd, Path::new("/tmp/vcddb"))
             .expect("could not create wavedb");
 
-        let var = wdb.get_imw("TOP.clock".into()).expect("signal doesn't exist and it definitely should!!");
+        let var = wdb
+            .get_imw("TOP.clock".into())
+            .expect("signal doesn't exist and it definitely should!!");
 
-        let val : (u32,&[u8]) = var.all_data().next().unwrap();
-        info!("len is val.1: {}",val.0);
+        let val: (u32, &[u8]) = var.all_data().next().unwrap();
+        info!("len is val.1: {}", val.0);
         //assert!(val.1.len() == 8);
 
         std::fs::remove_dir_all("/tmp/vcddb");
     }
-
 }

@@ -252,9 +252,6 @@ impl<'a> Droplet<'a> {
         }
     }
 
-    fn timestamp_from_bytes(payload: &'a [u8], poffset: Poffset) -> u16 {
-        (((payload[poffset + 1] & 0x0f) as u16) << 8) | payload[poffset] as u16
-    }
     pub fn get_timestamp(&self) -> u16 {
         (((self.content[1] & 0x0f) as u16) << 8) | self.content[0] as u16
     }

@@ -6,6 +6,7 @@ use std::sync::Arc;
 pub struct InMemWave {
     name: String,
     signal_id: SignalId,
+    width: u32,
     puddles: Vec<Arc<Puddle>>,
 }
 
@@ -132,10 +133,12 @@ impl InMemWave {
     pub fn new(
         name_str: String,
         signal_id: SignalId,
+        width: u32,
         puddles: Vec<Arc<Puddle>>,
     ) -> Result<InMemWave, Waverr> {
         Ok(InMemWave {
             name: name_str,
+            width,
             signal_id,
             puddles,
         })
@@ -170,11 +173,12 @@ mod tests {
 
     #[test]
     fn sanity_imw() {
+        let signal_width = 16;
         let puddles: Vec<Arc<Puddle>> = (0..5)
             .into_iter()
-            .map(|idx| build_dummy_puddles(idx * Puddle::max_puddle_length(), 20, 16))
+            .map(|idx| build_dummy_puddles(idx * Puddle::max_puddle_length(), 20, signal_width))
             .collect();
-        let imw_0 = InMemWave::new("sig_0".into(), 0, puddles).unwrap();
+        let imw_0 = InMemWave::new("sig_0".into(), 0, signal_width as u32, puddles).unwrap();
         let first_puddle_fragment: Vec<(u32, &[u8])> = imw_0.data_in_range(0, 1000).collect();
 
         assert_eq!(first_puddle_fragment.len(), 1000);

@@ -289,7 +289,7 @@ impl Application for Wave2 {
                     Message::MNMessage(mn_message) => match mn_message {
                         module_nav::Message::AddSig(signal_item) => {
                             return Command::perform(
-                                WdbApi::get_signals(state.get_api(), signal_item),
+                                WdbApi::get_signal(state.get_api(), signal_item),
                                 move |wave| Message::SignalsMessage(signals::Message::AddWave(wave)),
                             );
                         }
