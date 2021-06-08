@@ -68,8 +68,8 @@ impl From<Arc<InMemWave>> for DisplayedWave {
 
 impl std::fmt::Display for DisplayedWave {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.wave_content.get_name())
-    }
+        self.wave_content.fmt(f)
+   }
 }
 
 impl WaveColors {

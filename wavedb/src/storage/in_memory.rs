@@ -120,10 +120,7 @@ impl InMemWave {
     }
 
     pub fn get_width(&self) -> usize {
-        self.puddles
-            .iter()
-            .find_map(|puddle| puddle.get_signal_width(self.signal_id))
-            .expect("NO WIDTH FUCK")
+        self.width as usize
     }
 
     pub fn get_name(&self) -> &str {
@@ -142,6 +139,19 @@ impl InMemWave {
             signal_id,
             puddles,
         })
+    }
+}
+
+impl std::fmt::Display for InMemWave {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.get_name())?;
+        let width = self.get_width();
+        let value = 0;
+        if width > 1 {
+            write!(f, " [{}:0]", width - 1)?;
+        }
+        write!(f, " = {}", value)?;
+        Ok(())
     }
 }
 
@@ -222,5 +232,31 @@ mod tests {
             assert_eq!(expected_val, val);
             expected_val += 1;
         }
+    }
+
+    #[test]
+    fn vga_x_addr_get_next_and_prev_time() {
+        let wdb = create_vga_wdb();
+
+        let clock_wave = wdb
+            .get_imw("TOP.x_addr".into())
+            .expect("signal isn't here!");
+        let (toffset, payload) = clock_wave.get_prev_time(16029).expect("prev failed");
+        assert_eq!(toffset, 16010);
+        let val: u16 = u16::from_le_bytes(
+            payload
+                .try_into()
+                .expect("should be a 9bit val, convertible into u16"),
+        );
+        assert_eq!(val, 0x280);
+        let (toffset, payload) = clock_wave.get_next_time(16030).expect("next time failed");
+        let val: u16 = u16::from_le_bytes(
+            payload
+                .try_into()
+                .expect("should be a 9bit val, convertible into u16"),
+        );
+
+        assert_eq!(toffset, 19250);
+        assert_eq!(val, 0x1);
     }
 }

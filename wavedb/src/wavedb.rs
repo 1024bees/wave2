@@ -111,7 +111,7 @@ impl WaveDb {
         self.hier_map.clone()
     }
 
-    //TODO: parallelize this
+    //TODO: parallelize this, make this less nasty, etc
     pub fn from_vcd(vcd_file_path: PathBuf, wdb_path: &Path) -> Result<WaveDb, Waverr> {
         let mut parser = WaveParser::new(vcd_file_path.clone())?;
         let wdb_name = {

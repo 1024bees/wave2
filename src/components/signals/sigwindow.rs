@@ -40,7 +40,6 @@ impl Default for SigViewer {
         SigViewer {
             waves_state: CellList::default().set_cell_padding(4).set_text_size(11),
             //.set_spacing(wavewindow::BUFFER_PX as u16),
-            
             selected: Option::default(),
         }
     }
