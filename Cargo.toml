@@ -16,6 +16,7 @@ log = "0.4.0"
 env_logger = "0.7.1"
 bincode = "*"
 vcd = {git = "https://github.com/1024bees/rust-vcd", rev="48186f52f5cc5d6b012240e6c97f2cc7b9ddfb9f"}
+iced_aw = {git = "https://github.com/1024bees/iced_aw", branch="menu"}
 serde = "*"
 cached = "*"
 toml = "*"

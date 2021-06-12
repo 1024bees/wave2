@@ -21,7 +21,6 @@ pub enum Message {
     ///Messages that are only used by wavewindow
     UpdateCursor(u32),
     UpdateBounds((u32, u32)),
-    UpdateOffset(f32),
 
 
     ///Messages that are only used by sigviewer

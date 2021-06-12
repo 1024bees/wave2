@@ -37,6 +37,7 @@ pub struct WaveWindow<'a> {
     frame_state: &'a mut FrameState,
     wave_cache: &'a canvas::Cache,
     cursor_cache: &'a canvas::Cache,
+
 }
 #[derive(Default)]
 pub struct WaveWindowState {
@@ -71,7 +72,11 @@ impl Default for FrameState {
 
 impl WaveWindowState {
     pub fn view(&mut self) -> Element<Message> {
+
+
+        log::info!("offset is {}", self.scroll_state.get_offset());
         let val = HScroll::new(&mut self.scroll_state).scrollbar_width(10);
+
         val.push(
             Canvas::new(WaveWindow {
                 signals: &self.live_waves[..],
@@ -93,9 +98,6 @@ impl WaveWindowState {
             Message::UpdateCursor(cursor_location) => {
                 self.frame_state.cursor_location = cursor_location;
                 self.redraw_cursor();
-            }
-            Message::UpdateOffset(offset) => {
-                self.frame_state.offset = offset;
             }
             Message::UpdateBounds((start, end)) => {
                 self.frame_state.start_time = start;
@@ -254,7 +256,6 @@ impl<'a> WaveWindow<'a> {
                                 if self.out_of_range(time.clone()) {
                                     break;
                                 }
-
                                 working_pt.x += self.xdelt_from_prev(time, prev_xcoord, &bounds);
                                 p.line_to(working_pt);
                                 p.move_to(working_pt);
@@ -276,7 +277,7 @@ impl<'a> WaveWindow<'a> {
                                         sb_state = SBWaveState::High;
                                     }
                                     (_, _) => {
-                                        panic!("Impliment me");
+                                        unreachable!("We should never get here!");
                                     }
                                 }
                                 prev_xcoord = time;
