@@ -4,6 +4,13 @@ use wave2_custom_widgets::widget::menu_bar::{self,MenuBar,MenuBarOption,MenuOpti
 use wave2_custom_widgets::traits::{MenuOption,MenuBarOption};
 use strum_macros;
 
+use iced::{Column, Container, Element, Length, Text};
+use iced_aw::{menu, Menu};
+use menu::{Entry, Section};
+
+
+
+
 #[derive(MenuBarOption, strum_macros::Display, Debug, Clone)]
 pub enum Message {
     File(FileMenu),
@@ -21,9 +28,15 @@ pub enum ViewMenu {
     ImplMe
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, )]
 pub struct GlobalMenuBar {
     menu_bar: menu_bar::State,
+    menu: menu::State,
+    last_message: Message,
+    config: MenuConfig,
+
+
+
     pending_file: bool,
 }
 
