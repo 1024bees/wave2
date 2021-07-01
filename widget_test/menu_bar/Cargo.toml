@@ -9,7 +9,7 @@ publish = false
 wave2 = { path = "../.."}
 wave2_custom_widgets = { path = "../../custom_widgets"}
 tokio = "0.2.18"
-iced = { version="0.3.0", features = ["glow", "glow_canvas","tokio"] }
+iced = { version="0.3.0", features = ["tokio"] }
 
 strum = "0.19"
 strum_macros = "0.19"

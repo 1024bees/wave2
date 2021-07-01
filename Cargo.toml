@@ -7,16 +7,14 @@ edition = "2018"
 
 [dependencies]
 tokio = "0.2.18"
-iced = { version="0.3.0", features = ["glow", "glow_canvas","tokio"] }
-iced_native = {version="*"}
-iced_graphics = "*"
+iced = { version="0.3.0", features = ["tokio", "canvas"] }
 env = "*"
 nfd = "*"
 log = "0.4.0"
 env_logger = "0.7.1"
 bincode = "*"
 vcd = {git = "https://github.com/1024bees/rust-vcd", rev="48186f52f5cc5d6b012240e6c97f2cc7b9ddfb9f"}
-iced_aw = {git = "https://github.com/1024bees/iced_aw", branch="menu"}
+iced_aw = {git = "https://github.com/1024bees/iced_aw", branch="rb3", features=["menu"] }
 serde = "*"
 cached = "*"
 toml = "*"
@@ -34,11 +32,9 @@ debug = 2
 tempfile = "3"
 
 [workspace]
-members = [ "widget_test/cell_list",
-            "widget_test/cell",
+members = [ "widget_test/cell",
             "widget_test/hscroll",
             "widget_test/menu_bar",
             "custom_widgets/widget_derives",
             "wavedb",
 ]
-

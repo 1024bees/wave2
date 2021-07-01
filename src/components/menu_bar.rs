@@ -1,8 +1,6 @@
-use iced::{Container, Element};
-
-use wave2_custom_widgets::widget::menu_bar::{self,MenuBar,MenuBarOption,MenuOption};
-use wave2_custom_widgets::traits::{MenuOption,MenuBarOption};
 use strum_macros;
+use wave2_custom_widgets::traits::{MenuBarOption, MenuOption};
+use wave2_custom_widgets::widget::menu_bar::{self, MenuBar, MenuBarOption, MenuOption};
 
 use iced::{Column, Container, Element, Length, Text};
 use iced_aw::{menu, Menu};
@@ -10,12 +8,10 @@ use menu::{Entry, Section};
 
 
 
-
 #[derive(MenuBarOption, strum_macros::Display, Debug, Clone)]
 pub enum Message {
     File(FileMenu),
     View(ViewMenu),
-
 }
 
 #[derive(MenuOption, strum_macros::Display, Debug, Clone)]
@@ -25,18 +21,13 @@ pub enum FileMenu {
 
 #[derive(MenuOption, strum_macros::Display, Debug, Clone)]
 pub enum ViewMenu {
-    ImplMe
+    ImplMe,
 }
 
-#[derive(Debug, )]
+#[derive(Debug, Default)]
 pub struct GlobalMenuBar {
     menu_bar: menu_bar::State,
     menu: menu::State,
-    last_message: Message,
-    config: MenuConfig,
-
-
-
     pending_file: bool,
 }
 
@@ -48,11 +39,33 @@ impl GlobalMenuBar {
         self.pending_file
     }
 
-    pub fn view(&mut self) -> Element<Message> { 
-        Container::new(MenuBar::new(&mut self.menu_bar,Message::all()))
-        .width(iced::Length::Fill)
-        .center_x()
-        .into()
-    
+    pub fn view(&mut self) -> Element<Message> {
+        let menu : Element<Message> = Menu::new(&mut self.menu)
+            .push(
+                Section::new(
+                    Text::new("File"),
+                    vec![Entry::Item(
+                        Text::new("New File").into(),
+                        Some(FileMenu::Open),
+                    )],
+                )
+                .map(Message::File),
+            )
+            .push(
+                Section::new(
+                    Text::new("View"),
+                    vec![Entry::Item(
+                        Text::new("ImplMe").into(),
+                        Some(ViewMenu::ImplMe),
+                    )],
+                )
+                .map(Message::View),
+            )
+            .into();
+
+        Container::new(menu)
+            .width(iced::Length::Fill)
+            .center_x()
+            .into()
     }
 }
