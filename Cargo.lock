@@ -3080,6 +3080,7 @@ dependencies = [
  "log",
  "pretty_env_logger",
  "strum_macros",
+ "wave2_wavedb",
  "wave2_widget_derives",
 ]
 

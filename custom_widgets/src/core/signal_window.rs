@@ -1,4 +1,3 @@
-use iced::canvas::Text;
 use iced::Color;
 use std::sync::Arc;
 use wave2_wavedb::formatting::{format_payload, WaveFormat};
@@ -90,26 +89,26 @@ impl std::fmt::Display for WaveColors {
     }
 }
 
-/// Utility for converting value -> canvas based text.
-/// The text that we are generating exists in the margins between two "wave deltas", so we have to
-/// truncate that value occasionally
-pub fn generate_canvas_text(
-    data: Droplet,
-    display_options: WaveDisplayOptions,
-    bitwidth: usize,
-    space: f32,
-) -> Option<Text> {
-    let str_format = display_options.format;
-    if space < TEXT_SIZE {
-        return None;
-    }
-    let visible_chars = (space / TEXT_SIZE).ceil() as usize;
-    log::info!("payload is {:?}", data.get_data());
-
-    let value = format_payload(data, str_format,bitwidth,visible_chars);
-   log::info!("string value is {}",value);
-    Some(Text::from(value))
-}
+///// Utility for converting value -> canvas based text.
+///// The text that we are generating exists in the margins between two "wave deltas", so we have to
+///// truncate that value occasionally
+//pub fn generate_canvas_text(
+//    data: Droplet,
+//    display_options: WaveDisplayOptions,
+//    bitwidth: usize,
+//    space: f32,
+//) -> Option<Text> {
+//    let str_format = display_options.format;
+//    if space < TEXT_SIZE {
+//        return None;
+//    }
+//    let visible_chars = (space / TEXT_SIZE).ceil() as usize;
+//    log::info!("payload is {:?}", data.get_data());
+//
+//    let value = format_payload(data, str_format,bitwidth,visible_chars);
+//   log::info!("string value is {}",value);
+//    Some(Text::from(value))
+//}
 
 #[derive(Clone, Debug)]
 /// Wave state for single bit signals
