@@ -3,7 +3,7 @@ use iced_native::{
     Length, Point, Rectangle, Size, Widget,
 };
 
-use super::core::DisplayedWave;
+use crate::core::signal_window::DisplayedWave;
 
 /// A widget to represent a singular "SignalWindow"
 ///
@@ -11,12 +11,16 @@ use super::core::DisplayedWave;
 /// rather than later
 #[allow(missing_debug_implementations)]
 pub struct SignalWindow<'a, Message: 'static, Renderer: self::Renderer> {
-    window_state: &'a mut menu::State,
     waves: &'a [DisplayedWave],
+    state: &'a mut State,
     width: Length,
     padding: u16,
+    on_click: Option<Message>,
     text_size: Option<u16>,
     font: Renderer::Font,
+    scrollbar_width: u16,
+    scrollbar_margin: u16,
+    scroller_width: u16,
     style: <Renderer as self::Renderer>::Style,
 }
 
@@ -40,13 +44,17 @@ impl<'a, Message, Renderer: self::Renderer> SignalWindow<'a, Message, Renderer> 
     ///
     /// [`SignalWindow`]: struct.SignalWindow.html
     /// [`State`]: struct.State.html
-    pub fn new(window_state: &'a mut State, waves: &'a [DisplayedWave]) -> Self {
+    pub fn new(waves: &'a [DisplayedWave], state: &'a mut State) -> Self {
         Self {
-            window_state,
             waves,
+            state,
             width: Length::Fill,
             padding: Renderer::DEFAULT_PADDING,
             text_size: None,
+            on_click: None,
+            scrollbar_margin: 0,
+            scrollbar_width: 100,
+            scroller_width: 10,
             font: Default::default(),
             style: Default::default(),
         }
@@ -91,6 +99,27 @@ impl<'a, Message, Renderer: self::Renderer> SignalWindow<'a, Message, Renderer> 
         self.style = style.into();
         self
     }
+
+    /// Sets the scrollbar width of the [`HScroll`] .
+    ///
+    /// Silently enforces a minimum value of 1.
+    pub fn scrollbar_width(mut self, scrollbar_width: u16) -> Self {
+        self.scrollbar_width = scrollbar_width.max(1);
+        self
+    }
+
+    /// Sets the scrollbar margin of the [`HScroll`] .
+    pub fn scrollbar_margin(mut self, scrollbar_margin: u16) -> Self {
+        self.scrollbar_margin = scrollbar_margin;
+        self
+    }
+
+    /// Sets the scroller width of the [`HScroll`] .
+    /// Silently enforces a minimum value of 1.
+    pub fn scroller_width(mut self, scroller_width: u16) -> Self {
+        self.scroller_width = scroller_width.max(1);
+        self
+    }
 }
 
 impl<'a, Message, Renderer> Widget<Message, Renderer> for SignalWindow<'a, Message, Renderer>
@@ -114,8 +143,8 @@ where
 
         let bounds = limits.max();
 
-        let width = 10000;
-        let height = 10000;
+        let width = 10000.0;
+        let height = 10000.0;
 
         let size = limits.resolve(Size::new(width, height));
 
@@ -142,7 +171,8 @@ where
 
         match event {
             Event::Mouse(mouse::Event::CursorMoved { .. }) => {
-                self.state.hovered_position = cursor_position.x;
+                self.state.hovered_position =
+                    self.state.offset + self.state.ns_per_unit * cursor_position.x;
             }
 
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {}
@@ -160,11 +190,23 @@ where
         cursor_position: Point,
         _viewport: &Rectangle,
     ) -> Renderer::Output {
-        //TODO: redo this all
+        let bounds = layout.bounds();
+        let content_layout = layout.children().next().unwrap();
+        let content_bounds = content_layout.bounds();
+        let offset = self.state.offset;
+        let scrollbar = renderer.wave_scrollbar(
+            bounds,
+            offset,
+            self.scrollbar_width,
+            self.scrollbar_margin,
+            self.scroller_width,
+        );
+
         self::Renderer::draw(
             renderer,
             layout.bounds(),
             self.waves,
+            scrollbar,
             self.padding,
             self.text_size.unwrap_or(renderer.default_size()),
             self.font,
@@ -175,6 +217,53 @@ where
     fn overlay(&mut self, layout: Layout<'_>) -> Option<overlay::Element<'_, Message, Renderer>> {
         None
     }
+}
+
+/// The scrollbar of a [`HScroll`].
+#[derive(Debug)]
+pub struct Scrollbar {
+    /// The outer bounds of the scrollable, including the [`Scrollbar`] and
+    /// [`Scroller`].
+    pub outer_bounds: Rectangle,
+
+    /// The bounds of the [`Scrollbar`].
+    pub bounds: Rectangle,
+
+    /// The margin within the [`Scrollbar`].
+    pub margin: u16,
+
+    /// The bounds of the [`Scroller`].
+    pub scroller: Scroller,
+}
+
+impl Scrollbar {
+    fn is_mouse_over(&self, cursor_position: Point) -> bool {
+        self.outer_bounds.contains(cursor_position)
+    }
+
+    fn grab_scroller(&self, cursor_position: Point) -> Option<f32> {
+        if self.outer_bounds.contains(cursor_position) {
+            Some(if self.scroller.bounds.contains(cursor_position) {
+                (cursor_position.x - self.scroller.bounds.x) / self.scroller.bounds.width
+            } else {
+                0.5
+            })
+        } else {
+            None
+        }
+    }
+
+    fn scroll_percentage(&self, grabbed_at: f32, cursor_position: Point) -> f32 {
+        (cursor_position.x - self.bounds.x - self.scroller.bounds.width * grabbed_at)
+            / (self.bounds.width - self.scroller.bounds.width)
+    }
+}
+
+/// The handle of a [`Scrollbar`].
+#[derive(Debug, Clone, Copy)]
+pub struct Scroller {
+    /// The bounds of the [`Scroller`].
+    pub bounds: Rectangle,
 }
 
 /// The renderer of a [`SignalWindow`].
@@ -195,15 +284,25 @@ pub trait Renderer: text::Renderer {
     /// [`SignalWindow`]: struct.SignalWindow.html
     type Style: Default;
 
-    
+    /// Returns the [`Scrollbar`] given the bounds and content bounds of a
+    /// [`HScroll`].
+    fn wave_scrollbar(
+        &self,
+        bounds: Rectangle,
+        offset: u32,
+        scrollbar_width: u16,
+        scrollbar_margin: u16,
+        scroller_width: u16,
+    ) -> Option<Scrollbar>;
+
     /// Draws a [`SignalWindow`].
     ///
     /// [`SignalWindow`]: struct.SignalWindow.html
     fn draw(
         &mut self,
         bounds: Rectangle,
-        cursor_position: Point,
-        item: &[DisplatedWave],
+        item: &[DisplayedWave],
+        scrollbar: Option<Scrollbar>,
         padding: u16,
         text_size: u16,
         font: Self::Font,
