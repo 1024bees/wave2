@@ -29,12 +29,12 @@ pub struct SignalWindow<'a, Message: 'static, Renderer: self::Renderer> {
 /// [`SignalWindow`]: struct.SignalWindow.html
 #[derive(Debug, Clone, Default)]
 pub struct State {
-    start_time: u32,
-    end_time: u32,
-    ns_per_unit: f32,
-    cursor_location: u32,
-    offset: f32,
-    hovered_position: f32,
+    pub(crate) start_time: u32,
+    pub(crate) end_time: u32,
+    pub(crate) ns_per_unit: f32,
+    pub(crate) cursor_location: u32,
+    pub(crate) offset: f32,
+    pub(crate) hovered_position: f32,
 }
 
 impl<'a, Message, Renderer: self::Renderer> SignalWindow<'a, Message, Renderer> {
@@ -125,7 +125,7 @@ impl<'a, Message, Renderer: self::Renderer> SignalWindow<'a, Message, Renderer> 
 impl<'a, Message, Renderer> Widget<Message, Renderer> for SignalWindow<'a, Message, Renderer>
 where
     Message: 'static,
-    Renderer: self::Renderer + scrollable::Renderer + 'a,
+    Renderer: self::Renderer + 'a,
 {
     fn width(&self) -> Length {
         Length::Fill
@@ -164,7 +164,7 @@ where
         cursor_position: Point,
         renderer: &Renderer,
         _clipboard: &mut dyn Clipboard,
-        messages: &mut Vec<Message>,
+        _messages: &mut Vec<Message>,
     ) -> event::Status {
         let bounds = layout.bounds();
         let text_size = self.text_size.unwrap_or(renderer.default_size());
@@ -175,7 +175,9 @@ where
                     self.state.offset + self.state.ns_per_unit * cursor_position.x;
             }
 
-            Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {}
+            Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
+                unimplemented!()
+            }
 
             _ => {}
         }
@@ -187,7 +189,7 @@ where
         renderer: &mut Renderer,
         _defaults: &Renderer::Defaults,
         layout: Layout<'_>,
-        cursor_position: Point,
+        _cursor_position: Point,
         _viewport: &Rectangle,
     ) -> Renderer::Output {
         let bounds = layout.bounds();
@@ -196,7 +198,7 @@ where
         let offset = self.state.offset;
         let scrollbar = renderer.wave_scrollbar(
             bounds,
-            offset,
+            self.state, 
             self.scrollbar_width,
             self.scrollbar_margin,
             self.scroller_width,
@@ -206,11 +208,11 @@ where
             renderer,
             layout.bounds(),
             self.waves,
+            self.state, 
             scrollbar,
             self.padding,
             self.text_size.unwrap_or(renderer.default_size()),
-            self.font,
-            &self.style,
+            self.font
         )
     }
 
@@ -273,7 +275,7 @@ pub struct Scroller {
 ///
 /// [`SignalWindow`]: struct.SignalWindow.html
 /// [renderer]: ../../renderer/index.html
-pub trait Renderer: text::Renderer {
+pub trait Renderer: text::Renderer + Sized {
     /// The default padding of a [`SignalWindow`].
     ///
     /// [`SignalWindow`]: struct.SignalWindow.html
@@ -289,7 +291,7 @@ pub trait Renderer: text::Renderer {
     fn wave_scrollbar(
         &self,
         bounds: Rectangle,
-        offset: u32,
+        state:  &State,
         scrollbar_width: u16,
         scrollbar_margin: u16,
         scroller_width: u16,
@@ -301,12 +303,13 @@ pub trait Renderer: text::Renderer {
     fn draw(
         &mut self,
         bounds: Rectangle,
-        item: &[DisplayedWave],
+        waves: &[DisplayedWave],
+        state: & State,
         scrollbar: Option<Scrollbar>,
         padding: u16,
         text_size: u16,
         font: Self::Font,
-        style: &<Self as Renderer>::Style,
+        //style: &<Self as Renderer>::Style,
     ) -> Self::Output;
 }
 

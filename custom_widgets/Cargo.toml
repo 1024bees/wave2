@@ -13,6 +13,7 @@ iced_graphics = "*"
 iced_style = "*"
 iced_core = "*"
 log = "0.4.0"
+lyon = "0.15.0"
 pretty_env_logger = "0.4"
 strum_macros = "0.19"
 wave2_widget_derives = {path = "widget_derives"}
