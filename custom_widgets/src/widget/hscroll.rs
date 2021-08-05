@@ -1,12 +1,12 @@
 //! Navigate an endless amount of content with a scrollbar.
-use iced_native::row;
-use iced_native::Event;
 use iced_native::layout;
 use iced_native::mouse;
 use iced_native::overlay;
+use iced_native::row;
+use iced_native::Event;
 use iced_native::{
-    Align, Clipboard, Row, Element, Hasher, Layout, Length, Point,event,
-    Rectangle, Size, Vector, Widget
+    event, Align, Clipboard, Element, Hasher, Layout, Length, Point, Rectangle, Row, Size, Vector,
+    Widget,
 };
 
 use log::info;
@@ -124,8 +124,7 @@ impl<'a, Message, Renderer: self::Renderer> HScroll<'a, Message, Renderer> {
     }
 }
 
-impl<'a, Message, Renderer> Widget<Message, Renderer>
-    for HScroll<'a, Message, Renderer>
+impl<'a, Message, Renderer> Widget<Message, Renderer> for HScroll<'a, Message, Renderer>
 where
     Renderer: self::Renderer,
 {
@@ -137,11 +136,7 @@ where
         Widget::<Message, Renderer>::height(&self.content)
     }
 
-    fn layout(
-        &self,
-        renderer: &Renderer,
-        limits: &layout::Limits,
-    ) -> layout::Node {
+    fn layout(&self, renderer: &Renderer, limits: &layout::Limits) -> layout::Node {
         let limits = limits
             .max_width(self.max_width)
             .width(self.width)
@@ -190,14 +185,14 @@ where
             let cursor_position = if is_mouse_over && !is_mouse_over_scrollbar {
                 Point::new(
                     cursor_position.x + self.state.offset(bounds, content_bounds) as f32,
-                    cursor_position.y
+                    cursor_position.y,
                 )
             } else {
                 // TODO: Make `cursor_position` an `Option<Point>` so we can encode
                 // cursor availability.
                 // This will probably happen naturally once we add multi-window
                 // support.
-                Point::new(cursor_position.x,-1.0)
+                Point::new(cursor_position.x, -1.0)
             };
 
             self.content.on_event(
@@ -207,7 +202,6 @@ where
                 renderer,
                 clipboard,
                 messages,
-
             )
         };
 
@@ -221,7 +215,7 @@ where
                     match delta {
                         // FIXME: As I currently understand, ScrollDelta captures the movement of
                         // the scroller of the mouse; this movement is still being grabbed in the y dimension,
-                        // I don't have a mouse that can scroll in x ...? 
+                        // I don't have a mouse that can scroll in x ...?
                         mouse::ScrollDelta::Lines { y, .. } => {
                             // TODO: Configurable speed (?)
                             self.state.scroll(y * 60.0, bounds, content_bounds);
@@ -239,9 +233,7 @@ where
 
         if self.state.is_scroller_grabbed() {
             match event {
-                Event::Mouse(mouse::Event::ButtonReleased(
-                    mouse::Button::Left,
-                )) => {
+                Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
                     self.state.scroller_grabbed_at = None;
 
                     return event::Status::Captured;
@@ -251,10 +243,7 @@ where
                         (scrollbar, self.state.scroller_grabbed_at)
                     {
                         self.state.scroll_to(
-                            scrollbar.scroll_percentage(
-                                scroller_grabbed_at,
-                                cursor_position,
-                            ),
+                            scrollbar.scroll_percentage(scroller_grabbed_at, cursor_position),
                             bounds,
                             content_bounds,
                         );
@@ -266,24 +255,17 @@ where
             }
         } else if is_mouse_over_scrollbar {
             match event {
-                Event::Mouse(mouse::Event::ButtonPressed(
-                    mouse::Button::Left,
-                )) => {
+                Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
                     if let Some(scrollbar) = scrollbar {
-                        if let Some(scroller_grabbed_at) =
-                            scrollbar.grab_scroller(cursor_position)
+                        if let Some(scroller_grabbed_at) = scrollbar.grab_scroller(cursor_position)
                         {
                             self.state.scroll_to(
-                                scrollbar.scroll_percentage(
-                                    scroller_grabbed_at,
-                                    cursor_position,
-                                ),
+                                scrollbar.scroll_percentage(scroller_grabbed_at, cursor_position),
                                 bounds,
                                 content_bounds,
                             );
 
-                            self.state.scroller_grabbed_at =
-                                Some(scroller_grabbed_at);
+                            self.state.scroller_grabbed_at = Some(scroller_grabbed_at);
 
                             return event::Status::Captured;
                         }
@@ -366,10 +348,7 @@ where
         self.content.hash_layout(state)
     }
 
-    fn overlay(
-        &mut self,
-        layout: Layout<'_>,
-    ) -> Option<overlay::Element<'_, Message, Renderer>> {
+    fn overlay(&mut self, layout: Layout<'_>) -> Option<overlay::Element<'_, Message, Renderer>> {
         let Self { content, state, .. } = self;
 
         content
@@ -400,14 +379,9 @@ impl State {
 
     /// Apply a scrolling offset to the current [`State`], given the bounds of
     /// the [`HScroll`] and its contents.
-    pub fn scroll(
-        &mut self,
-        delta_x: f32,
-        bounds: Rectangle,
-        content_bounds: Rectangle,
-    ) {
-        info!("Content bounds are {:#?}",content_bounds);
-        info!("scroll bounds are {:#?}",bounds);
+    pub fn scroll(&mut self, delta_x: f32, bounds: Rectangle, content_bounds: Rectangle) {
+        info!("Content bounds are {:#?}", content_bounds);
+        info!("scroll bounds are {:#?}", bounds);
 
         if bounds.width >= content_bounds.width {
             return;
@@ -415,8 +389,7 @@ impl State {
 
         self.offset = (self.offset - delta_x)
             .max(0.0)
-            .min((content_bounds.width- bounds.width) as f32);
-
+            .min((content_bounds.width - bounds.width) as f32);
     }
 
     /// Get the scrolling offset of the current [`State`]
@@ -429,21 +402,14 @@ impl State {
     ///
     /// `0` represents scrollbar at the top, while `1` represents scrollbar at
     /// the bottom.
-    pub fn scroll_to(
-        &mut self,
-        percentage: f32,
-        bounds: Rectangle,
-        content_bounds: Rectangle,
-    ) {
-        self.offset =
-            ((content_bounds.width - bounds.width) * percentage).max(0.0);
+    pub fn scroll_to(&mut self, percentage: f32, bounds: Rectangle, content_bounds: Rectangle) {
+        self.offset = ((content_bounds.width - bounds.width) * percentage).max(0.0);
     }
 
     /// Returns the current scrolling offset of the [`State`], given the bounds
     /// of the [`HScroll`] and its contents.
     pub fn offset(&self, bounds: Rectangle, content_bounds: Rectangle) -> u32 {
-        let hidden_content =
-            (content_bounds.width - bounds.width).max(0.0).round() as u32;
+        let hidden_content = (content_bounds.width - bounds.width).max(0.0).round() as u32;
 
         self.offset.min(hidden_content as f32) as u32
     }
@@ -479,8 +445,7 @@ impl Scrollbar {
     fn grab_scroller(&self, cursor_position: Point) -> Option<f32> {
         if self.outer_bounds.contains(cursor_position) {
             Some(if self.scroller.bounds.contains(cursor_position) {
-                (cursor_position.x - self.scroller.bounds.x)
-                    / self.scroller.bounds.width
+                (cursor_position.x - self.scroller.bounds.x) / self.scroller.bounds.width
             } else {
                 0.5
             })
@@ -489,14 +454,8 @@ impl Scrollbar {
         }
     }
 
-    fn scroll_percentage(
-        &self,
-        grabbed_at: f32,
-        cursor_position: Point,
-    ) -> f32 {
-        (cursor_position.x
-            - self.bounds.x
-            - self.scroller.bounds.width * grabbed_at)
+    fn scroll_percentage(&self, grabbed_at: f32, cursor_position: Point) -> f32 {
+        (cursor_position.x - self.bounds.x - self.scroller.bounds.width * grabbed_at)
             / (self.bounds.width - self.scroller.bounds.width)
     }
 }
@@ -555,15 +514,12 @@ pub trait Renderer: row::Renderer + Sized {
     ) -> Self::Output;
 }
 
-impl<'a, Message, Renderer> From<HScroll<'a, Message, Renderer>>
-    for Element<'a, Message, Renderer>
+impl<'a, Message, Renderer> From<HScroll<'a, Message, Renderer>> for Element<'a, Message, Renderer>
 where
     Renderer: 'a + self::Renderer,
     Message: 'a,
 {
-    fn from(
-        scrollable: HScroll<'a, Message, Renderer>,
-    ) -> Element<'a, Message, Renderer> {
+    fn from(scrollable: HScroll<'a, Message, Renderer>) -> Element<'a, Message, Renderer> {
         Element::new(scrollable)
     }
 }

@@ -5,6 +5,7 @@ use iced_native::{
 
 use crate::core::signal_window::DisplayedWave;
 
+use log;
 /// A widget to represent a singular "SignalWindow"
 ///
 /// This is the core widget on which most components are built on. add doc comments in sooner
@@ -35,6 +36,33 @@ pub struct State {
     pub(crate) cursor_location: u32,
     pub(crate) offset: f32,
     pub(crate) hovered_position: f32,
+    scroller_grabbed_at: Option<f32>,
+}
+
+impl State {
+    /// Creates a new [`State`] with the scrollbar located at the left.
+    pub fn new() -> Self {
+        State::default()
+    }
+
+    /// Apply a scrolling offset to the current [`State`], given the bounds of
+    /// the [`SignalWindow`] and its contents.
+    pub fn scroll(&mut self, delta_x: f32, bounds: Rectangle) {
+        log::info!("scroll bounds are {:#?}", bounds);
+
+        self.offset = (self.offset - delta_x * self.ns_per_unit)
+            .max(0.0)
+            .min((self.end_time) as f32);
+    }
+
+    /// Moves the scroll position to a relative amount, given the bounds of
+    /// the [`SignalWindow`] and its contents.
+    ///
+    /// `0` represents scrollbar at the top, while `1` represents scrollbar at
+    /// the bottom.
+    pub fn scroll_to(&mut self, percentage: f32) {
+        self.offset = ((self.end_time - self.start_time) as f32 * percentage).max(0.0);
+    }
 }
 
 impl<'a, Message, Renderer: self::Renderer> SignalWindow<'a, Message, Renderer> {
@@ -100,7 +128,7 @@ impl<'a, Message, Renderer: self::Renderer> SignalWindow<'a, Message, Renderer> 
         self
     }
 
-    /// Sets the scrollbar width of the [`HScroll`] .
+    /// Sets the scrollbar width of the [`SignalWindow`] .
     ///
     /// Silently enforces a minimum value of 1.
     pub fn scrollbar_width(mut self, scrollbar_width: u16) -> Self {
@@ -108,13 +136,13 @@ impl<'a, Message, Renderer: self::Renderer> SignalWindow<'a, Message, Renderer> 
         self
     }
 
-    /// Sets the scrollbar margin of the [`HScroll`] .
+    /// Sets the scrollbar margin of the [`SignalWindow`] .
     pub fn scrollbar_margin(mut self, scrollbar_margin: u16) -> Self {
         self.scrollbar_margin = scrollbar_margin;
         self
     }
 
-    /// Sets the scroller width of the [`HScroll`] .
+    /// Sets the scroller width of the [`SignalWindow`] .
     /// Silently enforces a minimum value of 1.
     pub fn scroller_width(mut self, scroller_width: u16) -> Self {
         self.scroller_width = scroller_width.max(1);
@@ -169,18 +197,90 @@ where
         let bounds = layout.bounds();
         let text_size = self.text_size.unwrap_or(renderer.default_size());
 
-        match event {
-            Event::Mouse(mouse::Event::CursorMoved { .. }) => {
-                self.state.hovered_position =
-                    self.state.offset + self.state.ns_per_unit * cursor_position.x;
-            }
+        let is_mouse_over = bounds.contains(cursor_position);
 
-            Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
-                unimplemented!()
-            }
+        let scrollbar = renderer.wave_scrollbar(
+            bounds,
+            self.state,
+            self.scrollbar_width,
+            self.scrollbar_margin,
+            self.scroller_width,
+        );
+        let is_mouse_over_scrollbar = scrollbar
+            .as_ref()
+            .map(|scrollbar| scrollbar.is_mouse_over(cursor_position))
+            .unwrap_or(false);
 
-            _ => {}
+        if is_mouse_over {
+            match event {
+                Event::Mouse(mouse::Event::WheelScrolled { delta }) => {
+                    match delta {
+                        // FIXME: As I currently understand, ScrollDelta captures the movement of
+                        // the scroller of the mouse; this movement is still being grabbed in the y dimension,
+                        // I don't have a mouse that can scroll in x ...?
+                        mouse::ScrollDelta::Lines { y, .. } => {
+                            // TODO: Configurable speed (?)
+                            self.state.scroll(y * 60.0, bounds);
+                        }
+                        mouse::ScrollDelta::Pixels { y, .. } => {
+                            self.state.scroll(y, bounds);
+                        }
+                    }
+
+                    return event::Status::Captured;
+                }
+                Event::Mouse(mouse::Event::CursorMoved { position }) => {
+                    self.state.hovered_position =
+                        self.state.offset + self.state.ns_per_unit * position.x;
+                }
+                Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
+                    log::info!("Hehe! we have a little click here. maybe we should do something productive");
+                }
+
+                _ => {}
+            }
         }
+
+        if self.state.scroller_grabbed_at.is_some() {
+            match event {
+                Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
+                    self.state.scroller_grabbed_at = None;
+
+                    return event::Status::Captured;
+                }
+                Event::Mouse(mouse::Event::CursorMoved { .. }) => {
+                    if let (Some(scrollbar), Some(scroller_grabbed_at)) =
+                        (scrollbar, self.state.scroller_grabbed_at)
+                    {
+                        self.state.scroll_to(
+                            scrollbar.scroll_percentage(scroller_grabbed_at, cursor_position),
+                        );
+
+                        return event::Status::Captured;
+                    }
+                }
+                _ => {}
+            }
+        } else if is_mouse_over_scrollbar {
+            match event {
+                Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
+                    if let Some(scrollbar) = scrollbar {
+                        if let Some(scroller_grabbed_at) = scrollbar.grab_scroller(cursor_position)
+                        {
+                            self.state.scroll_to(
+                                scrollbar.scroll_percentage(scroller_grabbed_at, cursor_position),
+                            );
+
+                            self.state.scroller_grabbed_at = Some(scroller_grabbed_at);
+
+                            return event::Status::Captured;
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+
         event::Status::Ignored
     }
 
@@ -198,7 +298,7 @@ where
         let offset = self.state.offset;
         let scrollbar = renderer.wave_scrollbar(
             bounds,
-            self.state, 
+            self.state,
             self.scrollbar_width,
             self.scrollbar_margin,
             self.scroller_width,
@@ -208,11 +308,11 @@ where
             renderer,
             layout.bounds(),
             self.waves,
-            self.state, 
+            self.state,
             scrollbar,
             self.padding,
             self.text_size.unwrap_or(renderer.default_size()),
-            self.font
+            self.font,
         )
     }
 
@@ -221,7 +321,7 @@ where
     }
 }
 
-/// The scrollbar of a [`HScroll`].
+/// The scrollbar of a [`SignalWindow`].
 #[derive(Debug)]
 pub struct Scrollbar {
     /// The outer bounds of the scrollable, including the [`Scrollbar`] and
@@ -287,11 +387,11 @@ pub trait Renderer: text::Renderer + Sized {
     type Style: Default;
 
     /// Returns the [`Scrollbar`] given the bounds and content bounds of a
-    /// [`HScroll`].
+    /// [`SignalWindow`].
     fn wave_scrollbar(
         &self,
         bounds: Rectangle,
-        state:  &State,
+        state: &State,
         scrollbar_width: u16,
         scrollbar_margin: u16,
         scroller_width: u16,
@@ -304,7 +404,7 @@ pub trait Renderer: text::Renderer + Sized {
         &mut self,
         bounds: Rectangle,
         waves: &[DisplayedWave],
-        state: & State,
+        state: &State,
         scrollbar: Option<Scrollbar>,
         padding: u16,
         text_size: u16,

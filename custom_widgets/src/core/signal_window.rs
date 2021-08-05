@@ -151,17 +151,15 @@ pub fn translate_wave(wave_num: usize) -> Vector {
 }
 
 impl State {
-    fn start_time(&self, bounds: Rectangle)  -> u32 {
-        unimplemented!()
+    fn start_time(&self, _bounds: Rectangle) -> u32 {
+        self.offset.ceil() as u32
     }
-    fn end_time(&self, bounds: Rectangle)  -> u32 {
-        unimplemented!()
+    fn end_time(&self, bounds: Rectangle) -> u32 {
+        (self.offset + bounds.width * self.ns_per_unit).ceil() as u32
     }
-
 }
 
-
-pub fn render_header(state: &State, bounds: Rectangle) -> Primitive {
+pub fn render_header(state: &State, bounds: Rectangle, font: iced::Font) -> Primitive {
     //FIXME: need to think of way to generate uniform timestamp delimiters
     //       probably something probably something like 1,2,5
     let ts_width: u32 = (200.0 * state.ns_per_unit) as u32;
@@ -209,7 +207,7 @@ pub fn render_header(state: &State, bounds: Rectangle) -> Primitive {
                 },
                 color: Color::WHITE,
                 size: TS_FONT_SIZE,
-                font: iced::Font::Default,
+                font,
                 horizontal_alignment: iced::HorizontalAlignment::Right,
                 vertical_alignment: iced::VerticalAlignment::Bottom,
             });
@@ -244,9 +242,15 @@ pub fn render_header(state: &State, bounds: Rectangle) -> Primitive {
     }
 }
 
-pub fn render_wave(dwave: &DisplayedWave, state: &State, bounds: Rectangle) -> Primitive {
-    fn out_of_range(_time: u32, _state: &State) -> bool {
-        unimplemented!()
+pub fn render_wave(
+    dwave: &DisplayedWave,
+    state: &State,
+    bounds: Rectangle,
+    _text_size: u16,
+    _font: iced::Font,
+) -> Primitive {
+    fn out_of_range(time: u32, state: &State, bounds: Rectangle) -> bool {
+        time > state.end_time(bounds)
     }
 
     let mut p = Path::builder();
@@ -260,8 +264,10 @@ pub fn render_wave(dwave: &DisplayedWave, state: &State, bounds: Rectangle) -> P
         1 => {
             let mut sb_state = SBWaveState::Beginning;
 
-            for (time, sig_payload) in wave.data_in_range(state.start_time(bounds), state.end_time(bounds)) {
-                if out_of_range(time.clone(), state) {
+            for (time, sig_payload) in
+                wave.data_in_range(state.start_time(bounds), state.end_time(bounds))
+            {
+                if out_of_range(time, state, bounds) {
                     break;
                 }
                 working_pt.x += xdelt_from_prev(state, time, prev_xcoord);
@@ -299,9 +305,13 @@ pub fn render_wave(dwave: &DisplayedWave, state: &State, bounds: Rectangle) -> P
         _ => {
             let working_pt_top = lpoint(working_pt.x, working_pt.y - WAVEHEIGHT);
             let mut working_pts = [working_pt_top, working_pt];
-            for (time, sig_payload) in wave.droplets_in_range(state.start_time(bounds), state.end_time(bounds)) {
+            for (time, sig_payload) in
+                wave.droplets_in_range(state.start_time(bounds), state.end_time(bounds))
+            {
                 let x_delt = xdelt_from_prev(state, time, prev_xcoord) - VEC_SHIFT_WIDTH / 2.0;
-
+                if out_of_range(time, state, bounds) {
+                    break;
+                }
                 let mut value_text =
                     generate_canvas_text(sig_payload, display_options, width, x_delt);
 
