@@ -1,13 +1,16 @@
 use iced::{
     canvas::{self, event, Canvas, Cursor, Event, Frame, Geometry, Path, Stroke},
-    mouse, Color, Element, HorizontalAlignment, Length, Point, Rectangle,
+    mouse, Color, Element, HorizontalAlignment, Length, Point, Rectangle,Container,
 };
 
-use super::display_wave::{generate_canvas_text, DisplayedWave, SBWaveState};
+
 use super::Message;
-use log::info;
-use wave2_custom_widgets::widget::hscroll;
+use log;
 use wave2_custom_widgets::widget::hscroll::HScroll;
+use wave2_custom_widgets::widget::{hscroll, signal_window};
+use wave2_wavedb::storage:: display_wave::{DisplayedWave, SBWaveState};
+use super::display_wave::generate_canvas_text;
+
 
 pub const BUFFER_PX: f32 = 1.5;
 pub const WAVEHEIGHT: f32 = 16.0;
@@ -37,12 +40,12 @@ pub struct WaveWindow<'a> {
     frame_state: &'a mut FrameState,
     wave_cache: &'a canvas::Cache,
     cursor_cache: &'a canvas::Cache,
-
 }
 #[derive(Default)]
 pub struct WaveWindowState {
     live_waves: Vec<DisplayedWave>,
     cache: canvas::Cache,
+    widget_state: signal_window::State,
     cursor_cache: canvas::Cache,
     frame_state: FrameState,
     scroll_state: hscroll::State,
@@ -72,21 +75,28 @@ impl Default for FrameState {
 
 impl WaveWindowState {
     pub fn view(&mut self) -> Element<Message> {
+        //log::info!("offset is {}", self.scroll_state.get_offset());
+        //let val = HScroll::new(&mut self.scroll_state).scrollbar_width(10);
 
+        //val.push(
+        //    Canvas::new(WaveWindow {
+        //        signals: &self.live_waves[..],
+        //        frame_state: &mut self.frame_state,
+        //        wave_cache: &self.cache,
+        //        cursor_cache: &self.cursor_cache,
+        //    })
+        //    .width(Length::Units(u16::MAX))
+        //    .height(Length::Fill),
+        //)
+        //.width(Length::Shrink)
+        //.height(Length::Fill)
+        //.padding(10)
+        //.into()
 
-        log::info!("offset is {}", self.scroll_state.get_offset());
-        let val = HScroll::new(&mut self.scroll_state).scrollbar_width(10);
-
-        val.push(
-            Canvas::new(WaveWindow {
-                signals: &self.live_waves[..],
-                frame_state: &mut self.frame_state,
-                wave_cache: &self.cache,
-                cursor_cache: &self.cursor_cache,
-            })
-            .width(Length::Units(u16::MAX))
-            .height(Length::Fill),
-        )
+        Container::new(signal_window::SignalWindow::new(
+            &self.live_waves[..],
+            &mut self.widget_state,
+        ))
         .width(Length::Shrink)
         .height(Length::Fill)
         .padding(10)
@@ -99,9 +109,10 @@ impl WaveWindowState {
                 self.frame_state.cursor_location = cursor_location;
                 self.redraw_cursor();
             }
-            Message::UpdateBounds((start, end)) => {
-                self.frame_state.start_time = start;
-                self.frame_state.end_time = end;
+            Message::UpdateBounds(bounds) => {
+                self.frame_state.start_time = bounds.0;
+                self.frame_state.end_time = bounds.1;
+                self.widget_state.set_bounds(bounds);
             }
             Message::AddWave(imw) => match imw {
                 Ok(wave) => {
@@ -333,7 +344,7 @@ impl<'a> WaveWindow<'a> {
                                     value
                                 });
 
-                                //FIXME: seems like this closure is very overloaded 
+                                //FIXME: seems like this closure is very overloaded
                                 //       think of a way to pull this out
                                 if let Some(text) = value_text {
                                     text_vec.push(text);
@@ -385,7 +396,7 @@ impl<'a> canvas::Program<Message> for WaveWindow<'a> {
             Event::Mouse(mouse_event) => match mouse_event {
                 mouse::Event::ButtonReleased(mouse::Button::Left) => {
                     self.frame_state.cursor_location = self.get_timestamp(cursor_position.x);
-                    info!("click location is {}", self.frame_state.cursor_location,);
+                    log::info!("click location is {}", self.frame_state.cursor_location,);
                     (
                         event::Status::Captured,
                         Some(Message::UpdateCursor(self.frame_state.cursor_location)),

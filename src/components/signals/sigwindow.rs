@@ -1,4 +1,4 @@
-use super::display_wave::DisplayedWave;
+use wave2_wavedb::storage::display_wave::DisplayedWave;
 use crate::components::shared::cell_list::{CellList, ListNodeState};
 use iced::{Column, Container, Element, Row};
 use strum_macros;

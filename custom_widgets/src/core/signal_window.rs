@@ -2,7 +2,7 @@ use iced::Color;
 use std::sync::Arc;
 use wave2_wavedb::formatting::{format_payload, WaveFormat};
 use wave2_wavedb::storage::in_memory::InMemWave;
-
+pub use wave2_wavedb::storage::display_wave::{WaveDisplayOptions, DisplayedWave, SBWaveState, WaveColors};
 use crate::widget::signal_window::State;
 
 use iced_graphics::{triangle, Primitive};
@@ -46,20 +46,7 @@ const ORANGE: Color = Color::from_rgba(
     0.4,
 );
 
-#[derive(Clone, Copy, Debug)]
-pub struct WaveDisplayOptions {
-    color: WaveColors,
-    format: WaveFormat,
-}
 
-impl Default for WaveDisplayOptions {
-    fn default() -> WaveDisplayOptions {
-        WaveDisplayOptions {
-            color: WaveColors::Green,
-            format: WaveFormat::Hex,
-        }
-    }
-}
 
 pub const fn to_color(opts: &WaveDisplayOptions) -> Color {
     match opts.color {
@@ -69,60 +56,8 @@ pub const fn to_color(opts: &WaveDisplayOptions) -> Color {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct DisplayedWave {
-    wave_content: Arc<InMemWave>,
-    pub display_conf: Option<WaveDisplayOptions>,
-}
 
-//FIXME: for testing only; this should be removed once sigwindow is stable
-impl Default for DisplayedWave {
-    fn default() -> Self {
-        DisplayedWave {
-            wave_content: Arc::new(InMemWave::default()),
-            display_conf: Option::default(),
-        }
-    }
-}
 
-impl DisplayedWave {
-    pub fn get_wave(&self) -> &Arc<InMemWave> {
-        &self.wave_content
-    }
-}
-
-impl From<Arc<InMemWave>> for DisplayedWave {
-    fn from(imw: Arc<InMemWave>) -> Self {
-        DisplayedWave {
-            wave_content: imw,
-            display_conf: Option::default(),
-        }
-    }
-}
-
-impl std::fmt::Display for DisplayedWave {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.wave_content.fmt(f)
-    }
-}
-
-impl WaveColors {
-    pub const ALL: [WaveColors; 3] = [WaveColors::Green, WaveColors::Red, WaveColors::Blue];
-}
-
-impl std::fmt::Display for WaveColors {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                WaveColors::Green => "Green",
-                WaveColors::Red => "Red",
-                WaveColors::Blue => "Blue",
-            }
-        )
-    }
-}
 
 struct StrokeVertex([f32; 4]);
 
@@ -434,21 +369,4 @@ pub fn generate_canvas_text(
     })
 }
 
-#[derive(Clone, Debug)]
-/// Wave state for single bit signals
-///
-/// Used when iterating across an in memory wave to decide coloring state
-pub enum SBWaveState {
-    Beginning,
-    Low,
-    High,
-    X,
-    Z,
-}
 
-#[derive(Clone, Copy, Debug)]
-enum WaveColors {
-    Green,
-    Red,
-    Blue,
-}

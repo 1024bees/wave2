@@ -45,6 +45,12 @@ impl State {
         State::default()
     }
 
+
+    pub fn set_bounds(&mut self, bounds: (u32,u32)) {
+        self.start_time = bounds.0;
+        self.end_time = bounds.1;
+    }
+
     /// Apply a scrolling offset to the current [`State`], given the bounds of
     /// the [`SignalWindow`] and its contents.
     pub fn scroll(&mut self, delta_x: f32, bounds: Rectangle) {
@@ -293,9 +299,6 @@ where
         _viewport: &Rectangle,
     ) -> Renderer::Output {
         let bounds = layout.bounds();
-        let content_layout = layout.children().next().unwrap();
-        let content_bounds = content_layout.bounds();
-        let offset = self.state.offset;
         let scrollbar = renderer.wave_scrollbar(
             bounds,
             self.state,
@@ -316,7 +319,7 @@ where
         )
     }
 
-    fn overlay(&mut self, layout: Layout<'_>) -> Option<overlay::Element<'_, Message, Renderer>> {
+    fn overlay(&mut self, _layout: Layout<'_>) -> Option<overlay::Element<'_, Message, Renderer>> {
         None
     }
 }
