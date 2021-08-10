@@ -78,10 +78,10 @@ fn xdelt_from_prev(state: &State, ts: u32, prev_ts: u32) -> f32 {
     (ts - prev_ts) as f32 * state.ns_per_unit
 }
 
-pub fn translate_wave(wave_num: usize) -> Vector {
+pub fn translate_wave(wave_num: usize, bounds: Rectangle) -> Vector {
     Vector {
-        x: 0.0,
-        y: (wave_num as f32 * WAVEHEIGHT),
+        x: bounds.x,
+        y: bounds.y + TS_FONT_SIZE + (wave_num as f32 * WAVEHEIGHT),
     }
 }
 
@@ -100,14 +100,14 @@ pub fn render_header(state: &State, bounds: Rectangle, font: iced::Font) -> Prim
     let ts_width: u32 = (200.0 * state.ns_per_unit) as u32;
 
     let mut prev_ts = state.start_time(bounds);
-    let mut xpos: f32 = 0.0;
+    let mut xpos: f32 = bounds.x;
 
     let hdr_line = lpoint(
-        0.0,
-        TS_FONT_SIZE, //+ bounds.y ,
+        bounds.x,
+        TS_FONT_SIZE + bounds.y ,
     );
 
-    let right_side = [hdr_line.x + bounds.width, hdr_line.y].into();
+    let right_side = [bounds.x + bounds.width, hdr_line.y].into();
 
     let mut p = Path::builder();
 
@@ -125,7 +125,7 @@ pub fn render_header(state: &State, bounds: Rectangle, font: iced::Font) -> Prim
         .tessellate_path(
             &top_line,
             &StrokeOptions::default(),
-            &mut BuffersBuilder::new(&mut geometry, StrokeVertex(GREEN.into_linear())),
+            &mut BuffersBuilder::new(&mut geometry, StrokeVertex(ORANGE.into_linear())),
         )
         .expect("Tesselator failed");
 
@@ -136,21 +136,21 @@ pub fn render_header(state: &State, bounds: Rectangle, font: iced::Font) -> Prim
                 content: format!("{}ns", ts),
                 bounds: Rectangle {
                     x: xpos,
-                    y: 0.0, //bounds.y,
+                    y: bounds.y,
                     width: f32::INFINITY,
                     height: TEXT_SIZE,
                 },
                 color: Color::WHITE,
                 size: TS_FONT_SIZE,
                 font,
-                horizontal_alignment: iced::HorizontalAlignment::Right,
-                vertical_alignment: iced::VerticalAlignment::Bottom,
+                horizontal_alignment: iced::HorizontalAlignment::Left,
+                vertical_alignment: iced::VerticalAlignment::Top,
             });
         }
 
         let mut p2 = Path::builder();
 
-        p2.move_to([xpos, TS_FONT_SIZE].into());
+        p2.move_to([xpos, bounds.y + TS_FONT_SIZE].into());
         p2.line_to([xpos, bounds.y + bounds.height].into());
         let line = p2.build();
 
@@ -158,7 +158,7 @@ pub fn render_header(state: &State, bounds: Rectangle, font: iced::Font) -> Prim
             .tessellate_path(
                 &line,
                 &StrokeOptions::default(),
-                &mut BuffersBuilder::new(&mut geometry, StrokeVertex(BLUE.into_linear())),
+                &mut BuffersBuilder::new(&mut geometry, StrokeVertex(GREEN.into_linear())),
             )
             .expect("Tesselator failed");
 
@@ -169,7 +169,7 @@ pub fn render_header(state: &State, bounds: Rectangle, font: iced::Font) -> Prim
             vertices: geometry.vertices,
             indices: geometry.indices,
         },
-        size: iced::Size::new(bounds.width, bounds.height),
+        size: iced::Size::new(bounds.x + bounds.width, bounds.height + bounds.x),
     });
 
     Primitive::Group {
@@ -321,7 +321,7 @@ pub fn render_wave(
         .tessellate_path(
             &wave_path,
             &StrokeOptions::default(),
-            &mut BuffersBuilder::new(&mut geometry, StrokeVertex(GREEN.into_linear())),
+            &mut BuffersBuilder::new(&mut geometry, StrokeVertex(ORANGE.into_linear())),
         )
         .expect("Tesselator failed");
 
@@ -330,7 +330,7 @@ pub fn render_wave(
             vertices: geometry.vertices,
             indices: geometry.indices,
         },
-        size: iced::Size::new(bounds.width, bounds.height),
+        size: iced::Size::new(bounds.x + bounds.width, bounds.y + bounds.height),
     });
 
     Primitive::Group {

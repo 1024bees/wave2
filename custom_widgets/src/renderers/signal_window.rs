@@ -94,14 +94,14 @@ where
         for (idx, wave) in waves.iter().enumerate() {
             primitives.push(Primitive::Translate {
                 content: Box::new(render_wave(wave, state, bounds, text_size, font)),
-                translation: translate_wave(idx),
+                translation: translate_wave(idx, bounds),
             })
         }
 
         if let Some(scrollbar) = scrollbar {
             let scroller = Primitive::Quad {
                 bounds: scrollbar.scroller.bounds,
-                background: Background::Color(Color::WHITE),
+                background: Background::Color(Color::BLACK),
                 border_radius: 1.0,         //style.scroller.border_radius,
                 border_width: 1.0,          //,style.scroller.border_width,
                 border_color: Color::BLACK, //style.scroller.border_color,

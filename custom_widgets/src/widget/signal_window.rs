@@ -28,7 +28,7 @@ pub struct SignalWindow<'a, Message: 'static, Renderer: self::Renderer> {
 /// The local state of a [`SignalWindow`].
 ///
 /// [`SignalWindow`]: struct.SignalWindow.html
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct State {
     pub(crate) start_time: u32,
     pub(crate) end_time: u32,
@@ -38,6 +38,26 @@ pub struct State {
     pub(crate) hovered_position: f32,
     scroller_grabbed_at: Option<f32>,
 }
+
+
+impl Default for State {
+    fn default() -> State {
+        State {
+            start_time: 0,
+            end_time: 1000,
+            ns_per_unit: 1.0,
+            cursor_location: 0,
+            offset: 0.0,
+            hovered_position: 0.0,
+            scroller_grabbed_at: None,
+        }
+    }
+}
+
+
+
+
+
 
 impl State {
     /// Creates a new [`State`] with the scrollbar located at the left.
