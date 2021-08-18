@@ -15,10 +15,10 @@ use lyon::math::point as lpoint;
 use lyon::path::Path;
 use lyon::tessellation::*;
 
-pub const BUFFER_PX: f32 = 1.5;
-pub const WAVEHEIGHT: f32 = 16.0;
-pub const VEC_SHIFT_WIDTH: f32 = 4.0;
-pub const TS_FONT_SIZE: f32 = 12.0;
+pub(crate) const BUFFER_PX: f32 = 1.5;
+pub(crate) const WAVEHEIGHT: f32 = 16.0;
+pub(crate) const VEC_SHIFT_WIDTH: f32 = 4.0;
+pub(crate) const TS_FONT_SIZE: f32 = 10.0;
 
 /// Mininum x_delta between two "value" changes that must occur before we consider writing the
 /// wave's value on the line
@@ -81,7 +81,7 @@ fn xdelt_from_prev(state: &State, ts: u32, prev_ts: u32) -> f32 {
 pub fn translate_wave(wave_num: usize, bounds: Rectangle) -> Vector {
     Vector {
         x: bounds.x,
-        y: bounds.y + TS_FONT_SIZE + (wave_num as f32 * WAVEHEIGHT),
+        y: bounds.y + TS_FONT_SIZE + ((wave_num + 1) as f32 * (WAVEHEIGHT+BUFFER_PX * 2.0)) + BUFFER_PX,
     }
 }
 
@@ -211,10 +211,10 @@ pub fn render_wave(
                 //TODO: handle z/x case
                 match (&mut sb_state, sig_payload[0] & 0x1) {
                     (SBWaveState::Beginning, 0) => {
+                        working_pt.y += WAVEHEIGHT;
                         sb_state = SBWaveState::Low;
                     }
                     (SBWaveState::Beginning, 1) => {
-                        working_pt.y -= WAVEHEIGHT;
                         sb_state = SBWaveState::High;
                     }
                     (SBWaveState::High, 0) => {
@@ -238,8 +238,8 @@ pub fn render_wave(
             p.line_to(working_pt);
         }
         _ => {
-            let working_pt_top = lpoint(working_pt.x, working_pt.y - WAVEHEIGHT);
-            let mut working_pts = [working_pt_top, working_pt];
+            let working_pt_bot = lpoint(working_pt.x, working_pt.y + WAVEHEIGHT);
+            let mut working_pts = [working_pt, working_pt_bot];
             for (time, sig_payload) in
                 wave.droplets_in_range(state.start_time(bounds), state.end_time(bounds))
             {
@@ -321,7 +321,7 @@ pub fn render_wave(
         .tessellate_path(
             &wave_path,
             &StrokeOptions::default(),
-            &mut BuffersBuilder::new(&mut geometry, StrokeVertex(ORANGE.into_linear())),
+            &mut BuffersBuilder::new(&mut geometry, StrokeVertex(GREEN.into_linear())),
         )
         .expect("Tesselator failed");
 
