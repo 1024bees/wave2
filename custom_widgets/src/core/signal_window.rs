@@ -1,9 +1,11 @@
+use crate::widget::signal_window::State;
 use iced::Color;
 use std::sync::Arc;
 use wave2_wavedb::formatting::{format_payload, WaveFormat};
+pub use wave2_wavedb::storage::display_wave::{
+    DisplayedWave, SBWaveState, WaveColors, WaveDisplayOptions,
+};
 use wave2_wavedb::storage::in_memory::InMemWave;
-pub use wave2_wavedb::storage::display_wave::{WaveDisplayOptions, DisplayedWave, SBWaveState, WaveColors};
-use crate::widget::signal_window::State;
 
 use iced_graphics::{triangle, Primitive};
 
@@ -31,7 +33,6 @@ const TEXT_SIZE: f32 = 12.0;
 const TS_CLIP_RANGE: f32 = 5.0;
 
 const GREEN: Color = Color::from_rgb(0.0, 1.0, 0.0);
-const WHITE: Color = Color::from_rgb(0.0, 0.0, 0.0);
 const BLUE: Color = Color::from_rgba(
     0x1b as f32 / 255.0,
     0x0a as f32 / 255.0,
@@ -46,8 +47,6 @@ const ORANGE: Color = Color::from_rgba(
     0.4,
 );
 
-
-
 pub const fn to_color(opts: &WaveDisplayOptions) -> Color {
     match opts.color {
         WaveColors::Green => Color::from_rgba(0.0, 1.0, 0.0, 1.0),
@@ -55,9 +54,6 @@ pub const fn to_color(opts: &WaveDisplayOptions) -> Color {
         WaveColors::Blue => Color::from_rgba(0.0, 0.0, 1.0, 1.0),
     }
 }
-
-
-
 
 struct StrokeVertex([f32; 4]);
 
@@ -81,7 +77,10 @@ fn xdelt_from_prev(state: &State, ts: u32, prev_ts: u32) -> f32 {
 pub fn translate_wave(wave_num: usize, bounds: Rectangle) -> Vector {
     Vector {
         x: bounds.x,
-        y: bounds.y + TS_FONT_SIZE + ((wave_num + 1) as f32 * (WAVEHEIGHT+BUFFER_PX * 2.0)) + BUFFER_PX,
+        y: bounds.y
+            + TS_FONT_SIZE
+            + ((wave_num) as f32 * (WAVEHEIGHT + BUFFER_PX * 2.0))
+            + BUFFER_PX,
     }
 }
 
@@ -102,10 +101,7 @@ pub fn render_header(state: &State, bounds: Rectangle, font: iced::Font) -> Prim
     let mut prev_ts = state.start_time(bounds);
     let mut xpos: f32 = bounds.x;
 
-    let hdr_line = lpoint(
-        bounds.x,
-        TS_FONT_SIZE + bounds.y ,
-    );
+    let hdr_line = lpoint(bounds.x, TS_FONT_SIZE + bounds.y);
 
     let right_side = [bounds.x + bounds.width, hdr_line.y].into();
 
@@ -158,7 +154,7 @@ pub fn render_header(state: &State, bounds: Rectangle, font: iced::Font) -> Prim
             .tessellate_path(
                 &line,
                 &StrokeOptions::default(),
-                &mut BuffersBuilder::new(&mut geometry, StrokeVertex(GREEN.into_linear())),
+                &mut BuffersBuilder::new(&mut geometry, StrokeVertex(BLUE.into_linear())),
             )
             .expect("Tesselator failed");
 
@@ -240,19 +236,29 @@ pub fn render_wave(
         _ => {
             let working_pt_bot = lpoint(working_pt.x, working_pt.y + WAVEHEIGHT);
             let mut working_pts = [working_pt, working_pt_bot];
-            for (time, sig_payload) in
-                wave.droplets_in_range(state.start_time(bounds), state.end_time(bounds))
-            {
-                let x_delt = xdelt_from_prev(state, time, prev_xcoord) - VEC_SHIFT_WIDTH / 2.0;
+            let mut wave_iter = wave
+                .droplets_in_range(state.start_time(bounds), state.end_time(bounds))
+                .peekable();
+
+            while let Some((time, sig_payload)) = wave_iter.next() {
+                let x_delt = xdelt_from_prev(state, time, prev_xcoord);
                 if out_of_range(time, state, bounds) {
                     break;
                 }
+
+                let next_time = wave_iter.peek().map_or_else(
+                    || (bounds.width * state.ns_per_unit) as u32,
+                    |(time, _)| time.clone(),
+                );
+
+                let text_space = xdelt_from_prev(state, next_time, prev_xcoord);
+
                 let mut value_text =
-                    generate_canvas_text(sig_payload, display_options, width, x_delt);
+                    generate_canvas_text(sig_payload, display_options, width, text_space);
 
                 for (point, direction) in working_pts.iter_mut().zip([1.0, -1.0].iter()) {
                     p.move_to(*point);
-                    point.x += x_delt;
+                    point.x += x_delt - VEC_SHIFT_WIDTH / 2.0;
                     p.line_to(*point);
                     point.y += WAVEHEIGHT * direction;
                     //TODO: logic for when really zoomed out, so we dont move past the next
@@ -273,7 +279,7 @@ pub fn render_wave(
                         } => {
                             let bounds: Rectangle = Rectangle {
                                 x: working_pts[0].x,
-                                y: bounds.y,
+                                y: working_pts[0].y,
                                 width: f32::INFINITY,
                                 height: TEXT_SIZE,
                             };
@@ -285,7 +291,7 @@ pub fn render_wave(
                                 color,
                                 font,
                                 horizontal_alignment: iced::HorizontalAlignment::Left,
-                                vertical_alignment: iced::VerticalAlignment::Center,
+                                vertical_alignment: iced::VerticalAlignment::Top,
                             }
                         }
                         _ => {
@@ -330,7 +336,7 @@ pub fn render_wave(
             vertices: geometry.vertices,
             indices: geometry.indices,
         },
-        size: iced::Size::new(bounds.x + bounds.width, bounds.y + bounds.height),
+        size: iced::Size::new(bounds.width, bounds.height),
     });
 
     Primitive::Group {
@@ -352,7 +358,7 @@ pub fn generate_canvas_text(
         return None;
     }
     let visible_chars = (space / TEXT_SIZE).ceil() as usize;
-    log::info!("payload is {:?}", data.get_data());
+    
 
     let value = format_payload(data, str_format, bitwidth, visible_chars);
     Some(Primitive::Text {
@@ -362,11 +368,9 @@ pub fn generate_canvas_text(
             ..Rectangle::default()
         },
         size: TEXT_SIZE,
-        color: WHITE,
+        color: Color::WHITE,
         font: iced::Font::Default,
         horizontal_alignment: iced::HorizontalAlignment::Left,
-        vertical_alignment: iced::VerticalAlignment::Center,
+        vertical_alignment: iced::VerticalAlignment::Bottom,
     })
 }
-
-
