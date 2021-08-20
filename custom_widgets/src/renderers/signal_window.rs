@@ -30,7 +30,7 @@ where
     ) -> Option<signal_window::Scrollbar> {
         let ratio = bounds.width / ((state.end_time - state.start_time) as f32 * state.ns_per_unit); //content_bounds.width;
 
-        if ratio >= 1.0 {
+        if ratio < 1.0 {
             let outer_width = scrollbar_width.max(scroller_width) + 2 * scrollbar_margin;
 
             let outer_bounds = Rectangle {
@@ -101,17 +101,22 @@ where
         if let Some(scrollbar) = scrollbar {
             let scroller = Primitive::Quad {
                 bounds: scrollbar.scroller.bounds,
-                background: Background::Color(Color::BLACK),
-                border_radius: 1.0,         //style.scroller.border_radius,
-                border_width: 1.0,          //,style.scroller.border_width,
-                border_color: Color::BLACK, //style.scroller.border_color,
+                background: Background::Color(Color {
+                    a: 0.4,
+                    r: 0.5,
+                    g: 0.5,
+                    b: 0.5,
+                }),
+                border_radius: 1.0,               //style.scroller.border_radius,
+                border_width: 1.0,                //,style.scroller.border_width,
+                border_color: Color::TRANSPARENT, //style.scroller.border_color,
             };
 
             let scrollbar_quad = Primitive::Quad {
                 bounds: scrollbar.bounds,
                 background: Background::Color(Color::TRANSPARENT),
                 border_radius: 1.0,
-                border_width: 1.0,
+                border_width: 2.0,
                 border_color: Color::TRANSPARENT, //style.border_color,
             };
 
