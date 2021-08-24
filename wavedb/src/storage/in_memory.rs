@@ -259,4 +259,23 @@ mod tests {
         assert_eq!(toffset, 19250);
         assert_eq!(val, 0x1);
     }
+
+
+    #[test]
+    fn vga_x_cnt_entire_iterator() {
+        let wdb = create_vga_wdb();
+
+        let x_cnt = wdb
+            .get_imw("TOP.vga.x_cnt".into())
+            .expect("signal isn't here!");
+        let mut prev_time = 0;
+        for (time, _) in x_cnt.droplets_in_range(6900, 7500) {
+            assert!(time > prev_time);
+            prev_time = time
+        }
+    }
+
+
+
+
 }

@@ -74,11 +74,12 @@ impl State {
     /// Apply a scrolling offset to the current [`State`], given the bounds of
     /// the [`SignalWindow`] and its contents.
     pub fn scroll(&mut self, delta_x: f32, bounds: Rectangle) {
-        log::info!("scroll bounds are {:#?}", bounds);
-
+        log::info!("old offset is {}", self.offset);
         self.offset = (self.offset - delta_x * self.ns_per_unit)
             .max(0.0)
             .min((self.end_time) as f32);
+        log::info!("new offset is {}", self.offset);
+
     }
 
     /// Moves the scroll position to a relative amount, given the bounds of
@@ -249,7 +250,7 @@ where
                             self.state.scroll(y * 60.0, bounds);
                         }
                         mouse::ScrollDelta::Pixels { y, .. } => {
-                            self.state.scroll(y, bounds);
+                            //self.state.scroll(y, bounds);
                         }
                     }
 

@@ -188,7 +188,9 @@ pub fn render_wave(
     let wave = dwave.get_wave();
     let width = wave.get_width();
     let mut working_pt = lpoint(0.0, 0.0);
-    let mut prev_xcoord = state.start_time;
+    let mut prev_xcoord = state.offset as u32;
+    log::info!("wave offset is {}", state.offset);
+    log::info!("wave name is {}", wave.get_name());
     let display_options = dwave.display_conf.unwrap_or_default();
     let mut prim_vec = Vec::new();
     match width {
@@ -241,15 +243,18 @@ pub fn render_wave(
                 .peekable();
 
             while let Some((time, sig_payload)) = wave_iter.next() {
+                log::info!("first xdelt");
                 let x_delt = xdelt_from_prev(state, time, prev_xcoord);
+                
                 if out_of_range(time, state, bounds) {
                     break;
                 }
 
                 let next_time = wave_iter.peek().map_or_else(
-                    || (bounds.width * state.ns_per_unit) as u32,
+                    || (state.offset + bounds.width * state.ns_per_unit) as u32,
                     |(time, _)| time.clone(),
                 );
+                log::info!("second xdelt");
 
                 let text_space = xdelt_from_prev(state, next_time, prev_xcoord);
 
@@ -358,7 +363,6 @@ pub fn generate_canvas_text(
         return None;
     }
     let visible_chars = (space / TEXT_SIZE).ceil() as usize;
-    
 
     let value = format_payload(data, str_format, bitwidth, visible_chars);
     Some(Primitive::Text {
