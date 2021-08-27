@@ -12,25 +12,23 @@ pub struct InMemWave {
 
 ///In memory DS for wave content; created from a Vector of Arcs to puddles
 impl InMemWave {
-    pub fn all_data(&self) -> Box<dyn Iterator<Item = (u32, &[u8])> + '_> {
+    pub fn all_data(&self) -> impl Iterator<Item = (u32, &[u8])> + '_ {
         let sigid = self.signal_id;
-        Box::new(
-            self.puddles
-                .iter()
-                .filter_map(move |puddle| {
-                    puddle
-                        .get_cursor(sigid)
-                        .ok()
-                        .map(|cursor| (cursor, puddle.puddle_base()))
-                })
-                .flat_map(|(cursor, base)| cursor.into_iter().zip(std::iter::repeat(base)))
-                .map(|(droplet, base)| {
-                    (
-                        base + droplet.get_timestamp() as Toffset,
-                        droplet.take_data(),
-                    )
-                }),
-        )
+        self.puddles
+            .iter()
+            .filter_map(move |puddle| {
+                puddle
+                    .get_cursor(sigid)
+                    .ok()
+                    .map(|cursor| (cursor, puddle.puddle_base()))
+            })
+            .flat_map(|(cursor, base)| cursor.into_iter().zip(std::iter::repeat(base)))
+            .map(|(droplet, base)| {
+                (
+                    base + droplet.get_timestamp() as Toffset,
+                    droplet.take_data(),
+                )
+            })
     }
 
     //FIXME: is there a way to .. minimize the boxing going on here?
@@ -38,11 +36,9 @@ impl InMemWave {
         &self,
         begin: Toffset,
         end: Toffset,
-    ) -> Box<dyn Iterator<Item = (Toffset, &[u8])> + '_> {
-        Box::new(
-            self.droplets_in_range(begin, end)
-                .map(|(base, droplet)| (base, droplet.take_data())),
-        )
+    ) -> impl Iterator<Item = (Toffset, &[u8])> + '_ {
+        self.droplets_in_range(begin, end)
+            .map(|(base, droplet)| (base, droplet.take_data()))
     }
 
     fn get_idx(&self, time: Toffset) -> Option<usize> {
@@ -51,7 +47,25 @@ impl InMemWave {
             .position(|puddle| puddle.puddle_base() == time & !(Puddle::max_puddle_length() - 1))
     }
 
-    pub fn get_prev_time(&self, time: Toffset) -> Option<(Toffset, &'_ [u8])> {
+    pub fn get_prev_droplet(&self, time: Toffset) -> Option<Droplet<'_>> {
+        let idx = self.get_idx(time)?;
+        let sigid = self.signal_id;
+        self.puddles[0..idx + 1]
+            .iter()
+            .rev()
+            .filter_map(move |puddle| {
+                puddle
+                    .get_cursor(sigid)
+                    .ok()
+                    .map(|cursor| (cursor, puddle.puddle_base()))
+            })
+            .flat_map(|(cursor, base)| cursor.into_iter().rev().zip(std::iter::repeat(base)))
+            .filter(|(droplet, base)| ((base + droplet.get_timestamp() as Toffset) < time))
+            .map(|(droplet, _base)| droplet)
+            .next()
+    }
+
+    pub fn get_prev_value(&self, time: Toffset) -> Option<(Toffset, &'_ [u8])> {
         let idx = self.get_idx(time)?;
         let sigid = self.signal_id;
         self.puddles[0..idx + 1]
@@ -101,22 +115,20 @@ impl InMemWave {
         &self,
         begin: Toffset,
         end: Toffset,
-    ) -> Box<dyn Iterator<Item = (Toffset, Droplet<'_>)> + '_> {
+    ) -> impl Iterator<Item = (Toffset, Droplet<'_>)> + '_ {
         let sigid = self.signal_id;
-        Box::new(
-            self.puddles
-                .iter()
-                .filter(move |puddle| begin < puddle.puddle_end() && end > puddle.puddle_base())
-                .filter_map(move |puddle| {
-                    puddle
-                        .get_cursor(sigid)
-                        .ok()
-                        .map(|cursor| (cursor, puddle.puddle_base()))
-                })
-                .flat_map(|(cursor, base)| cursor.into_iter().zip(std::iter::repeat(base)))
-                .map(|(droplet, base)| (base + droplet.get_timestamp() as Toffset, droplet))
-                .filter(move |(time, _)| *time >= begin && *time < end),
-        )
+        self.puddles
+            .iter()
+            .filter(move |puddle| begin < puddle.puddle_end() && end > puddle.puddle_base())
+            .filter_map(move |puddle| {
+                puddle
+                    .get_cursor(sigid)
+                    .ok()
+                    .map(|cursor| (cursor, puddle.puddle_base()))
+            })
+            .flat_map(|(cursor, base)| cursor.into_iter().zip(std::iter::repeat(base)))
+            .map(|(droplet, base)| (base + droplet.get_timestamp() as Toffset, droplet))
+            .filter(move |(time, _)| *time >= begin && *time < end)
     }
 
     pub fn get_width(&self) -> usize {
@@ -241,7 +253,7 @@ mod tests {
         let clock_wave = wdb
             .get_imw("TOP.x_addr".into())
             .expect("signal isn't here!");
-        let (toffset, payload) = clock_wave.get_prev_time(16029).expect("prev failed");
+        let (toffset, payload) = clock_wave.get_prev_value(16029).expect("prev failed");
         assert_eq!(toffset, 16010);
         let val: u16 = u16::from_le_bytes(
             payload
@@ -260,7 +272,6 @@ mod tests {
         assert_eq!(val, 0x1);
     }
 
-
     #[test]
     fn vga_x_cnt_entire_iterator() {
         let wdb = create_vga_wdb();
@@ -274,8 +285,4 @@ mod tests {
             prev_time = time
         }
     }
-
-
-
-
 }

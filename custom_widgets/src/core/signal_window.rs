@@ -19,9 +19,10 @@ use lyon::tessellation::*;
 
 pub(crate) const BUFFER_PX: f32 = 1.5;
 pub(crate) const WAVEHEIGHT: f32 = 16.0;
-pub(crate) const VEC_SHIFT_WIDTH: f32 = 4.0;
+pub(crate) const VEC_SHIFT_WIDTH: f32 = 6.0;
 pub(crate) const TS_FONT_SIZE: f32 = 10.0;
 
+pub(crate) const TEXT_PADDING: f32 = TEXT_SIZE / 2.0;
 /// Mininum x_delta between two "value" changes that must occur before we consider writing the
 /// wave's value on the line
 const TEXT_THRESHOLD: f32 = 12.0;
@@ -189,8 +190,6 @@ pub fn render_wave(
     let width = wave.get_width();
     let mut working_pt = lpoint(0.0, 0.0);
     let mut prev_xcoord = state.offset as u32;
-    log::info!("wave offset is {}", state.offset);
-    log::info!("wave name is {}", wave.get_name());
     let display_options = dwave.display_conf.unwrap_or_default();
     let mut prim_vec = Vec::new();
     match width {
@@ -242,10 +241,65 @@ pub fn render_wave(
                 .droplets_in_range(state.start_time(bounds), state.end_time(bounds))
                 .peekable();
 
+            let beautify_text = |working_pts: [lyon::math::Point; 2], value| {
+                let value = match value {
+                    Primitive::Text {
+                        content,
+                        size,
+                        font,
+                        color,
+                        ..
+                    } => {
+                        let bounds: Rectangle = Rectangle {
+                            x: working_pts[0].x,
+                            y: working_pts[0].y,
+                            width: f32::INFINITY,
+                            height: TEXT_SIZE,
+                        };
+
+                        Primitive::Text {
+                            content,
+                            bounds,
+                            size,
+                            color,
+                            font,
+                            horizontal_alignment: iced::HorizontalAlignment::Left,
+                            vertical_alignment: iced::VerticalAlignment::Top,
+                        }
+                    }
+                    _ => {
+                        unimplemented!()
+                    }
+                };
+
+                value
+            };
+
+            if wave_iter
+                .peek()
+                .map_or_else(|| true, |(time, _)| *time != state.offset.ceil() as u32)
+            {
+                let next_time = wave_iter.peek().map_or_else(
+                    || (state.offset + bounds.width * state.ns_per_unit) as u32,
+                    |(time, _)| time.clone(),
+                );
+
+                if let Some(sig_payload) = wave.get_prev_droplet(state.offset.ceil() as u32) {
+                    let text_space = xdelt_from_prev(state, next_time, prev_xcoord);
+
+                    let value_text =
+                        generate_canvas_text(sig_payload, display_options, width, text_space)
+                            .map(|text| beautify_text(working_pts, text));
+
+                    if let Some(text) = value_text {
+                        prim_vec.push(text);
+                    }
+                }
+            }
+
             while let Some((time, sig_payload)) = wave_iter.next() {
-                log::info!("first xdelt");
                 let x_delt = xdelt_from_prev(state, time, prev_xcoord);
-                
+
                 if out_of_range(time, state, bounds) {
                     break;
                 }
@@ -254,12 +308,8 @@ pub fn render_wave(
                     || (state.offset + bounds.width * state.ns_per_unit) as u32,
                     |(time, _)| time.clone(),
                 );
-                log::info!("second xdelt");
 
                 let text_space = xdelt_from_prev(state, next_time, prev_xcoord);
-
-                let mut value_text =
-                    generate_canvas_text(sig_payload, display_options, width, text_space);
 
                 for (point, direction) in working_pts.iter_mut().zip([1.0, -1.0].iter()) {
                     p.move_to(*point);
@@ -273,39 +323,10 @@ pub fn render_wave(
                     p.line_to(*point);
                     point.y -= WAVEHEIGHT * direction;
                 }
-                value_text = value_text.map(|value| {
-                    let value = match value {
-                        Primitive::Text {
-                            content,
-                            size,
-                            font,
-                            color,
-                            ..
-                        } => {
-                            let bounds: Rectangle = Rectangle {
-                                x: working_pts[0].x,
-                                y: working_pts[0].y,
-                                width: f32::INFINITY,
-                                height: TEXT_SIZE,
-                            };
 
-                            Primitive::Text {
-                                content,
-                                bounds,
-                                size,
-                                color,
-                                font,
-                                horizontal_alignment: iced::HorizontalAlignment::Left,
-                                vertical_alignment: iced::VerticalAlignment::Top,
-                            }
-                        }
-                        _ => {
-                            unimplemented!()
-                        }
-                    };
-
-                    value
-                });
+                let value_text =
+                    generate_canvas_text(sig_payload, display_options, width, text_space)
+                        .map(|text| beautify_text(working_pts, text));
 
                 //FIXME: seems like this closure is very overloaded
                 //       think of a way to pull this out
@@ -362,7 +383,7 @@ pub fn generate_canvas_text(
     if space < TEXT_SIZE {
         return None;
     }
-    let visible_chars = (space / TEXT_SIZE).ceil() as usize;
+    let visible_chars = ((space - TEXT_PADDING) / TEXT_SIZE).floor() as usize;
 
     let value = format_payload(data, str_format, bitwidth, visible_chars);
     Some(Primitive::Text {
