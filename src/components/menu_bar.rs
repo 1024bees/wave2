@@ -1,32 +1,29 @@
 use strum_macros;
-use wave2_custom_widgets::traits::{MenuBarOption, MenuOption};
-use wave2_custom_widgets::widget::menu_bar::{self, MenuBar, MenuBarOption, MenuOption};
 
-use iced::{Column, Container, Element, Length, Text};
+use iced::{Container, Element, Text};
 use iced_aw::{menu, Menu};
 use menu::{Entry, Section};
 
 
 
-#[derive(MenuBarOption, strum_macros::Display, Debug, Clone)]
+#[derive(strum_macros::Display, Debug, Clone)]
 pub enum Message {
     File(FileMenu),
     View(ViewMenu),
 }
 
-#[derive(MenuOption, strum_macros::Display, Debug, Clone)]
+#[derive(strum_macros::Display, Debug, Clone)]
 pub enum FileMenu {
     Open,
 }
 
-#[derive(MenuOption, strum_macros::Display, Debug, Clone)]
+#[derive(strum_macros::Display, Debug, Clone)]
 pub enum ViewMenu {
     ImplMe,
 }
 
 #[derive(Debug, Default)]
 pub struct GlobalMenuBar {
-    menu_bar: menu_bar::State,
     menu: menu::State,
     pending_file: bool,
 }

@@ -1,8 +1,13 @@
-//! Navigate an endless amount of content with a scrollbar.
+//! The core logic for visualizing the signal window. This is the widget that displays
+//! signal values, the cursors, etc
+//!
+//!
 use iced_graphics::backend::{self, Backend};
 use iced_graphics::{Primitive, Renderer};
 
-use crate::core::signal_window::{render_header, render_wave, translate_wave, DisplayedWave};
+use crate::core::signal_window::{
+    render_cursor, render_header, render_wave, translate_wave, DisplayedWave,
+};
 use crate::widget::signal_window;
 use iced_native::mouse;
 use iced_native::{Background, Color, Rectangle};
@@ -79,10 +84,13 @@ where
         _padding: u16,
         text_size: u16,
         font: Self::Font,
+        style: &Self::Style,
     ) -> Self::Output {
+        let style = style.default();
+
         let bg = Primitive::Quad {
             bounds,
-            background: Background::from(Color::BLACK),
+            background: Background::from(style.background_color),
             border_color: Color::BLACK,
             border_width: 1.0,
             border_radius: 1.0,
@@ -90,6 +98,10 @@ where
         let mut primitives = vec![bg];
 
         primitives.push(render_header(state, bounds, font));
+
+        if let Some(cursor) = render_cursor(state, bounds) {
+            primitives.push(cursor);
+        }
 
         for (idx, wave) in waves.iter().enumerate() {
             primitives.push(Primitive::Translate {
@@ -101,12 +113,7 @@ where
         if let Some(scrollbar) = scrollbar {
             let scroller = Primitive::Quad {
                 bounds: scrollbar.scroller.bounds,
-                background: Background::Color(Color {
-                    a: 0.4,
-                    r: 0.5,
-                    g: 0.5,
-                    b: 0.5,
-                }),
+                background: Background::Color(style.hscroll_cursor_color),
                 border_radius: 1.0,               //style.scroller.border_radius,
                 border_width: 1.0,                //,style.scroller.border_width,
                 border_color: Color::TRANSPARENT, //style.scroller.border_color,
@@ -114,7 +121,7 @@ where
 
             let scrollbar_quad = Primitive::Quad {
                 bounds: scrollbar.bounds,
-                background: Background::Color(Color::TRANSPARENT),
+                background: Background::Color(Color::WHITE),
                 border_radius: 1.0,
                 border_width: 2.0,
                 border_color: Color::TRANSPARENT, //style.border_color,

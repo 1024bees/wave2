@@ -92,6 +92,49 @@ impl State {
     fn end_time(&self, bounds: Rectangle) -> u32 {
         (self.offset + bounds.width * self.ns_per_unit).ceil() as u32
     }
+
+    fn cursor_in_range(&self, bounds: Rectangle) -> bool {
+        self.cursor_location >= self.start_time(bounds)
+            && self.cursor_location <= self.end_time(bounds)
+    }
+}
+
+pub fn render_cursor(state: &State, bounds: Rectangle) -> Option<Primitive> {
+    if state.cursor_in_range(bounds) {
+        let xpos =
+            bounds.x + xdelt_from_prev(state, state.cursor_location, state.start_time(bounds));
+        let top_pt = lpoint(xpos, TS_FONT_SIZE + bounds.y);
+
+        let bottom_pt = [xpos, bounds.y + bounds.height].into();
+
+        let mut p = Path::builder();
+
+        p.move_to(top_pt);
+        p.line_to(bottom_pt);
+
+        let mut geometry: VertexBuffers<triangle::Vertex2D, u32> = VertexBuffers::new();
+
+        let top_line = p.build();
+        let mut tessellator = StrokeTessellator::new();
+
+        tessellator
+            .tessellate_path(
+                &top_line,
+                &StrokeOptions::default(),
+                &mut BuffersBuilder::new(&mut geometry, StrokeVertex(ORANGE.into_linear())),
+            )
+            .expect("Tesselator failed");
+
+        Some(Primitive::Mesh2D {
+            buffers: triangle::Mesh2D {
+                vertices: geometry.vertices,
+                indices: geometry.indices,
+            },
+            size: iced::Size::new(bounds.x + bounds.width, bounds.height + bounds.x),
+        })
+    } else {
+        None
+    }
 }
 
 pub fn render_header(state: &State, bounds: Rectangle, font: iced::Font) -> Primitive {

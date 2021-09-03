@@ -5,3 +5,4 @@ pub mod signals;
 pub mod widget_bar;
 pub mod shared;
 pub mod style;
+pub mod icon_bar;

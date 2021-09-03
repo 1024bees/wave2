@@ -8,8 +8,13 @@ use std::sync::Arc;
 pub mod components;
 mod config;
 use components::hier_nav::hier_nav;
+use components::icon_bar;
 use components::signals::wavewindow;
-use components::{menu_bar, module_nav, signals::{sigwindow,self}, style};
+use components::{
+    menu_bar, module_nav,
+    signals::{self, sigwindow},
+    style,
+};
 use config::menu_update;
 use env_logger;
 use log::warn;
@@ -46,12 +51,10 @@ impl Opts {
                     Message::Loaded,
                 ),
             ),
-            _ => { 
-                (
+            _ => (
                 Wave2::Loading,
                 Command::perform(async { Ok(None) }, Message::Loaded),
-                )
-            },
+            ),
         }
     }
 }
@@ -65,7 +68,6 @@ fn main() {
     };
     env_logger::init();
     Wave2::run(settings).expect("Fatal error during initialization");
-
 }
 
 pub struct State {
@@ -76,6 +78,7 @@ pub struct State {
     ww_pane: pane_grid::Pane,
     focused_pane: Option<pane_grid::Pane>,
     menu_bar: menu_bar::GlobalMenuBar,
+    icon_bar: icon_bar::IconBar,
     wdb_api: Option<Arc<WdbApi>>,
 }
 
@@ -125,8 +128,6 @@ enum Wave2 {
     Loaded(State),
 }
 
-
-
 #[derive(Debug)]
 pub enum PaneMessage {
     //Dragged(pane_grid::DragEvent),
@@ -140,6 +141,7 @@ pub enum Message {
     HNMessage(hier_nav::Message),
     SignalsMessage(signals::Message),
     MBMessage(menu_bar::Message),
+    IBMessage(icon_bar::Message),
     //IoMessage
     Loaded(Result<Option<Arc<WdbApi>>, std::io::Error>),
     LoadWDB(Result<Arc<WdbApi>, Waverr>),
@@ -177,7 +179,9 @@ impl Content {
             Content::ModNav(module_nav) => module_nav
                 .view()
                 .map(move |message| Message::MNMessage(message)),
-            Content::WaveWindow(ww) => ww.view().map(move |message| Message::SignalsMessage(message)),
+            Content::WaveWindow(ww) => ww
+                .view()
+                .map(move |message| Message::SignalsMessage(message)),
         }
     }
 }
@@ -228,6 +232,7 @@ impl Application for Wave2 {
                         //      should probably initialize sizes of panes, etc
 
                         let menu_bar = menu_bar::GlobalMenuBar::default();
+                        let icon_bar = icon_bar::IconBar::default();
                         *self = Wave2::Loaded(State {
                             panes,
                             sv_pane,
@@ -235,6 +240,7 @@ impl Application for Wave2 {
                             hn_pane,
                             ww_pane,
                             menu_bar,
+                            icon_bar,
                             focused_pane: None,
                             wdb_api: None,
                         });
@@ -252,9 +258,16 @@ impl Application for Wave2 {
                     Message::MBMessage(menu_message) => return menu_update(state, menu_message),
                     Message::SignalsMessage(inner_message) => {
                         state.focused_pane = Some(state.sv_pane);
-                        state.panes.get_mut(&state.sv_pane).unwrap().update(Message::SignalsMessage(inner_message.clone()));
-                        state.panes.get_mut(&state.ww_pane).unwrap().update(Message::SignalsMessage(inner_message.clone()));
-
+                        state
+                            .panes
+                            .get_mut(&state.sv_pane)
+                            .unwrap()
+                            .update(Message::SignalsMessage(inner_message.clone()));
+                        state
+                            .panes
+                            .get_mut(&state.ww_pane)
+                            .unwrap()
+                            .update(Message::SignalsMessage(inner_message.clone()));
                     }
                     Message::HNMessage(hn_message) => {
                         match hn_message {
@@ -265,8 +278,6 @@ impl Application for Wave2 {
                                     .get_mut(&state.hn_pane)
                                     .unwrap()
                                     .update(Message::HNMessage(hn_message.clone()));
-
-                                //FIXME: this work should definitely be done in a command
                                 return Command::perform(
                                     WdbApi::get_module_signals(state.get_api(), module_idx),
                                     move |vector| {
@@ -286,11 +297,16 @@ impl Application for Wave2 {
                             }
                         }
                     }
+                    Message::IBMessage(ib_message) => {
+                        log::info!("ib message is {:?}", ib_message);
+                    }
                     Message::MNMessage(mn_message) => match mn_message {
                         module_nav::Message::AddSig(signal_item) => {
                             return Command::perform(
                                 WdbApi::get_signal(state.get_api(), signal_item),
-                                move |wave| Message::SignalsMessage(signals::Message::AddWave(wave)),
+                                move |wave| {
+                                    Message::SignalsMessage(signals::Message::AddWave(wave))
+                                },
                             );
                         }
 
@@ -344,6 +360,7 @@ impl Application for Wave2 {
                 panes,
                 menu_bar,
                 focused_pane,
+                icon_bar,
                 ..
             }) => {
                 //all_content.into()
@@ -367,9 +384,9 @@ impl Application for Wave2 {
                 })
                 .spacing(3);
 
-                let menu_bar_view = menu_bar.view().map(|message| Message::MBMessage(message));
-
-                Column::new().push(menu_bar_view).push(pane_grid).into()
+                let menu_bar_view = menu_bar.view().map(Message::MBMessage);
+                let icon_bar_view = icon_bar.view().map(Message::IBMessage);
+                Column::new().push(menu_bar_view).push(icon_bar_view).push(pane_grid).into()
             }
         }
     }

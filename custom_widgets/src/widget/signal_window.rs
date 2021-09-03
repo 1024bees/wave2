@@ -1,15 +1,16 @@
 use iced_native::{
-    event, layout, mouse, overlay, scrollable, text, Clipboard, Element, Event, Hasher, Layout,
+    event, layout, mouse, overlay,  text, Clipboard, Element, Event, Hasher, Layout,
     Length, Point, Rectangle, Size, Widget,
 };
 
 use crate::core::signal_window::DisplayedWave;
 
 use log;
-/// A widget to represent a singular "SignalWindow"
+/// A widget to view signals. The signal window is the core of the wave2 app. This is the widget
+/// that does the heavy lifting of vizualising waves and displaying values of vectors
 ///
-/// This is the core widget on which most components are built on. add doc comments in sooner
-/// rather than later
+/// Horizontal scrolling is built in as part of the widget.
+///
 #[allow(missing_debug_implementations)]
 pub struct SignalWindow<'a, Message: 'static, Renderer: self::Renderer> {
     waves: &'a [DisplayedWave],
@@ -39,7 +40,6 @@ pub struct State {
     scroller_grabbed_at: Option<f32>,
 }
 
-
 impl Default for State {
     fn default() -> State {
         State {
@@ -54,19 +54,13 @@ impl Default for State {
     }
 }
 
-
-
-
-
-
 impl State {
     /// Creates a new [`State`] with the scrollbar located at the left.
     pub fn new() -> Self {
         State::default()
     }
 
-
-    pub fn set_bounds(&mut self, bounds: (u32,u32)) {
+    pub fn set_bounds(&mut self, bounds: (u32, u32)) {
         self.start_time = bounds.0;
         self.end_time = bounds.1;
     }
@@ -74,12 +68,10 @@ impl State {
     /// Apply a scrolling offset to the current [`State`], given the bounds of
     /// the [`SignalWindow`] and its contents.
     pub fn scroll(&mut self, delta_x: f32, bounds: Rectangle) {
-        log::info!("old offset is {}", self.offset);
         self.offset = (self.offset - delta_x * self.ns_per_unit)
             .max(0.0)
             .min((self.end_time) as f32);
         log::info!("new offset is {}", self.offset);
-
     }
 
     /// Moves the scroll position to a relative amount, given the bounds of
@@ -108,8 +100,8 @@ impl<'a, Message, Renderer: self::Renderer> SignalWindow<'a, Message, Renderer> 
             text_size: None,
             on_click: None,
             scrollbar_margin: 0,
-            scrollbar_width: 100,
-            scroller_width: 10,
+            scrollbar_width: 20,
+            scroller_width: 20,
             font: Default::default(),
             style: Default::default(),
         }
@@ -249,7 +241,7 @@ where
                             // TODO: Configurable speed (?)
                             self.state.scroll(y * 60.0, bounds);
                         }
-                        mouse::ScrollDelta::Pixels { y, .. } => {
+                        mouse::ScrollDelta::Pixels { .. } => {
                             //self.state.scroll(y, bounds);
                         }
                     }
@@ -258,10 +250,10 @@ where
                 }
                 Event::Mouse(mouse::Event::CursorMoved { position }) => {
                     self.state.hovered_position =
-                        self.state.offset + self.state.ns_per_unit * position.x;
+                        self.state.offset + self.state.ns_per_unit * (position.x - bounds.x);
                 }
                 Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
-                    log::info!("Hehe! we have a little click here. maybe we should do something productive");
+                    self.state.cursor_location = self.state.hovered_position as u32;
                 }
 
                 _ => {}
@@ -337,6 +329,7 @@ where
             self.padding,
             self.text_size.unwrap_or(renderer.default_size()),
             self.font,
+            &self.style
         )
     }
 
@@ -433,7 +426,7 @@ pub trait Renderer: text::Renderer + Sized {
         padding: u16,
         text_size: u16,
         font: Self::Font,
-        //style: &<Self as Renderer>::Style,
+        style: &Self::Style,
     ) -> Self::Output;
 }
 
