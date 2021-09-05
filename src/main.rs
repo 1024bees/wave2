@@ -141,7 +141,7 @@ pub enum Message {
     HNMessage(hier_nav::Message),
     SignalsMessage(signals::Message),
     MBMessage(menu_bar::Message),
-    IBMessage(icon_bar::Message),
+    IBMessage(signals::Message),
     //IoMessage
     Loaded(Result<Option<Arc<WdbApi>>, std::io::Error>),
     LoadWDB(Result<Arc<WdbApi>, Waverr>),
@@ -204,6 +204,19 @@ impl Application for Wave2 {
         message: Self::Message,
         _clipboard: &mut Clipboard,
     ) -> Command<Self::Message> {
+        fn update_signals_logic(state: &mut State, inner_message: signals::Message) {
+            state
+                .panes
+                .get_mut(&state.sv_pane)
+                .unwrap()
+                .update(Message::SignalsMessage(inner_message.clone()));
+            state
+                .panes
+                .get_mut(&state.ww_pane)
+                .unwrap()
+                .update(Message::SignalsMessage(inner_message.clone()));
+        }
+
         match self {
             Wave2::Loading => {
                 match message {
@@ -258,16 +271,7 @@ impl Application for Wave2 {
                     Message::MBMessage(menu_message) => return menu_update(state, menu_message),
                     Message::SignalsMessage(inner_message) => {
                         state.focused_pane = Some(state.sv_pane);
-                        state
-                            .panes
-                            .get_mut(&state.sv_pane)
-                            .unwrap()
-                            .update(Message::SignalsMessage(inner_message.clone()));
-                        state
-                            .panes
-                            .get_mut(&state.ww_pane)
-                            .unwrap()
-                            .update(Message::SignalsMessage(inner_message.clone()));
+                        update_signals_logic(state, inner_message);
                     }
                     Message::HNMessage(hn_message) => {
                         match hn_message {
@@ -297,9 +301,14 @@ impl Application for Wave2 {
                             }
                         }
                     }
-                    Message::IBMessage(ib_message) => {
-                        log::info!("ib message is {:?}", ib_message);
-                    }
+                    Message::IBMessage(ib_message) => match ib_message {
+                        signals::Message::TIUpdate(..) | signals::Message::BoundsUpdate(_) => {
+                            state.icon_bar.update(ib_message)
+                        }
+                        _ => {
+                            update_signals_logic(state, ib_message);
+                        }
+                    },
                     Message::MNMessage(mn_message) => match mn_message {
                         module_nav::Message::AddSig(signal_item) => {
                             return Command::perform(
@@ -386,7 +395,11 @@ impl Application for Wave2 {
 
                 let menu_bar_view = menu_bar.view().map(Message::MBMessage);
                 let icon_bar_view = icon_bar.view().map(Message::IBMessage);
-                Column::new().push(menu_bar_view).push(icon_bar_view).push(pane_grid).into()
+                Column::new()
+                    .push(menu_bar_view)
+                    .push(icon_bar_view)
+                    .push(pane_grid)
+                    .into()
             }
         }
     }

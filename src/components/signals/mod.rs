@@ -27,4 +27,20 @@ pub enum Message {
     CellListPlaceholder,
 
 
+    ///Messages
+    ZoomIn,
+    ZoomOut,
+    GoToStart,
+    GoToEnd,
+    Next,
+    Prev,
+    TIUpdate(Bound, String),
+    BoundsUpdate(Bound),
+    Noop
+}
+
+#[derive(Debug, Clone)]
+pub enum Bound {
+    Left,
+    Right
 }
