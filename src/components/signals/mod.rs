@@ -11,7 +11,7 @@ use wave2_wavedb::storage::in_memory::InMemWave;
 
 
 #[derive(Debug, Clone)]
-pub enum Message {
+pub enumMessage {
     ///Messages that are shared across wavewindow and signalviewer
     AddWave(Result<Arc<InMemWave>, Arc<Waverr>>),
     SelectedWave(usize), 
@@ -35,7 +35,7 @@ pub enum Message {
     Next,
     Prev,
     TIUpdate(Bound, String),
-    BoundsUpdate(Bound),
+    BoundsUpdate(Bound, String),
     Noop
 }
 

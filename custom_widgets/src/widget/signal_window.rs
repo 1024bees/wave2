@@ -31,12 +31,12 @@ pub struct SignalWindow<'a, Message: 'static, Renderer: self::Renderer> {
 /// [`SignalWindow`]: struct.SignalWindow.html
 #[derive(Debug, Clone)]
 pub struct State {
-    pub(crate) start_time: u32,
-    pub(crate) end_time: u32,
-    pub(crate) ns_per_unit: f32,
-    pub(crate) cursor_location: u32,
-    pub(crate) offset: f32,
-    pub(crate) hovered_position: f32,
+    pub start_time: u32,
+    pub end_time: u32,
+    pub ns_per_unit: f32,
+    pub cursor_location: u32,
+    pub offset: f32,
+    pub hovered_position: f32,
     scroller_grabbed_at: Option<f32>,
 }
 
