@@ -8,13 +8,11 @@ use std::sync::Arc;
 use wave2_wavedb::errors::Waverr;
 use wave2_wavedb::storage::in_memory::InMemWave;
 
-
-
 #[derive(Debug, Clone)]
-pub enumMessage {
+pub enum Message {
     ///Messages that are shared across wavewindow and signalviewer
     AddWave(Result<Arc<InMemWave>, Arc<Waverr>>),
-    SelectedWave(usize), 
+    SelectedWave(usize),
     ClearWaves,
     RemoveSelected,
 
@@ -22,10 +20,8 @@ pub enumMessage {
     UpdateCursor(u32),
     UpdateBounds((u32, u32)),
 
-
     ///Messages that are only used by sigviewer
     CellListPlaceholder,
-
 
     ///Messages
     ZoomIn,
@@ -36,11 +32,13 @@ pub enumMessage {
     Prev,
     TIUpdate(Bound, String),
     BoundsUpdate(Bound, String),
-    Noop
+    Noop,
 }
 
 #[derive(Debug, Clone)]
 pub enum Bound {
     Left,
-    Right
+    Right,
 }
+
+

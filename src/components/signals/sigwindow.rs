@@ -1,9 +1,9 @@
-use wave2_wavedb::storage::display_wave::DisplayedWave;
+use super::Message;
 use crate::components::shared::cell_list::{CellList, ListNodeState};
-use iced::{Column, Container, Element, Row};
+use iced::{Column, Command, Container, Element, Row};
 use strum_macros;
 use wave2_custom_widgets::traits::CellOption;
-use super::Message;
+use wave2_wavedb::storage::display_wave::DisplayedWave;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, strum_macros::Display)]
 //TODO: add options, move to its own module?
@@ -29,7 +29,6 @@ impl CellOption for WaveOptions {
     }
 }
 
-
 pub struct SigViewer {
     waves_state: CellList<DisplayedWave, WaveOptions>,
     selected: Option<Vec<usize>>,
@@ -46,21 +45,18 @@ impl Default for SigViewer {
 }
 
 impl SigViewer {
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: Message) -> Command<Message> {
         match message {
             Message::AddWave(imw_res) => match imw_res {
                 Ok(imw) => {
-                    self.waves_state
-                        .push(DisplayedWave::from(imw));
+                    self.waves_state.push(DisplayedWave::from(imw));
                     //self.wavewindow.request_redraw();
                 }
                 Err(err) => {
                     log::info!("Cannot create InMemWave, err is {:#?}", err);
                 }
             },
-            Message::ClearWaves => {
-                self.waves_state.clear()
-            }
+            Message::ClearWaves => self.waves_state.clear(),
             Message::RemoveSelected => {
                 if let Some(selected) = self.selected.as_ref() {
                     for idx in selected.into_iter().rev().cloned() {
@@ -84,10 +80,24 @@ impl SigViewer {
 
                 self.selected = Some(vec![offset]);
             }
+            Message::Next => {
+                if let Some(selected) = self.selected {
+                    if selected.len() == 1 {
+                        let next_wave = self.waves_state.ref_at(selected[0]).get_wave().clone();
+                        return Command::perform(
+                            async { 
+                                next_wave.get_next_time().map(|(time, _)| time)
+                            },
+                            |time| time.map_or_else(|| Message::Noop, |val| Message::UpdateCursor(val))
+                        );
+                    }
+                }
+            }
             _ => {
                 log::info!("Not yet impl'd");
             }
         }
+        Command::none()
     }
     pub fn view(&mut self) -> Element<Message> {
         let SigViewer {

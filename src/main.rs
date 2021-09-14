@@ -204,7 +204,7 @@ impl Application for Wave2 {
         message: Self::Message,
         _clipboard: &mut Clipboard,
     ) -> Command<Self::Message> {
-        fn update_signals_logic(state: &mut State, inner_message: signals::Message) {
+        fn update_signals_logic(state: &mut State, inner_message: signals::Message) -> Option<Command<Message>> {
             state
                 .panes
                 .get_mut(&state.sv_pane)
@@ -215,6 +215,7 @@ impl Application for Wave2 {
                 .get_mut(&state.ww_pane)
                 .unwrap()
                 .update(Message::SignalsMessage(inner_message.clone()));
+            None
         }
 
         match self {

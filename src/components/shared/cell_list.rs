@@ -137,6 +137,13 @@ where
         self.nodes.iter().map(|node| &node.payload).collect()
     }
 
+    pub fn ref_at(&self, index: usize) -> &T {
+        self.nodes
+            .get(index)
+            .map(|node| &node.payload)
+            .expect("getting out of bounds ref!")
+    }
+
     pub fn view(
         &mut self,
         on_click: impl Fn(ListNodeState) -> Box<dyn Fn(&T) -> O::Message + 'static> + Copy,
@@ -182,7 +189,6 @@ where
     pub fn clear(&mut self) {
         self.nodes.clear();
     }
-
 }
 
 impl<T, O> Default for CellList<T, O> {
