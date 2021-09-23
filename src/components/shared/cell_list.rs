@@ -5,10 +5,9 @@ use wave2_custom_widgets::widget::cell::Cell as VizCell;
 
 use wave2_custom_widgets::traits::CellOption;
 
-pub struct ListNode<T, O> {
+pub struct ListNode<O> {
     ui_state: cell::State<O>,
     node_state: ListNodeState,
-    payload: T,
 }
 
 #[derive(Copy, Clone, Default)]
@@ -20,31 +19,29 @@ pub struct ListNodeState {
     pub selected: bool,
 }
 
-impl<T, O> ListNode<T, O>
+impl<O> ListNode< O>
 where
-    T: ToString + Clone,
     O: CellOption,
 {
-    fn new(payload: T, offset: usize) -> Self {
+    fn new(offset: usize) -> Self {
         ListNode {
-            payload,
             ui_state: cell::State::default(),
             node_state: ListNodeState {
-                offset: offset,
+                offset,
                 ..ListNodeState::default()
             },
         }
     }
-    fn view(
-        &mut self,
-        on_click: impl Fn(ListNodeState) -> Box<dyn Fn(&T) -> O::Message + 'static>,
-        on_double_click: impl Fn(ListNodeState) -> Box<dyn Fn(&T) -> O::Message + 'static>,
+    fn view<'a>(
+        &'a mut self,
+        payload: &'a str,
+        on_click: impl Fn(ListNodeState) -> Box<dyn Fn() -> O::Message + 'static>,
+        on_double_click: impl Fn(ListNodeState) -> Box<dyn Fn() -> O::Message + 'static>,
         text_size: Option<u16>,
         cell_padding: Option<u16>,
     ) -> Element<O::Message> {
         let ListNode {
             ui_state,
-            payload,
             node_state,
             ..
         } = self;
@@ -61,56 +58,26 @@ where
     }
 }
 
-pub struct CellList<T, O> {
-    pub nodes: Vec<ListNode<T, O>>,
+pub struct CellList<O> {
+    pub nodes: Vec<ListNode<O>>,
     text_size: Option<u16>,
     cell_padding: Option<u16>,
     spacing: u16,
 }
 
-impl<'a, T, O> IntoIterator for &'a CellList<T, O> {
-    type Item = &'a T;
-    type IntoIter = CLIter<'a, T, O>;
 
-    fn into_iter(self) -> Self::IntoIter {
-        CLIter {
-            list: self,
-            index: 0,
-        }
-    }
-}
-
-pub struct CLIter<'a, T, O> {
-    list: &'a CellList<T, O>,
-    index: usize,
-}
-
-impl<'a, T, O> Iterator for CLIter<'a, T, O> {
-    type Item = &'a T;
-    fn next(&mut self) -> Option<&'a T> {
-        match self.list.nodes.get(self.index) {
-            Some(node) => {
-                self.index += 1;
-                Some(&node.payload)
-            }
-            None => None,
-        }
-    }
-}
-
-impl<T, O> CellList<T, O>
+impl<O> CellList<O>
 where
-    T: ToString + Clone,
     O: CellOption,
 {
     pub fn new<C>(collection: C) -> Self
     where
-        C: IntoIterator<Item = T>,
+        C: IntoIterator,
     {
         let nodes = collection
             .into_iter()
             .enumerate()
-            .map(|(idx, payload)| ListNode::new(payload, idx))
+            .map(|(idx,_)| ListNode::new(idx))
             .collect();
 
         Self {
@@ -119,43 +86,33 @@ where
         }
     }
 
-    pub fn push(&mut self, cell_payload: T) {
+    pub fn push(&mut self) {
         self.nodes
-            .push(ListNode::new(cell_payload, self.nodes.len()));
+            .push(ListNode::new(self.nodes.len()));
     }
 
-    pub fn remove(&mut self, idx: usize) -> T {
-        let rv = self.nodes.remove(idx).payload;
+    pub fn remove(&mut self, idx: usize) {
+        self.nodes.remove(idx);
         self.nodes
             .iter_mut()
             .enumerate()
             .for_each(|(idx, payload)| payload.node_state.offset = idx);
-        rv
     }
 
-    pub fn get_payloads(&self) -> Vec<&T> {
-        self.nodes.iter().map(|node| &node.payload).collect()
-    }
-
-    pub fn ref_at(&self, index: usize) -> &T {
-        self.nodes
-            .get(index)
-            .map(|node| &node.payload)
-            .expect("getting out of bounds ref!")
-    }
-
-    pub fn view(
-        &mut self,
-        on_click: impl Fn(ListNodeState) -> Box<dyn Fn(&T) -> O::Message + 'static> + Copy,
-        on_double_click: impl Fn(ListNodeState) -> Box<dyn Fn(&T) -> O::Message + 'static> + Copy,
+    
+    pub fn view<'a, T: AsRef<str> + 'a >(
+        &'a mut self,
+        strings: impl IntoIterator<Item = &'a T>,
+        on_click: impl Fn(ListNodeState) -> Box<dyn Fn() -> O::Message + 'static> + Copy,
+        on_double_click: impl Fn(ListNodeState) -> Box<dyn Fn() -> O::Message + 'static> + Copy,
     ) -> Element<O::Message> {
         // To hack around the borrow checker being a little baby. Waa Waa
         let text_size = self.text_size;
         let cell_padding = self.cell_padding;
         Column::with_children(
             self.nodes
-                .iter_mut()
-                .map(|x| x.view(on_click, on_double_click, text_size, cell_padding))
+                .iter_mut().zip(strings.into_iter())
+                .map(|(x, val)| x.view((val).as_ref(),on_click, on_double_click, text_size, cell_padding))
                 .collect(),
         )
         .spacing(self.spacing)
@@ -191,7 +148,7 @@ where
     }
 }
 
-impl<T, O> Default for CellList<T, O> {
+impl<O> Default for CellList<O> {
     fn default() -> Self {
         Self {
             nodes: vec![],

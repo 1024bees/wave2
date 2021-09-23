@@ -1,10 +1,10 @@
 use iced::{
-    button, text_input, Align, Button, Container, Element, Font, HorizontalAlignment, Length, Row,
-    Space, Text, TextInput,
+    button, text_input, Align, Button, Command, Container, Element, Font, HorizontalAlignment,
+    Length, Row, Space, Text, TextInput,
 };
 
 use crate::signals::Bound;
-pub use crate::signals::Message;
+pub use crate::signals::{IconBarMessage, Message};
 
 const ICONS: Font = Font::External {
     name: "Icons",
@@ -66,9 +66,9 @@ pub struct IconBar {
 }
 
 impl IconBar {
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: IconBarMessage) -> Command<IconBarMessage> {
         match message {
-            Message::TIUpdate(bound, val) => match bound {
+            IconBarMessage::TIUpdate(bound, val) => match bound {
                 Bound::Left => self.bounds_str.0 = val,
                 Bound::Right => self.bounds_str.1 = val,
             },
@@ -76,6 +76,7 @@ impl IconBar {
                 panic!("Message: {:?} is being sent to the Icon Bar when it shouldnt be.. we die!")
             }
         }
+        Command::none()
     }
 
     pub fn view(&mut self) -> Element<Message> {
@@ -94,18 +95,22 @@ impl IconBar {
             &mut self.bounds_state.0,
             "0",
             self.bounds_str.0.as_str(),
-            |val| Message::TIUpdate(Bound::Left, val),
+            |val| Message::IconBarMessage(IconBarMessage::TIUpdate(Bound::Left, val)),
         )
-        .on_submit(Message::BoundsUpdate(Bound::Left))
+        .on_submit(Message::IconBarMessage(IconBarMessage::BoundsUpdate(
+            Bound::Left,
+        )))
         .size(15)
         .width(Length::Units(150));
         let right_bounds = TextInput::new(
             &mut self.bounds_state.1,
             "0",
             self.bounds_str.1.as_str(),
-            |val| Message::TIUpdate(Bound::Right, val),
+            |val| Message::IconBarMessage(IconBarMessage::TIUpdate(Bound::Right, val)),
         )
-        .on_submit(Message::BoundsUpdate(Bound::Right))
+        .on_submit(Message::IconBarMessage(IconBarMessage::BoundsUpdate(
+            Bound::Right,
+        )))
         .size(15)
         .width(Length::Units(150));
 

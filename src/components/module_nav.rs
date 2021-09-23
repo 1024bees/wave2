@@ -1,4 +1,4 @@
-use iced::{scrollable, Container, Element, Length, Scrollable};
+use iced::{scrollable, Command, Container, Element, Length, Scrollable};
 use log::error;
 use std::sync::Arc;
 use strum_macros;
@@ -33,6 +33,7 @@ impl CellOption for SigOptions {
 #[derive(Debug, Clone)]
 pub enum Message {
     SignalUpdate(Arc<Vec<SignalItem>>),
+    AddSigOffset(usize),
     AddSig(SignalItem),
     ClickedItem(usize),
     //Messages from SigOptions
@@ -42,17 +43,18 @@ pub enum Message {
 ///Responsible for navigating signals within a module
 #[derive(Default)]
 pub struct ModNavigator {
-    signals: CellList<SignalItem, SigOptions>,
+    signal_vec: Vec<SignalItem>,
+    signals: CellList<SigOptions>,
     selected_offset: Option<usize>,
     scroll_x: scrollable::State,
 }
 
 impl ModNavigator {
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: Message) -> Command<Message> {
         match message {
             Message::SignalUpdate(payload) => {
-                self.signals = Arc::try_unwrap(payload)
-                    .map_or_else(|e| CellList::new(e.as_ref().clone()), |o| CellList::new(o));
+                self.signal_vec = Arc::try_unwrap(payload)
+                    .map_or_else(|arcvec| arcvec.as_ref().clone(), |vec| vec);
 
                 self.selected_offset = None;
             }
@@ -65,27 +67,33 @@ impl ModNavigator {
                 self.selected_offset = Some(offset);
             }
             Message::AddSelected => {}
+            Message::AddSigOffset(offset) => {
+                let sig_item = self.signal_vec[offset].clone();
+                return Command::perform(async move { sig_item}, Message::AddSig);
+            }
             _ => {
                 error!("Not implimented yet!");
             }
         }
+        Command::none()
     }
     pub fn view(&mut self) -> Element<Message> {
         let ModNavigator {
-            signals, scroll_x, ..
+            signal_vec,
+            signals,
+            scroll_x,
+            ..
         } = self;
 
-        fn click_func(node_state: ListNodeState) -> Box<dyn Fn(&SignalItem) -> Message + 'static> {
-            return Box::new(move |_| Message::ClickedItem(node_state.offset));
+        fn click_func(node_state: ListNodeState) -> Box<dyn Fn() -> Message + 'static> {
+            return Box::new(move || Message::ClickedItem(node_state.offset));
         }
 
-        fn double_click(
-            _node_state: ListNodeState,
-        ) -> Box<dyn Fn(&SignalItem) -> Message + 'static> {
-            return Box::new(|sig_item| Message::AddSig(sig_item.clone()));
+        fn double_click(node_state: ListNodeState) -> Box<dyn Fn() -> Message + 'static> {
+            return Box::new(move || Message::AddSigOffset(node_state.offset));
         }
 
-        let viewed_signals = signals.view(click_func, double_click);
+        let viewed_signals = signals.view(signal_vec.iter(), click_func, double_click);
 
         let scrollable = Scrollable::new(scroll_x).push(
             Container::new(viewed_signals)

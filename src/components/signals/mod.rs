@@ -30,15 +30,30 @@ pub enum Message {
     GoToEnd,
     Next,
     Prev,
-    TIUpdate(Bound, String),
-    BoundsUpdate(Bound, String),
+    IconBarMessage(IconBarMessage),
     Noop,
 }
 
+
+#[derive(Debug, Clone)]
+pub enum IconBarMessage{
+    TIUpdate(Bound, String),
+    BoundsUpdate(Bound),
+
+}
 #[derive(Debug, Clone)]
 pub enum Bound {
     Left,
     Right,
+}
+
+
+
+pub mod state {
+    pub struct SharedState {
+
+    }
+
 }
 
 

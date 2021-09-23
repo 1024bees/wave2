@@ -1,9 +1,10 @@
+use super::InMemWave;
 use super::Message;
 use crate::components::shared::cell_list::{CellList, ListNodeState};
 use iced::{Column, Command, Container, Element, Row};
+use std::sync::Arc;
 use strum_macros;
 use wave2_custom_widgets::traits::CellOption;
-use wave2_wavedb::storage::display_wave::DisplayedWave;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, strum_macros::Display)]
 //TODO: add options, move to its own module?
@@ -30,7 +31,8 @@ impl CellOption for WaveOptions {
 }
 
 pub struct SigViewer {
-    waves_state: CellList<DisplayedWave, WaveOptions>,
+    waves_state: CellList<WaveOptions>,
+    waves: Vec<Arc<InMemWave>>,
     selected: Option<Vec<usize>>,
 }
 
@@ -39,6 +41,7 @@ impl Default for SigViewer {
         SigViewer {
             waves_state: CellList::default().set_cell_padding(4).set_text_size(11),
             //.set_spacing(wavewindow::BUFFER_PX as u16),
+            waves: vec![],
             selected: Option::default(),
         }
     }
@@ -49,7 +52,8 @@ impl SigViewer {
         match message {
             Message::AddWave(imw_res) => match imw_res {
                 Ok(imw) => {
-                    self.waves_state.push(DisplayedWave::from(imw));
+                    self.waves_state.push();
+                    self.waves.push(imw);
                     //self.wavewindow.request_redraw();
                 }
                 Err(err) => {
@@ -80,19 +84,19 @@ impl SigViewer {
 
                 self.selected = Some(vec![offset]);
             }
-            Message::Next => {
-                if let Some(selected) = self.selected {
-                    if selected.len() == 1 {
-                        let next_wave = self.waves_state.ref_at(selected[0]).get_wave().clone();
-                        return Command::perform(
-                            async { 
-                                next_wave.get_next_time().map(|(time, _)| time)
-                            },
-                            |time| time.map_or_else(|| Message::Noop, |val| Message::UpdateCursor(val))
-                        );
-                    }
-                }
-            }
+            //Message::Next => {
+            //    if let Some(selected) = self.selected {
+            //        if selected.len() == 1 {
+            //            let next_wave = self.waves_state.ref_at(selected[0]).get_wave().clone();
+            //            return Command::perform(
+            //                async {
+            //                    next_wave.get_next_time().map(|(time, _)| time)
+            //                },
+            //                |time| time.map_or_else(|| Message::Noop, |val| Message::UpdateCursor(val))
+            //            );
+            //        }
+            //    }
+            //}
             _ => {
                 log::info!("Not yet impl'd");
             }
@@ -112,19 +116,19 @@ impl SigViewer {
         //    .view(&live_waves[..])
         //    .map(move |message| Message::WWMessage(message));
 
-        fn click_func(
-            node_state: ListNodeState,
-        ) -> Box<dyn Fn(&DisplayedWave) -> Message + 'static> {
-            return Box::new(move |_| Message::SelectedWave(node_state.offset));
+        fn click_func(node_state: ListNodeState) -> Box<dyn Fn() -> Message + 'static> {
+            return Box::new(move || Message::SelectedWave(node_state.offset));
         }
 
-        fn double_click(
-            _node_state: ListNodeState,
-        ) -> Box<dyn Fn(&DisplayedWave) -> Message + 'static> {
-            return Box::new(move |_| Message::CellListPlaceholder);
+        fn double_click(_node_state: ListNodeState) -> Box<dyn Fn() -> Message + 'static> {
+            return Box::new(move || Message::CellListPlaceholder);
         }
 
-        let cl = waves_state.view(click_func, double_click);
+        let cl = waves_state.view(
+            self.waves.iter().map(|x| x.as_ref()),
+            click_func,
+            double_click,
+        );
 
         let pick_list = Column::new()
             //.push(

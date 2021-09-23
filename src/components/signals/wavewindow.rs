@@ -1,8 +1,10 @@
-use iced::{Color, Container, Element, Length};
+use iced::{Color, Container, Element, Length,Row,Command,Column};
 
 use super::Message;
 use wave2_custom_widgets::widget::signal_window;
 use wave2_wavedb::storage::display_wave::DisplayedWave;
+
+
 
 pub const BUFFER_PX: f32 = 1.5;
 pub const WAVEHEIGHT: f32 = 16.0;
@@ -31,7 +33,7 @@ impl WaveWindowState {
         .into()
     }
 
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: Message) -> Command<Message> {
         match message {
             Message::UpdateBounds(bounds) => {
                 self.widget_state.set_bounds(bounds);
@@ -49,5 +51,6 @@ impl WaveWindowState {
                 log::info!("Not covered");
             }
         }
+        Command::none()
     }
 }

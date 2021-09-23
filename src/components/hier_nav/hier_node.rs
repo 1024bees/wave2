@@ -18,11 +18,21 @@ struct ModuleWrapper {
     name: String,
 }
 
+
+
 impl ToString for ModuleWrapper {
     fn to_string(&self) -> String {
         self.name.clone()
     }
 }
+impl AsRef<str> for ModuleWrapper {
+    fn as_ref(&self) -> &str {
+        self.name.as_ref()
+    }
+}
+
+
+
 
 impl From<&ModuleItem> for ModuleWrapper {
     fn from(module: &ModuleItem) -> ModuleWrapper {
@@ -101,7 +111,7 @@ impl From<&HierMap> for HierRoot {
             .collect();
         HierRoot {
             root_vec: rootlist,
-            flat_expander_map: flat_expander_map,
+            flat_expander_map,
         }
     }
 }
@@ -129,13 +139,13 @@ impl HierNode {
                     .cloned()
                     .map(|x| HierNode::from_hmap(x, map, flat_expander_map))
                     .collect(),
-                shared_state: shared_state,
+                shared_state,
                 ..HierNode::default()
             }
         } else {
             HierNode {
                 payload,
-                shared_state: shared_state,
+                shared_state,
                 ..HierNode::default()
             }
         };
@@ -162,8 +172,9 @@ impl HierNode {
         .on_press(Message::Toggle(payload.hier_idx));
 
         //TODO: fixme, placeholder message closure
-        let root_cell = VizCell::new(ui_state, payload)
-            .on_click(Box::new(|module| Message::SendModule(module.hier_idx)))
+        let idx = payload.hier_idx.clone();
+        let root_cell = VizCell::new(ui_state, self.payload.as_ref())
+            .on_click(Box::new(move || Message::SendModule(idx)))
             .override_selected(shared_state.selected.get());
 
         let top_row = if !children.is_empty() {

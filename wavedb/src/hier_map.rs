@@ -237,6 +237,12 @@ pub struct SignalItem {
     pub(crate) width: u32,
 }
 
+impl AsRef<str> for SignalItem {
+    fn as_ref(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
 impl SignalItem {
     pub fn new(name: String, id: u32,  width: u32) -> Self {
         Self {

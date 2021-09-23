@@ -1,5 +1,5 @@
 use crate::components::hier_nav::hier_node::HierRoot;
-use iced::{scrollable, Container, Element, Scrollable};
+use iced::{scrollable, Command, Container, Element, Scrollable};
 use log::info;
 use std::sync::Arc;
 use strum_macros;
@@ -59,7 +59,7 @@ pub enum Message {
 }
 
 impl HierNav {
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: Message) -> Command<Message> {
         match message {
             Message::SetHier(payload) => {
                 self.hier_root = HierRoot::from(payload.as_ref());
@@ -94,6 +94,7 @@ impl HierNav {
                 }
             }
         }
+        Command::none()
     }
     pub fn view(&mut self) -> Element<Message> {
         let HierNav {

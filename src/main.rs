@@ -99,7 +99,7 @@ impl State {
 // This may be bad design, but I've resigned for the pane_grid::State
 // to own all Component level state.
 //
-// In the future it will be better to have content own the iced widget state and have an
+// In the future it may be cleaner to have content own the iced widget state and have an
 // Rc<RefCell<>> wrapping application state
 ///
 /// Component level content;
@@ -150,20 +150,20 @@ pub enum Message {
 }
 
 impl Content {
-    fn update(&mut self, app_message: Message) {
+    fn update(&mut self, app_message: Message) -> Command<Message> {
         match (self, &app_message) {
-            (Content::HierNav(hier_mod), Message::HNMessage(message)) => {
-                hier_mod.update(message.clone())
-            }
-            (Content::SigView(sig_view), Message::SignalsMessage(message)) => {
-                sig_view.update(message.clone())
-            }
-            (Content::WaveWindow(wavewindow), Message::SignalsMessage(message)) => {
-                wavewindow.update(message.clone())
-            }
-            (Content::ModNav(module_nav), Message::MNMessage(message)) => {
-                module_nav.update(message.clone())
-            }
+            (Content::HierNav(hier_mod), Message::HNMessage(message)) => hier_mod
+                .update(message.clone())
+                .map(|message| Message::HNMessage(message)),
+            (Content::SigView(sig_view), Message::SignalsMessage(message)) => sig_view
+                .update(message.clone())
+                .map(|message| Message::SignalsMessage(message)),
+            (Content::WaveWindow(wavewindow), Message::SignalsMessage(message)) => wavewindow
+                .update(message.clone())
+                .map(|message| Message::SignalsMessage(message)),
+            (Content::ModNav(module_nav), Message::MNMessage(message)) => module_nav
+                .update(message.clone())
+                .map(|message| Message::MNMessage(message)),
             (_, _) => panic!("Incorrect update message and content"),
         }
     }
@@ -204,18 +204,22 @@ impl Application for Wave2 {
         message: Self::Message,
         _clipboard: &mut Clipboard,
     ) -> Command<Self::Message> {
-        fn update_signals_logic(state: &mut State, inner_message: signals::Message) -> Option<Command<Message>> {
-            state
-                .panes
-                .get_mut(&state.sv_pane)
-                .unwrap()
-                .update(Message::SignalsMessage(inner_message.clone()));
-            state
-                .panes
-                .get_mut(&state.ww_pane)
-                .unwrap()
-                .update(Message::SignalsMessage(inner_message.clone()));
-            None
+        fn update_signals_logic(
+            state: &mut State,
+            inner_message: signals::Message,
+        ) -> Command<Message> {
+            Command::batch(vec![
+                state
+                    .panes
+                    .get_mut(&state.sv_pane)
+                    .unwrap()
+                    .update(Message::SignalsMessage(inner_message.clone())),
+                state
+                    .panes
+                    .get_mut(&state.ww_pane)
+                    .unwrap()
+                    .update(Message::SignalsMessage(inner_message.clone())),
+            ])
         }
 
         match self {
@@ -269,10 +273,10 @@ impl Application for Wave2 {
             }
             Wave2::Loaded(state) => {
                 match message {
-                    Message::MBMessage(menu_message) => return menu_update(state, menu_message),
+                    Message::MBMessage(menu_message) => menu_update(state, menu_message),
                     Message::SignalsMessage(inner_message) => {
                         state.focused_pane = Some(state.sv_pane);
-                        update_signals_logic(state, inner_message);
+                        update_signals_logic(state, inner_message)
                     }
                     Message::HNMessage(hn_message) => {
                         match hn_message {
@@ -303,11 +307,11 @@ impl Application for Wave2 {
                         }
                     }
                     Message::IBMessage(ib_message) => match ib_message {
-                        signals::Message::TIUpdate(..) | signals::Message::BoundsUpdate(_) => {
-                            state.icon_bar.update(ib_message)
+                        signals::Message::IconBarMessage(icon_bar_message) => {
+                            state.icon_bar.update(icon_bar_message).map(|message| Message::IBMessage(signals::Message::IconBarMessage(message)))
                         }
                         _ => {
-                            update_signals_logic(state, ib_message);
+                            update_signals_logic(state, ib_message)
                         }
                     },
                     Message::MNMessage(mn_message) => match mn_message {
@@ -339,26 +343,27 @@ impl Application for Wave2 {
                                     state.wdb_api.as_ref().unwrap().get_hier_map().clone(),
                                 )),
                             );
-                            return Command::perform(
+                            Command::perform(
                                 WdbApi::bounds(state.get_api()),
                                 move |bounds| {
                                     Message::SignalsMessage(signals::Message::UpdateBounds(bounds))
                                 },
-                            );
+                            )
                         }
                         Err(waverr) => {
                             state.set_file_pending(false);
-                            warn!("{}", format!("VCD not loaded! err is {:?}", waverr))
+                            warn!("{}", format!("VCD not loaded! err is {:?}", waverr));
+                            Command::none()
                         }
                     },
                     Message::PaneMessage(pane_message) => match pane_message {
                         PaneMessage::Resize(pane_grid::ResizeEvent { split, ratio }) => {
                             state.panes.resize(&split, ratio);
+                            Command::none()
                         }
                     },
-                    _ => {}
+                    _ => { Command::none()}
                 }
-                Command::none()
             }
         }
     }

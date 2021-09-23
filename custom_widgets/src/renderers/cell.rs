@@ -11,8 +11,8 @@ use iced_style::menu::Style as MenuStyle;
 use crate::styles::cell_list::StyleSheet;
 
 /// A widget allowing the selection of a single value from a list of options.
-pub type Cell<'a, T, O, Message, Backend> =
-    cell::Cell<'a, T, O, Message, Renderer<Backend>>;
+pub type Cell<'a, O, Message, Backend> =
+    cell::Cell<'a, O, Message, Renderer<Backend>>;
 
 impl<B> cell::Renderer for Renderer<B>
 where
@@ -26,11 +26,11 @@ where
         style.options()
     }
 
-    fn draw<T: ToString>(
+    fn draw(
         &mut self,
         bounds: Rectangle,
         cursor_position: Point,
-        item: &T,
+        item: &str,
         selected: bool,
         padding: u16,
         text_size: u16,

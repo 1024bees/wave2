@@ -10,6 +10,14 @@ pub struct InMemWave {
     puddles: Vec<Arc<Puddle>>,
 }
 
+
+impl AsRef<str> for InMemWave {
+    fn as_ref(&self) -> &str {
+        self.name.as_str()
+    }
+
+}
+
 ///In memory DS for wave content; created from a Vector of Arcs to puddles
 impl InMemWave {
     pub fn all_data(&self) -> impl Iterator<Item = (u32, &[u8])> + '_ {
