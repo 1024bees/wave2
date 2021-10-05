@@ -1,10 +1,11 @@
-use super::InMemWave;
-use super::Message;
+use super::{state, Message};
 use crate::components::shared::cell_list::{CellList, ListNodeState};
 use iced::{Column, Command, Container, Element, Row};
-use std::sync::Arc;
+use strum::IntoEnumIterator;
 use strum_macros;
 use wave2_custom_widgets::traits::CellOption;
+
+use wave2_wavedb::storage::display_wave::DisplayedWave;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, strum_macros::Display)]
 //TODO: add options, move to its own module?
@@ -32,7 +33,7 @@ impl CellOption for WaveOptions {
 
 pub struct SigViewer {
     waves_state: CellList<WaveOptions>,
-    waves: Vec<Arc<InMemWave>>,
+    shared_state: state::SharedState,
     selected: Option<Vec<usize>>,
 }
 
@@ -41,7 +42,7 @@ impl Default for SigViewer {
         SigViewer {
             waves_state: CellList::default().set_cell_padding(4).set_text_size(11),
             //.set_spacing(wavewindow::BUFFER_PX as u16),
-            waves: vec![],
+            shared_state: state::SharedState::default(),
             selected: Option::default(),
         }
     }
@@ -53,7 +54,10 @@ impl SigViewer {
             Message::AddWave(imw_res) => match imw_res {
                 Ok(imw) => {
                     self.waves_state.push();
-                    self.waves.push(imw);
+                    self.shared_state
+                        .borrow_mut()
+                        .waves
+                        .push(DisplayedWave::from(imw));
                     //self.wavewindow.request_redraw();
                 }
                 Err(err) => {
@@ -124,11 +128,10 @@ impl SigViewer {
             return Box::new(move || Message::CellListPlaceholder);
         }
 
-        let cl = waves_state.view(
-            self.waves.iter().map(|x| x.as_ref()),
-            click_func,
-            double_click,
-        );
+        let borrowed_val = self.shared_state.borrow();
+
+        let iter = borrowed_val.waves.iter().map(|x| x.get_wave());
+        let cl = waves_state.view(iter, click_func, double_click);
 
         let pick_list = Column::new()
             //.push(

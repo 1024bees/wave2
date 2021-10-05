@@ -19,7 +19,7 @@ pub struct ListNodeState {
     pub selected: bool,
 }
 
-impl<O> ListNode< O>
+impl<O> ListNode<O>
 where
     O: CellOption,
 {
@@ -32,9 +32,9 @@ where
             },
         }
     }
-    fn view<'a>(
-        &'a mut self,
-        payload: &'a str,
+    fn view(
+        &mut self,
+        payload: String,
         on_click: impl Fn(ListNodeState) -> Box<dyn Fn() -> O::Message + 'static>,
         on_double_click: impl Fn(ListNodeState) -> Box<dyn Fn() -> O::Message + 'static>,
         text_size: Option<u16>,
@@ -65,7 +65,6 @@ pub struct CellList<O> {
     spacing: u16,
 }
 
-
 impl<O> CellList<O>
 where
     O: CellOption,
@@ -77,7 +76,7 @@ where
         let nodes = collection
             .into_iter()
             .enumerate()
-            .map(|(idx,_)| ListNode::new(idx))
+            .map(|(idx, _)| ListNode::new(idx))
             .collect();
 
         Self {
@@ -87,8 +86,7 @@ where
     }
 
     pub fn push(&mut self) {
-        self.nodes
-            .push(ListNode::new(self.nodes.len()));
+        self.nodes.push(ListNode::new(self.nodes.len()));
     }
 
     pub fn remove(&mut self, idx: usize) {
@@ -99,9 +97,8 @@ where
             .for_each(|(idx, payload)| payload.node_state.offset = idx);
     }
 
-    
-    pub fn view<'a, T: AsRef<str> + 'a >(
-        &'a mut self,
+    pub fn view<'a, T: ToString + 'a>(
+        &mut self,
         strings: impl IntoIterator<Item = &'a T>,
         on_click: impl Fn(ListNodeState) -> Box<dyn Fn() -> O::Message + 'static> + Copy,
         on_double_click: impl Fn(ListNodeState) -> Box<dyn Fn() -> O::Message + 'static> + Copy,
@@ -109,14 +106,22 @@ where
         // To hack around the borrow checker being a little baby. Waa Waa
         let text_size = self.text_size;
         let cell_padding = self.cell_padding;
-        Column::with_children(
-            self.nodes
-                .iter_mut().zip(strings.into_iter())
-                .map(|(x, val)| x.view((val).as_ref(),on_click, on_double_click, text_size, cell_padding))
-                .collect(),
-        )
-        .spacing(self.spacing)
-        .into()
+        let vecs = self
+            .nodes
+            .iter_mut()
+            .zip(strings.into_iter())
+            .map(|(x, val)| {
+                x.view(
+                    (val).to_string(),
+                    on_click,
+                    on_double_click,
+                    text_size,
+                    cell_padding,
+                )
+            })
+            .collect();
+
+        Column::with_children(vecs).spacing(self.spacing).into()
     }
 
     pub fn toggle_selected(&mut self, offset: usize, selected: bool) {

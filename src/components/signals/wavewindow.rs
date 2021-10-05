@@ -38,12 +38,12 @@ impl WaveWindowState {
             Message::UpdateBounds(bounds) => {
                 self.widget_state.set_bounds(bounds);
             }
-            Message::AddWave(imw) => match imw {
-                Ok(wave) => {
-                    self.live_waves.push(DisplayedWave::from(wave));
-                }
-                Err(err) => log::info!("Failed to add wave with err {:?}", err),
-            },
+            //Message::AddWave(imw) => match imw {
+            //    Ok(wave) => {
+            //        self.live_waves.push(DisplayedWave::from(wave));
+            //    }
+            //    Err(err) => log::info!("Failed to add wave with err {:?}", err),
+            //},
             Message::UpdateCursor(cursor_loc) => {
                 self.widget_state.cursor_location = cursor_loc;
             }

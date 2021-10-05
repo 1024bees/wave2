@@ -28,7 +28,7 @@ where
     on_click: Option<Box<dyn Fn() -> Message>>,
     on_double_click: Option<Box<dyn Fn() -> Message>>,
     overriden_selected: Option<bool>,
-    item: &'a str,
+    item: String,
     options: PhantomData<O>,
     width: Length,
     padding: u16,
@@ -83,7 +83,7 @@ where
     ///
     /// [`Cell`]: struct.Cell.html
     /// [`State`]: struct.State.html
-    pub fn new(state: &'a mut State<O>, item: &'a str) -> Self {
+    pub fn new(state: &'a mut State<O>, item: String) -> Self {
         let State {
             menu,
             menu_open,
@@ -319,7 +319,7 @@ where
             renderer,
             layout.bounds(),
             cursor_position,
-            self.item,
+            self.item.as_ref(),
             self.overriden_selected.unwrap_or(*self.selected),
             self.padding,
             self.text_size.unwrap_or(renderer.default_size()),

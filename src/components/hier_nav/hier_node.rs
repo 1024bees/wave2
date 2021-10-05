@@ -173,7 +173,7 @@ impl HierNode {
 
         //TODO: fixme, placeholder message closure
         let idx = payload.hier_idx.clone();
-        let root_cell = VizCell::new(ui_state, self.payload.as_ref())
+        let root_cell = VizCell::new(ui_state, self.payload.to_string())
             .on_click(Box::new(move || Message::SendModule(idx)))
             .override_selected(shared_state.selected.get());
 

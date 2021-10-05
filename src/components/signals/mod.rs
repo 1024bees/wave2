@@ -34,12 +34,10 @@ pub enum Message {
     Noop,
 }
 
-
 #[derive(Debug, Clone)]
-pub enum IconBarMessage{
+pub enum IconBarMessage {
     TIUpdate(Bound, String),
     BoundsUpdate(Bound),
-
 }
 #[derive(Debug, Clone)]
 pub enum Bound {
@@ -47,13 +45,15 @@ pub enum Bound {
     Right,
 }
 
-
-
 pub mod state {
-    pub struct SharedState {
+    use std::rc::Rc;
+    use std::cell::RefCell;
+    use wave2_wavedb::storage::display_wave::DisplayedWave;
+    pub type SharedState = Rc<RefCell<SignalState>>;
 
+    #[derive(Default)]
+    pub struct SignalState {
+        pub cursor_location: u32,
+        pub waves : Vec<DisplayedWave>,
     }
-
 }
-
-
