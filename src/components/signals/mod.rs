@@ -1,3 +1,4 @@
+pub mod beach;
 pub mod sigwindow;
 pub mod wavewindow;
 
@@ -46,14 +47,22 @@ pub enum Bound {
 }
 
 pub mod state {
-    use std::rc::Rc;
     use std::cell::RefCell;
+    use std::rc::Rc;
+
     use wave2_wavedb::storage::display_wave::DisplayedWave;
     pub type SharedState = Rc<RefCell<SignalState>>;
 
     #[derive(Default)]
     pub struct SignalState {
         pub cursor_location: u32,
-        pub waves : Vec<DisplayedWave>,
+        pub waves: Vec<DisplayedWave>,
+    }
+
+    #[derive(Default)]
+    pub struct Beach {
+        pub cursor_location: u32,
+        pub waves: Vec<DisplayedWave>,
+        sigviewer: sigwindow::SigViewer,
     }
 }

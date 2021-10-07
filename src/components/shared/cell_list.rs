@@ -46,7 +46,7 @@ where
             ..
         } = self;
         let click = on_click(node_state.clone());
-
+        log::info!("string we want to view is {}", payload);
         let sig_cell = VizCell::new(ui_state, payload)
             .on_click(click)
             .on_double_click(on_double_click(node_state.clone()))
@@ -69,15 +69,8 @@ impl<O> CellList<O>
 where
     O: CellOption,
 {
-    pub fn new<C>(collection: C) -> Self
-    where
-        C: IntoIterator,
-    {
-        let nodes = collection
-            .into_iter()
-            .enumerate()
-            .map(|(idx, _)| ListNode::new(idx))
-            .collect();
+    pub fn new(size: usize) -> Self {
+        let nodes = (0..size).map(|idx| ListNode::new(idx)).collect();
 
         Self {
             nodes,
@@ -106,6 +99,7 @@ where
         // To hack around the borrow checker being a little baby. Waa Waa
         let text_size = self.text_size;
         let cell_padding = self.cell_padding;
+        log::info!("nodes len is {}", self.nodes.len());
         let vecs = self
             .nodes
             .iter_mut()

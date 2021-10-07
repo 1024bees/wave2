@@ -56,6 +56,7 @@ impl ModNavigator {
                 self.signal_vec = Arc::try_unwrap(payload)
                     .map_or_else(|arcvec| arcvec.as_ref().clone(), |vec| vec);
 
+                self.signals = CellList::new(self.signal_vec.len());
                 self.selected_offset = None;
             }
 
@@ -69,7 +70,7 @@ impl ModNavigator {
             Message::AddSelected => {}
             Message::AddSigOffset(offset) => {
                 let sig_item = self.signal_vec[offset].clone();
-                return Command::perform(async move { sig_item}, Message::AddSig);
+                return Command::perform(async move { sig_item }, Message::AddSig);
             }
             _ => {
                 error!("Not implimented yet!");
@@ -101,8 +102,6 @@ impl ModNavigator {
                 .width(Length::Shrink)
                 .center_x(),
         );
-
-
 
         Container::new(scrollable)
             .height(Length::Fill)

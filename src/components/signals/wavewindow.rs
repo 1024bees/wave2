@@ -1,6 +1,7 @@
 use iced::{Color, Container, Element, Length,Row,Command,Column};
 
 use super::Message;
+use super::state;
 use wave2_custom_widgets::widget::signal_window;
 use wave2_wavedb::storage::display_wave::DisplayedWave;
 
@@ -18,6 +19,7 @@ const TS_CLIP_RANGE: f32 = 5.0;
 #[derive(Default)]
 pub struct WaveWindowState {
     live_waves: Vec<DisplayedWave>,
+    shared_waves_state: state::SharedState, 
     widget_state: signal_window::State,
 }
 

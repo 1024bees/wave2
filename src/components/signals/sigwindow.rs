@@ -33,7 +33,7 @@ impl CellOption for WaveOptions {
 
 pub struct SigViewer {
     waves_state: CellList<WaveOptions>,
-    shared_state: state::SharedState,
+    shared_waves_state: state::SharedState,
     selected: Option<Vec<usize>>,
 }
 
@@ -42,7 +42,7 @@ impl Default for SigViewer {
         SigViewer {
             waves_state: CellList::default().set_cell_padding(4).set_text_size(11),
             //.set_spacing(wavewindow::BUFFER_PX as u16),
-            shared_state: state::SharedState::default(),
+            shared_waves_state: state::SharedState::default(),
             selected: Option::default(),
         }
     }
@@ -54,7 +54,7 @@ impl SigViewer {
             Message::AddWave(imw_res) => match imw_res {
                 Ok(imw) => {
                     self.waves_state.push();
-                    self.shared_state
+                    self.shared_waves_state
                         .borrow_mut()
                         .waves
                         .push(DisplayedWave::from(imw));
@@ -128,7 +128,7 @@ impl SigViewer {
             return Box::new(move || Message::CellListPlaceholder);
         }
 
-        let borrowed_val = self.shared_state.borrow();
+        let borrowed_val = self.shared_waves_state.borrow();
 
         let iter = borrowed_val.waves.iter().map(|x| x.get_wave());
         let cl = waves_state.view(iter, click_func, double_click);
