@@ -308,11 +308,11 @@ impl Application for Wave2 {
                     }
                     Message::IBMessage(ib_message) => match ib_message {
                         signals::Message::IconBarMessage(icon_bar_message) => {
-                            state.icon_bar.update(icon_bar_message).map(|message| Message::IBMessage(signals::Message::IconBarMessage(message)))
+                            state.icon_bar.update(icon_bar_message).map(|message| {
+                                Message::IBMessage(signals::Message::IconBarMessage(message))
+                            })
                         }
-                        _ => {
-                            update_signals_logic(state, ib_message)
-                        }
+                        _ => update_signals_logic(state, ib_message),
                     },
                     Message::MNMessage(mn_message) => match mn_message {
                         module_nav::Message::AddSig(signal_item) => {
@@ -343,12 +343,9 @@ impl Application for Wave2 {
                                     state.wdb_api.as_ref().unwrap().get_hier_map().clone(),
                                 )),
                             );
-                            Command::perform(
-                                WdbApi::bounds(state.get_api()),
-                                move |bounds| {
-                                    Message::SignalsMessage(signals::Message::UpdateBounds(bounds))
-                                },
-                            )
+                            Command::perform(WdbApi::bounds(state.get_api()), move |bounds| {
+                                Message::SignalsMessage(signals::Message::UpdateBounds(bounds))
+                            })
                         }
                         Err(waverr) => {
                             state.set_file_pending(false);
@@ -362,7 +359,7 @@ impl Application for Wave2 {
                             Command::none()
                         }
                     },
-                    _ => { Command::none()}
+                    _ => Command::none(),
                 }
             }
         }

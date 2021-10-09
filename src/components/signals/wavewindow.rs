@@ -35,6 +35,17 @@ impl WaveWindowState {
         .into()
     }
 
+    pub fn view2<'a>(&'a mut self, waves: &'a [DisplayedWave]) -> Element<Message> {
+        Container::new(signal_window::SignalWindow::new(
+            waves,
+            &mut self.widget_state,
+        ))
+        .width(Length::Shrink)
+        .height(Length::Fill)
+        .padding(10)
+        .into()
+    }
+
     pub fn update(&mut self, message: Message) -> Command<Message> {
         match message {
             Message::UpdateBounds(bounds) => {

@@ -1,7 +1,6 @@
 use super::{state, Message};
 use crate::components::shared::cell_list::{CellList, ListNodeState};
 use iced::{Column, Command, Container, Element, Row};
-use strum::IntoEnumIterator;
 use strum_macros;
 use wave2_custom_widgets::traits::CellOption;
 
@@ -131,6 +130,43 @@ impl SigViewer {
         let borrowed_val = self.shared_waves_state.borrow();
 
         let iter = borrowed_val.waves.iter().map(|x| x.get_wave());
+        let cl = waves_state.view(iter, click_func, double_click);
+
+        let pick_list = Column::new()
+            //.push(
+            //    Text::new("Active signals")
+            //        .height(iced::Length::Units(
+            //            (wavewindow::TS_FONT_SIZE + wavewindow::BUFFER_PX) as u16,
+            //        ))
+            //        .size(wavewindow::TS_FONT_SIZE as u16),
+            //)
+            .push(cl)
+            .width(iced::Length::Fill)
+            .height(iced::Length::Fill)
+            .max_width(400)
+            .padding(20);
+        //.spacing(20);
+
+        Container::new(Row::new().push(pick_list).height(iced::Length::Fill)).into()
+    }
+    pub fn view2(&mut self, waves: &[DisplayedWave]) -> Element<Message> {
+        let SigViewer {
+            waves_state,
+            ..
+            //wavewindow,
+            //live_waves,
+        } = self;
+
+        
+        fn click_func(node_state: ListNodeState) -> Box<dyn Fn() -> Message + 'static> {
+            return Box::new(move || Message::SelectedWave(node_state.offset));
+        }
+
+        fn double_click(_node_state: ListNodeState) -> Box<dyn Fn() -> Message + 'static> {
+            return Box::new(move || Message::CellListPlaceholder);
+        }
+
+        let iter = waves.iter().map(|x| x.get_wave());
         let cl = waves_state.view(iter, click_func, double_click);
 
         let pick_list = Column::new()

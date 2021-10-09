@@ -9,6 +9,7 @@ use std::sync::Arc;
 use wave2_wavedb::errors::Waverr;
 use wave2_wavedb::storage::in_memory::InMemWave;
 
+
 #[derive(Debug, Clone)]
 pub enum Message {
     ///Messages that are shared across wavewindow and signalviewer
@@ -33,6 +34,7 @@ pub enum Message {
     Prev,
     IconBarMessage(IconBarMessage),
     Noop,
+    BeachPane(beach::BeachPane)
 }
 
 #[derive(Debug, Clone)]
@@ -40,6 +42,18 @@ pub enum IconBarMessage {
     TIUpdate(Bound, String),
     BoundsUpdate(Bound),
 }
+
+
+
+
+
+
+
+
+
+
+
+
 #[derive(Debug, Clone)]
 pub enum Bound {
     Left,
@@ -57,12 +71,5 @@ pub mod state {
     pub struct SignalState {
         pub cursor_location: u32,
         pub waves: Vec<DisplayedWave>,
-    }
-
-    #[derive(Default)]
-    pub struct Beach {
-        pub cursor_location: u32,
-        pub waves: Vec<DisplayedWave>,
-        sigviewer: sigwindow::SigViewer,
     }
 }

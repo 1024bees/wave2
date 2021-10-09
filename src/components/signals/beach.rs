@@ -1,12 +1,17 @@
 use super::sigwindow;
 use super::wavewindow;
 use super::Message;
-use iced::{pane_grid, Command, Element, PaneGrid};
+use iced::{pane_grid, Command, Element, Length, PaneGrid};
 use wave2_wavedb::storage::display_wave::DisplayedWave;
 
 pub enum BeachContent {
     Waves(wavewindow::WaveWindowState),
     Signals(sigwindow::SigViewer),
+}
+
+#[derive(Debug, Clone)]
+pub enum BeachPane {
+    Resize(pane_grid::ResizeEvent),
 }
 
 impl BeachContent {
@@ -16,10 +21,10 @@ impl BeachContent {
             BeachContent::Signals(signals) => signals.update(message),
         }
     }
-    fn view(&mut self, beach: &mut Beach) -> Element<Message> {
+    fn view<'a>(&'a mut self, waves: &'a [DisplayedWave]) -> Element<Message> {
         match self {
-            BeachContent::Waves(waves) => waves.view(),
-            BeachContent::Signals(signals) => signals.view(),
+            BeachContent::Waves(ww) => ww.view2(waves),
+            BeachContent::Signals(signals) => signals.view2(waves),
         }
     }
 }
@@ -32,8 +37,29 @@ pub struct Beach {
     sig_pane: pane_grid::Pane,
 }
 
+impl Default for Beach {
+    fn default() -> Self {
+        let waves = BeachContent::Waves(wavewindow::WaveWindowState::default());
+        let signals = BeachContent::Signals(sigwindow::SigViewer::default());
+        let (mut beach_panes, sig_pane) = pane_grid::State::new(signals);
+
+        let (waves_pane, split) = beach_panes
+            .split(pane_grid::Axis::Vertical, &sig_pane, waves)
+            .unwrap();
+        beach_panes.swap(&waves_pane, &sig_pane);
+        beach_panes.resize(&split, 0.3);
+        Beach {
+            cursor_location: 0,
+            waves: vec![],
+            beach_panes,
+            waves_pane,
+            sig_pane,
+        }
+    }
+}
+
 impl Beach {
-    fn update(&mut self, message: Message) -> Command<Message> {
+    pub fn update(&mut self, message: Message) -> Command<Message> {
         match message {
             //Messages that are only handled by the sigwindow
             Message::UpdateBounds(_) | Message::UpdateCursor(_) => {
@@ -55,7 +81,7 @@ impl Beach {
             Message::ClearWaves => self.waves.clear(),
             Message::CellListPlaceholder | Message::RemoveSelected | Message::SelectedWave(_) => {
                 self.beach_panes
-                    .get_mut(&self.waves_pane)
+                    .get_mut(&self.sig_pane)
                     .unwrap()
                     .update(message);
             }
@@ -64,5 +90,23 @@ impl Beach {
             }
         }
         Command::none()
+    }
+
+    pub fn view(&mut self) -> Element<Message> {
+        let waves = &self.waves[..];
+        PaneGrid::new(&mut self.beach_panes, |_, content| {
+            //let title_bar = pane_grid::TitleBar::new(Text::new(format!("Focused pane"))).padding(3);
+            pane_grid::Content::new(content.view(waves))
+            //.title_bar(title_bar)
+        })
+        .width(Length::Fill)
+        .height(Length::Fill)
+        //FIXME: causes int overflow in the glow backend
+        //.on_drag(|pane_data| Message::PaneMessage(PaneMessage::Dragged(pane_data)))
+        .on_resize(10, |resize_data| {
+            Message::BeachPane(BeachPane::Resize(resize_data))
+        })
+        .spacing(3)
+        .into()
     }
 }
