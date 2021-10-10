@@ -9,10 +9,9 @@ pub mod components;
 mod config;
 use components::hier_nav::hier_nav;
 use components::icon_bar;
-use components::signals::wavewindow;
 use components::{
     menu_bar, module_nav,
-    signals::{self, sigwindow},
+    signals::{self, beach},
     style,
 };
 use config::menu_update;
@@ -72,10 +71,9 @@ fn main() {
 
 pub struct State {
     panes: pane_grid::State<Content>,
-    sv_pane: pane_grid::Pane,
     mn_pane: pane_grid::Pane,
     hn_pane: pane_grid::Pane,
-    ww_pane: pane_grid::Pane,
+    beach: pane_grid::Pane,
     focused_pane: Option<pane_grid::Pane>,
     menu_bar: menu_bar::GlobalMenuBar,
     icon_bar: icon_bar::IconBar,
@@ -106,19 +104,17 @@ impl State {
 /// Content wraps each component level state, and can be referenced via get_mut() using each pane
 /// as a key
 enum Content {
-    SigView(sigwindow::SigViewer),
     ModNav(module_nav::ModNavigator),
     HierNav(hier_nav::HierNav),
-    WaveWindow(wavewindow::WaveWindowState),
+    Beach(beach::Beach),
 }
 
 impl ToString for Content {
     fn to_string(&self) -> String {
         match self {
-            Content::SigView(_) => String::from("Signal viewer"),
             Content::ModNav(_) => String::from("Signal navigator"),
             Content::HierNav(_) => String::from("Hierarchy navigator"),
-            Content::WaveWindow(_) => String::from("Waves"),
+            Content::Beach(_) => String::from("Beach"),
         }
     }
 }
@@ -155,10 +151,8 @@ impl Content {
             (Content::HierNav(hier_mod), Message::HNMessage(message)) => hier_mod
                 .update(message.clone())
                 .map(|message| Message::HNMessage(message)),
-            (Content::SigView(sig_view), Message::SignalsMessage(message)) => sig_view
-                .update(message.clone())
-                .map(|message| Message::SignalsMessage(message)),
-            (Content::WaveWindow(wavewindow), Message::SignalsMessage(message)) => wavewindow
+
+            (Content::Beach(beach), Message::SignalsMessage(message)) => beach 
                 .update(message.clone())
                 .map(|message| Message::SignalsMessage(message)),
             (Content::ModNav(module_nav), Message::MNMessage(message)) => module_nav
@@ -173,13 +167,10 @@ impl Content {
             Content::HierNav(hier_mod) => hier_mod
                 .view()
                 .map(move |message| Message::HNMessage(message)),
-            Content::SigView(sig_view) => sig_view
-                .view()
-                .map(move |message| Message::SignalsMessage(message)),
             Content::ModNav(module_nav) => module_nav
                 .view()
                 .map(move |message| Message::MNMessage(message)),
-            Content::WaveWindow(ww) => ww
+            Content::Beach(beach) => beach
                 .view()
                 .map(move |message| Message::SignalsMessage(message)),
         }
@@ -208,40 +199,27 @@ impl Application for Wave2 {
             state: &mut State,
             inner_message: signals::Message,
         ) -> Command<Message> {
-            Command::batch(vec![
-                state
-                    .panes
-                    .get_mut(&state.sv_pane)
-                    .unwrap()
-                    .update(Message::SignalsMessage(inner_message.clone())),
-                state
-                    .panes
-                    .get_mut(&state.ww_pane)
-                    .unwrap()
-                    .update(Message::SignalsMessage(inner_message.clone())),
-            ])
+            state
+                .panes
+                .get_mut(&state.beach)
+                .unwrap()
+                .update(Message::SignalsMessage(inner_message.clone()))
         }
 
         match self {
             Wave2::Loading => {
                 match message {
                     Message::Loaded(Ok(wavedb)) => {
-                        let sig_viewer = Content::SigView(sigwindow::SigViewer::default());
                         let mod_nav = Content::ModNav(module_nav::ModNavigator::default());
                         let hier_nav = Content::HierNav(hier_nav::HierNav::default());
-                        let wavewindow =
-                            Content::WaveWindow(wavewindow::WaveWindowState::default());
-                        let (mut panes, sv_pane) = pane_grid::State::new(sig_viewer);
+                        let beach = Content::Beach(beach::Beach::default());
+                        let (mut panes, beach) = pane_grid::State::new(beach);
 
                         let (mn_pane, split) = panes
-                            .split(pane_grid::Axis::Vertical, &sv_pane, mod_nav)
+                            .split(pane_grid::Axis::Vertical, &beach, mod_nav)
                             .unwrap();
-                        panes.swap(&mn_pane, &sv_pane);
+                        panes.swap(&mn_pane, &beach);
                         panes.resize(&split, 0.2);
-                        let (ww_pane, ww_split) = panes
-                            .split(pane_grid::Axis::Vertical, &sv_pane, wavewindow)
-                            .unwrap();
-                        panes.resize(&ww_split, 0.3);
                         let (hn_pane, _) = panes
                             .split(pane_grid::Axis::Horizontal, &mn_pane, hier_nav)
                             .unwrap();
@@ -253,10 +231,9 @@ impl Application for Wave2 {
                         let icon_bar = icon_bar::IconBar::default();
                         *self = Wave2::Loaded(State {
                             panes,
-                            sv_pane,
+                            beach,
                             mn_pane,
                             hn_pane,
-                            ww_pane,
                             menu_bar,
                             icon_bar,
                             focused_pane: None,
@@ -275,7 +252,7 @@ impl Application for Wave2 {
                 match message {
                     Message::MBMessage(menu_message) => menu_update(state, menu_message),
                     Message::SignalsMessage(inner_message) => {
-                        state.focused_pane = Some(state.sv_pane);
+                        state.focused_pane = Some(state.beach);
                         update_signals_logic(state, inner_message)
                     }
                     Message::HNMessage(hn_message) => {

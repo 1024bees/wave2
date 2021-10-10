@@ -46,7 +46,7 @@ impl Default for Beach {
         let (waves_pane, split) = beach_panes
             .split(pane_grid::Axis::Vertical, &sig_pane, waves)
             .unwrap();
-        beach_panes.swap(&waves_pane, &sig_pane);
+        //beach_panes.swap(&waves_pane, &sig_pane);
         beach_panes.resize(&split, 0.3);
         Beach {
             cursor_location: 0,
@@ -59,31 +59,62 @@ impl Default for Beach {
 }
 
 impl Beach {
+    fn get_sigwindow(&mut self) -> &mut sigwindow::SigViewer {
+        let pane_val = self.beach_panes.get_mut(&self.sig_pane).unwrap();
+        match pane_val {
+            BeachContent::Signals(sigs) => sigs,
+            _ => unreachable!("Should never get to this point!"),
+        }
+    }
+
+    fn get_wavewindow(&mut self) -> &mut wavewindow::WaveWindowState {
+        let pane_val = self.beach_panes.get_mut(&self.waves_pane).unwrap();
+        match pane_val {
+            BeachContent::Waves(waves) => waves,
+            _ => unreachable!("Should never get to this point!"),
+        }
+}
+
+
     pub fn update(&mut self, message: Message) -> Command<Message> {
+        fn update_sigwindow(beach: &mut Beach, message: Message) -> Command<Message> {
+            beach
+                .beach_panes
+                .get_mut(&beach.sig_pane)
+                .unwrap()
+                .update(message)
+        }
+
+        fn update_wavewindow(beach: &mut Beach, message: Message) -> Command<Message> {
+            beach
+                .beach_panes
+                .get_mut(&beach.waves_pane)
+                .unwrap()
+                .update(message)
+        }
+
         match message {
             //Messages that are only handled by the sigwindow
             Message::UpdateBounds(_) | Message::UpdateCursor(_) => {
-                self.beach_panes
-                    .get_mut(&self.waves_pane)
-                    .unwrap()
-                    .update(message);
+                update_wavewindow(self, message);
             }
             Message::AddWave(imw_res) => match imw_res {
                 Ok(imw) => {
                     //self.waves_state.push();
                     self.waves.push(DisplayedWave::from(imw));
+                    self.get_sigwindow().add_wave();
                     //self.wavewindow.request_redraw();
                 }
                 Err(err) => {
                     log::info!("Cannot create InMemWave, err is {:#?}", err);
                 }
             },
-            Message::ClearWaves => self.waves.clear(),
+            Message::ClearWaves => {
+                self.waves.clear();
+                update_sigwindow(self, message);
+            }
             Message::CellListPlaceholder | Message::RemoveSelected | Message::SelectedWave(_) => {
-                self.beach_panes
-                    .get_mut(&self.sig_pane)
-                    .unwrap()
-                    .update(message);
+                update_sigwindow(self, message);
             }
             _ => {
                 log::info!("Not covered");

@@ -1,4 +1,4 @@
-use super::{state, Message};
+use super::Message;
 use crate::components::shared::cell_list::{CellList, ListNodeState};
 use iced::{Column, Command, Container, Element, Row};
 use strum_macros;
@@ -32,7 +32,6 @@ impl CellOption for WaveOptions {
 
 pub struct SigViewer {
     waves_state: CellList<WaveOptions>,
-    shared_waves_state: state::SharedState,
     selected: Option<Vec<usize>>,
 }
 
@@ -41,23 +40,21 @@ impl Default for SigViewer {
         SigViewer {
             waves_state: CellList::default().set_cell_padding(4).set_text_size(11),
             //.set_spacing(wavewindow::BUFFER_PX as u16),
-            shared_waves_state: state::SharedState::default(),
             selected: Option::default(),
         }
     }
 }
 
 impl SigViewer {
+    pub fn add_wave(&mut self) {
+        self.waves_state.push();
+    }
+
     pub fn update(&mut self, message: Message) -> Command<Message> {
         match message {
             Message::AddWave(imw_res) => match imw_res {
-                Ok(imw) => {
+                Ok(_) => {
                     self.waves_state.push();
-                    self.shared_waves_state
-                        .borrow_mut()
-                        .waves
-                        .push(DisplayedWave::from(imw));
-                    //self.wavewindow.request_redraw();
                 }
                 Err(err) => {
                     log::info!("Cannot create InMemWave, err is {:#?}", err);
@@ -106,49 +103,7 @@ impl SigViewer {
         }
         Command::none()
     }
-    pub fn view(&mut self) -> Element<Message> {
-        let SigViewer {
-            waves_state,
-            ..
-            //wavewindow,
-            //live_waves,
-        } = self;
 
-        //TODO: move message logic out of wavewindow
-        //let ww = wavewindow
-        //    .view(&live_waves[..])
-        //    .map(move |message| Message::WWMessage(message));
-
-        fn click_func(node_state: ListNodeState) -> Box<dyn Fn() -> Message + 'static> {
-            return Box::new(move || Message::SelectedWave(node_state.offset));
-        }
-
-        fn double_click(_node_state: ListNodeState) -> Box<dyn Fn() -> Message + 'static> {
-            return Box::new(move || Message::CellListPlaceholder);
-        }
-
-        let borrowed_val = self.shared_waves_state.borrow();
-
-        let iter = borrowed_val.waves.iter().map(|x| x.get_wave());
-        let cl = waves_state.view(iter, click_func, double_click);
-
-        let pick_list = Column::new()
-            //.push(
-            //    Text::new("Active signals")
-            //        .height(iced::Length::Units(
-            //            (wavewindow::TS_FONT_SIZE + wavewindow::BUFFER_PX) as u16,
-            //        ))
-            //        .size(wavewindow::TS_FONT_SIZE as u16),
-            //)
-            .push(cl)
-            .width(iced::Length::Fill)
-            .height(iced::Length::Fill)
-            .max_width(400)
-            .padding(20);
-        //.spacing(20);
-
-        Container::new(Row::new().push(pick_list).height(iced::Length::Fill)).into()
-    }
     pub fn view2(&mut self, waves: &[DisplayedWave]) -> Element<Message> {
         let SigViewer {
             waves_state,
@@ -157,7 +112,6 @@ impl SigViewer {
             //live_waves,
         } = self;
 
-        
         fn click_func(node_state: ListNodeState) -> Box<dyn Fn() -> Message + 'static> {
             return Box::new(move || Message::SelectedWave(node_state.offset));
         }
