@@ -24,7 +24,7 @@ pub enum Message {
 
     ///Messages that are only used by sigviewer
     CellListPlaceholder,
-
+    UpdateWaveValues(Option<(u32, String)>),
     ///Messages
     ZoomIn,
     ZoomOut,

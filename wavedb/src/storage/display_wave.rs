@@ -30,6 +30,7 @@ impl Default for WaveDisplayOptions {
 #[derive(Clone, Debug)]
 pub struct DisplayedWave {
     wave_content: Arc<InMemWave>,
+    pub val_under_cursor: Option<String>,
     pub display_conf: Option<WaveDisplayOptions>,
 }
 
@@ -38,6 +39,7 @@ impl Default for DisplayedWave {
     fn default() -> Self {
         DisplayedWave {
             wave_content: Arc::new(InMemWave::default()),
+            val_under_cursor: None,
             display_conf: Option::default(),
         }
     }
@@ -53,6 +55,7 @@ impl From<Arc<InMemWave>> for DisplayedWave {
     fn from(imw: Arc<InMemWave>) -> Self {
         DisplayedWave {
             wave_content: imw,
+            val_under_cursor: None,
             display_conf: Option::default(),
         }
     }
@@ -60,7 +63,10 @@ impl From<Arc<InMemWave>> for DisplayedWave {
 
 impl std::fmt::Display for DisplayedWave {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.wave_content.fmt(f)
+        self.wave_content.fmt(f)?;
+        let value = self.val_under_cursor.as_deref().unwrap_or("0XHEADBEEF");
+        write!(f, " = {} ", value)?;
+        Ok(())
    }
 }
 

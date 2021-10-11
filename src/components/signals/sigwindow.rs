@@ -32,7 +32,7 @@ impl CellOption for WaveOptions {
 
 pub struct SigViewer {
     waves_state: CellList<WaveOptions>,
-    selected: Option<Vec<usize>>,
+    pub selected: Option<Vec<usize>>,
 }
 
 impl Default for SigViewer {
@@ -120,7 +120,7 @@ impl SigViewer {
             return Box::new(move || Message::CellListPlaceholder);
         }
 
-        let iter = waves.iter().map(|x| x.get_wave());
+        let iter = waves.iter();
         let cl = waves_state.view(iter, click_func, double_click);
 
         let pick_list = Column::new()

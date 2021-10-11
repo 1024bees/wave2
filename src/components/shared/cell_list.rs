@@ -46,7 +46,6 @@ where
             ..
         } = self;
         let click = on_click(node_state.clone());
-        log::info!("string we want to view is {}", payload);
         let sig_cell = VizCell::new(ui_state, payload)
             .on_click(click)
             .on_double_click(on_double_click(node_state.clone()))
@@ -100,6 +99,9 @@ where
         let text_size = self.text_size;
         let cell_padding = self.cell_padding;
         log::info!("nodes len is {}", self.nodes.len());
+
+
+
         let vecs = self
             .nodes
             .iter_mut()

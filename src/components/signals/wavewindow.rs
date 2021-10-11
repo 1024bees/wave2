@@ -1,11 +1,9 @@
-use iced::{Color, Container, Element, Length,Row,Command,Column};
+use iced::{Color, Column, Command, Container, Element, Length, Row};
 
-use super::Message;
 use super::state;
+use super::Message;
 use wave2_custom_widgets::widget::signal_window;
 use wave2_wavedb::storage::display_wave::DisplayedWave;
-
-
 
 pub const BUFFER_PX: f32 = 1.5;
 pub const WAVEHEIGHT: f32 = 16.0;
@@ -18,28 +16,15 @@ const TS_CLIP_RANGE: f32 = 5.0;
 
 #[derive(Default)]
 pub struct WaveWindowState {
-    live_waves: Vec<DisplayedWave>,
-    shared_waves_state: state::SharedState, 
-    widget_state: signal_window::State,
+    pub widget_state: signal_window::State,
 }
 
 impl WaveWindowState {
-    pub fn view(&mut self) -> Element<Message> {
-        Container::new(signal_window::SignalWindow::new(
-            &self.live_waves[..],
-            &mut self.widget_state,
-        ))
-        .width(Length::Shrink)
-        .height(Length::Fill)
-        .padding(10)
-        .into()
-    }
-
     pub fn view2<'a>(&'a mut self, waves: &'a [DisplayedWave]) -> Element<Message> {
-        Container::new(signal_window::SignalWindow::new(
-            waves,
-            &mut self.widget_state,
-        ))
+        Container::new(
+            signal_window::SignalWindow::new(waves, &mut self.widget_state)
+                .on_click(Message::UpdateCursor),
+        )
         .width(Length::Shrink)
         .height(Length::Fill)
         .padding(10)

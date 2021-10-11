@@ -1,6 +1,6 @@
 use iced_native::{
-    event, layout, mouse, overlay,  text, Clipboard, Element, Event, Hasher, Layout,
-    Length, Point, Rectangle, Size, Widget,
+    event, layout, mouse, overlay, text, Clipboard, Element, Event, Hasher, Layout, Length, Point,
+    Rectangle, Size, Widget,
 };
 
 use crate::core::signal_window::DisplayedWave;
@@ -17,7 +17,7 @@ pub struct SignalWindow<'a, Message: 'static, Renderer: self::Renderer> {
     state: &'a mut State,
     width: Length,
     padding: u16,
-    on_click: Option<Message>,
+    on_click: Option<Box<dyn Fn(u32) -> Message>>,
     text_size: Option<u16>,
     font: Renderer::Font,
     scrollbar_width: u16,
@@ -112,6 +112,11 @@ impl<'a, Message, Renderer: self::Renderer> SignalWindow<'a, Message, Renderer> 
     /// [`SignalWindow`]: struct.SignalWindow.html
     pub fn width(mut self, width: Length) -> Self {
         self.width = width;
+        self
+    }
+
+    pub fn on_click(mut self, on_click: impl Fn(u32) -> Message + 'static) -> Self {
+        self.on_click = Some(Box::new(on_click));
         self
     }
 
@@ -211,10 +216,10 @@ where
         cursor_position: Point,
         renderer: &Renderer,
         _clipboard: &mut dyn Clipboard,
-        _messages: &mut Vec<Message>,
+        messages: &mut Vec<Message>,
     ) -> event::Status {
         let bounds = layout.bounds();
-        let text_size = self.text_size.unwrap_or(renderer.default_size());
+        //let text_size = self.text_size.unwrap_or(renderer.default_size());
 
         let is_mouse_over = bounds.contains(cursor_position);
 
@@ -254,6 +259,9 @@ where
                 }
                 Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
                     self.state.cursor_location = self.state.hovered_position as u32;
+                    if let Some(ref click_fn) = self.on_click {
+                        messages.push(click_fn(self.state.cursor_location));
+                    }
                 }
 
                 _ => {}
@@ -329,7 +337,7 @@ where
             self.padding,
             self.text_size.unwrap_or(renderer.default_size()),
             self.font,
-            &self.style
+            &self.style,
         )
     }
 

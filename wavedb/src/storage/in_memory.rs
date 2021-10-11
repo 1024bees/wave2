@@ -5,17 +5,15 @@ use std::sync::Arc;
 #[derive(Debug, Default)]
 pub struct InMemWave {
     name: String,
-    signal_id: SignalId,
+    pub signal_id: SignalId,
     width: u32,
     puddles: Vec<Arc<Puddle>>,
 }
-
 
 impl AsRef<str> for InMemWave {
     fn as_ref(&self) -> &str {
         self.name.as_str()
     }
-
 }
 
 ///In memory DS for wave content; created from a Vector of Arcs to puddles
@@ -73,7 +71,12 @@ impl InMemWave {
             .next()
     }
 
-    pub fn get_prev_value(&self, time: Toffset) -> Option<(Toffset, &'_ [u8])> {
+
+    pub fn get_droplet_at(&self, time: Toffset) -> Option<Droplet<'_>>{
+        self.get_prev_droplet(time+1)
+    }
+
+    pub fn get_prev_time(&self, time: Toffset) -> Option<(Toffset, &'_ [u8])> {
         let idx = self.get_idx(time)?;
         let sigid = self.signal_id;
         self.puddles[0..idx + 1]
@@ -166,11 +169,9 @@ impl std::fmt::Display for InMemWave {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.get_name())?;
         let width = self.get_width();
-        let value = 0;
         if width > 1 {
             write!(f, " [{}:0]", width - 1)?;
         }
-        write!(f, " = {}", value)?;
         Ok(())
     }
 }
@@ -261,7 +262,7 @@ mod tests {
         let clock_wave = wdb
             .get_imw("TOP.x_addr".into())
             .expect("signal isn't here!");
-        let (toffset, payload) = clock_wave.get_prev_value(16029).expect("prev failed");
+        let (toffset, payload) = clock_wave.get_prev_time(16029).expect("prev failed");
         assert_eq!(toffset, 16010);
         let val: u16 = u16::from_le_bytes(
             payload
