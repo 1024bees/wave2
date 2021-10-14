@@ -206,6 +206,21 @@ impl Beach {
                 update_sigwindow(self, message);
             }
             Message::CellListPlaceholder | Message::RemoveSelected | Message::SelectedWave(_) => {
+                if let Message::RemoveSelected = message {
+                    // look this really pisses me off i need a way to have fine grained mutable
+                    // borrows
+                    let vec = if let Some(ref selected_vec) = self.get_sigwindow().selected {
+                        let mut rv = selected_vec.clone();
+                        rv.sort();
+                        rv
+                    } else {
+                        vec![]
+                    };
+                    vec.into_iter().for_each(|i| {
+                        self.waves.remove(i);
+                    });
+                }
+
                 update_sigwindow(self, message);
             }
             _ => {
