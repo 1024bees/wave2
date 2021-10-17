@@ -37,6 +37,9 @@ pub struct State {
     pub cursor_location: u32,
     pub offset: f32,
     pub hovered_position: f32,
+    zoom: f64,
+    ppf: f64,
+    ns_per_frame: f64,
     scroller_grabbed_at: Option<f32>,
 }
 
@@ -50,6 +53,9 @@ impl Default for State {
             offset: 0.0,
             hovered_position: 0.0,
             scroller_grabbed_at: None,
+            zoom: 0.0,
+            ppf: 0.0,
+            ns_per_frame: 0.0,
         }
     }
 }
@@ -81,6 +87,13 @@ impl State {
     /// the bottom.
     pub fn scroll_to(&mut self, percentage: f32) {
         self.offset = ((self.end_time - self.start_time) as f32 * percentage).max(0.0);
+    }
+
+
+    /// Calculates the zoom factor of the [`SignalWindow`]. This logic is mirrored from GtkWave's
+    /// calczoom function 
+    pub fn calczoom(&mut self, zoom_factor: f64) {
+        self.zoom += zoom_factor;
     }
 }
 
@@ -172,6 +185,11 @@ impl<'a, Message, Renderer: self::Renderer> SignalWindow<'a, Message, Renderer> 
         self.scroller_width = scroller_width.max(1);
         self
     }
+
+
+    
+    
+    
 }
 
 impl<'a, Message, Renderer> Widget<Message, Renderer> for SignalWindow<'a, Message, Renderer>
