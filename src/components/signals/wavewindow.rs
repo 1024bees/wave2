@@ -45,6 +45,14 @@ impl WaveWindowState {
             Message::UpdateCursor(cursor_loc) => {
                 self.widget_state.cursor_location = cursor_loc;
             }
+            Message::ZoomIn => {
+
+            }
+
+            Message::ZoomOut => {
+
+            }
+
             _ => {
                 log::info!("Not covered");
             }

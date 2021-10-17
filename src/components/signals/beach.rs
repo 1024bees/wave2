@@ -128,8 +128,7 @@ impl Beach {
             }
 
             //Messages that are only handled by the sigwindow
-            Message::UpdateBounds(_) | Message::UpdateCursor(_) => {
-                log::info!("Updating the cursor, yipee!");
+            Message::UpdateBounds(_) | Message::UpdateCursor(_) | Message::ZoomIn | Message::ZoomOut => {
                 update_wavewindow(self, message.clone());
                 if let Message::UpdateCursor(time) = message {
                     let cv: Vec<Command<Message>> = self
@@ -138,10 +137,7 @@ impl Beach {
                         .map(|wave| {
                             let format = wave.display_conf.unwrap_or_default().format;
                             let imw = wave.get_wave().clone();
-                            Command::perform(
-                                async move { get_data(imw, time, format) },
-                                Message::UpdateWaveValues,
-                            )
+                            Command::perform(async move {get_data(imw, time, format) }, Message::UpdateWaveValues)
                         })
                         .collect();
                     return Command::batch(cv);
@@ -189,10 +185,9 @@ impl Beach {
                     let holder = imw.clone();
                     let ct = self.get_wavewindow().widget_state.cursor_location;
                     let mut dw = DisplayedWave::from(imw);
-
                     self.get_sigwindow().add_wave();
                     //TODO: get waveformat from some global state
-                    if let Some((_, val)) = get_data(holder, ct, WaveFormat::default()) {
+                    if let Some((_, val)) = get_data(holder,ct, WaveFormat::default()) {
                         dw.val_under_cursor = Some(val);
                     }
                     self.waves.push(dw);
