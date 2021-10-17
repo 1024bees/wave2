@@ -46,11 +46,11 @@ impl WaveWindowState {
                 self.widget_state.cursor_location = cursor_loc;
             }
             Message::ZoomIn => {
-
+                self.widget_state.calczoom(-1);
             }
 
             Message::ZoomOut => {
-
+                self.widget_state.calczoom(1);
             }
 
             _ => {

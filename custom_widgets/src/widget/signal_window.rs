@@ -37,7 +37,7 @@ pub struct State {
     pub cursor_location: u32,
     pub offset: f32,
     pub hovered_position: f32,
-    zoom: usize,
+    zoom: i32,
     ppf: f64,
     ns_per_frame: f64,
     scroller_grabbed_at: Option<f32>,
@@ -91,7 +91,7 @@ impl State {
 
     /// Calculates the zoom factor of the [`SignalWindow`]. This logic is mirrored from GtkWave's
     /// calczoom function
-    pub fn calczoom(&mut self, zoom_factor: usize) {
+    pub fn calczoom(&mut self, zoom_factor: i32 ) {
         self.zoom += zoom_factor;
         let lnspf: usize = 1 << zoom_factor;
         self.zoom = self.zoom.clamp(0, 63);
@@ -105,6 +105,7 @@ impl State {
             self.ppf = 200.0 * nsperframe2 / nspf;
             self.ns_per_frame = nsperframe2;
         }
+        self.ns_per_unit = (self.ns_per_frame / self.ppf) as f32;
     }
 }
 
