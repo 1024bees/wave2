@@ -72,7 +72,7 @@ impl lyon::tessellation::StrokeVertexConstructor<triangle::Vertex2D> for StrokeV
 }
 
 fn xdelt_from_prev(state: &State, ts: u32, prev_ts: u32) -> f32 {
-    (ts - prev_ts) as f32 * state.ns_per_unit
+    (ts - prev_ts) as f32 / state.ns_per_pixel
 }
 
 pub fn translate_wave(wave_num: usize, bounds: Rectangle) -> Vector {
@@ -90,7 +90,7 @@ impl State {
         self.offset.ceil() as u32
     }
     fn end_time(&self, bounds: Rectangle) -> u32 {
-        (self.offset + bounds.width * self.ns_per_unit).ceil() as u32
+        (self.offset + bounds.width * self.ns_per_pixel).ceil() as u32
     }
 
     fn cursor_in_range(&self, bounds: Rectangle) -> bool {
@@ -140,7 +140,7 @@ pub fn render_cursor(state: &State, bounds: Rectangle) -> Option<Primitive> {
 pub fn render_header(state: &State, bounds: Rectangle, font: iced::Font) -> Primitive {
     //FIXME: need to think of way to generate uniform timestamp delimiters
     //       probably something probably something like 1,2,5
-    let ts_width: u32 = (200.0 * state.ns_per_unit) as u32;
+    let ts_width: u32 = (state.ns_per_frame) as u32;
 
     let mut prev_ts = state.start_time(bounds);
     let mut xpos: f32 = bounds.x;
@@ -168,9 +168,11 @@ pub fn render_header(state: &State, bounds: Rectangle, font: iced::Font) -> Prim
             &mut BuffersBuilder::new(&mut geometry, StrokeVertex(ORANGE.into_linear())),
         )
         .expect("Tesselator failed");
-
-    for ts in (state.start_time(bounds)..state.end_time(bounds)).step_by(ts_width as usize) {
-        xpos += xdelt_from_prev(state, ts, prev_ts);
+    
+    let next_bounds = state.start_time(bounds) + (state.ns_per_frame as u32 - (state.start_time(bounds) % state.ns_per_frame as u32));
+    //log::info!("next bounds is {}, last bounds is {}, ppf is {}, ns_per_pixel {}", next_bounds, state.end_time(bounds), state.ppf, state.ns_per_pixel);
+    for ts in (next_bounds..state.end_time(bounds)).step_by(ts_width as usize) {
+        xpos +=  xdelt_from_prev(state, ts, prev_ts);
         if xpos > TS_CLIP_RANGE {
             prim_vec.push(Primitive::Text {
                 content: format!("{}ns", ts),
@@ -323,7 +325,7 @@ pub fn render_wave(
                 .map_or_else(|| true, |(time, _)| *time != state.offset.ceil() as u32)
             {
                 let next_time = wave_iter.peek().map_or_else(
-                    || (state.offset + bounds.width * state.ns_per_unit) as u32,
+                    || (state.offset + bounds.width * state.ns_per_pixel) as u32,
                     |(time, _)| time.clone(),
                 );
 
@@ -348,7 +350,7 @@ pub fn render_wave(
                 }
 
                 let next_time = wave_iter.peek().map_or_else(
-                    || (state.offset + bounds.width * state.ns_per_unit) as u32,
+                    || (state.offset + bounds.width * state.ns_per_pixel) as u32,
                     |(time, _)| time.clone(),
                 );
 

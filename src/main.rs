@@ -152,7 +152,7 @@ impl Content {
                 .update(message.clone())
                 .map(|message| Message::HNMessage(message)),
 
-            (Content::Beach(beach), Message::SignalsMessage(message)) => beach 
+            (Content::Beach(beach), Message::SignalsMessage(message)) => beach
                 .update(message.clone())
                 .map(|message| Message::SignalsMessage(message)),
             (Content::ModNav(module_nav), Message::MNMessage(message)) => module_nav
@@ -166,7 +166,7 @@ impl Content {
         match self {
             Content::HierNav(hier_mod) => hier_mod
                 .view()
-                .map(move |message| Message::HNMessage(message)),
+                .map(|message| Message::HNMessage(message)),
             Content::ModNav(module_nav) => module_nav
                 .view()
                 .map(move |message| Message::MNMessage(message)),

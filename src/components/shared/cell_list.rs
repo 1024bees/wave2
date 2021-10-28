@@ -98,9 +98,6 @@ where
         // To hack around the borrow checker being a little baby. Waa Waa
         let text_size = self.text_size;
         let cell_padding = self.cell_padding;
-        log::info!("nodes len is {}", self.nodes.len());
-
-
 
         let vecs = self
             .nodes

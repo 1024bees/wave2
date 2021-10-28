@@ -33,13 +33,13 @@ pub struct SignalWindow<'a, Message: 'static, Renderer: self::Renderer> {
 pub struct State {
     pub start_time: u32,
     pub end_time: u32,
-    pub ns_per_unit: f32,
+    pub ns_per_pixel: f32,
     pub cursor_location: u32,
     pub offset: f32,
     pub hovered_position: f32,
     zoom: i32,
-    ppf: f64,
-    ns_per_frame: f64,
+    pub(crate) ppf: f64,
+    pub(crate) ns_per_frame: f64,
     scroller_grabbed_at: Option<f32>,
 }
 
@@ -48,14 +48,14 @@ impl Default for State {
         State {
             start_time: 0,
             end_time: 1000,
-            ns_per_unit: 1.0,
+            ns_per_pixel: 1.0,
             cursor_location: 0,
             offset: 0.0,
             hovered_position: 0.0,
             scroller_grabbed_at: None,
             zoom: 0,
-            ppf: 0.0,
-            ns_per_frame: 0.0,
+            ppf: 200.0,
+            ns_per_frame: 200.0,
         }
     }
 }
@@ -74,7 +74,7 @@ impl State {
     /// Apply a scrolling offset to the current [`State`], given the bounds of
     /// the [`SignalWindow`] and its contents.
     pub fn scroll(&mut self, delta_x: f32, bounds: Rectangle) {
-        self.offset = (self.offset - delta_x * self.ns_per_unit)
+        self.offset = (self.offset - delta_x * self.ns_per_pixel)
             .max(0.0)
             .min((self.end_time) as f32);
         log::info!("new offset is {}", self.offset);
@@ -93,19 +93,23 @@ impl State {
     /// calczoom function
     pub fn calczoom(&mut self, zoom_factor: i32 ) {
         self.zoom += zoom_factor;
-        let lnspf: usize = 1 << zoom_factor;
         self.zoom = self.zoom.clamp(0, 63);
+        log::info!("zoomfactor is {}",self.zoom);
+        let lnspf: usize = 1 << self.zoom;
         if self.zoom <= 3 {
             self.ppf = 200.0;
             self.ns_per_frame = lnspf as f64;
         } else {
             let nspf = lnspf as f64;
-            let pow_base10 = nspf.log10().ceil() as i32;
+            let pow_base10 = nspf.log10().round() as i32;
+
+
             let nsperframe2 = 10.0_f64.powi(pow_base10);
             self.ppf = 200.0 * nsperframe2 / nspf;
+            log::info!("scale is {}",nsperframe2 / nspf);
             self.ns_per_frame = nsperframe2;
         }
-        self.ns_per_unit = (self.ns_per_frame / self.ppf) as f32;
+        self.ns_per_pixel = (self.ns_per_frame / self.ppf) as f32;
     }
 }
 
@@ -280,7 +284,7 @@ where
                 }
                 Event::Mouse(mouse::Event::CursorMoved { position }) => {
                     self.state.hovered_position =
-                        self.state.offset + self.state.ns_per_unit * (position.x - bounds.x);
+                        self.state.offset + self.state.ns_per_pixel * (position.x - bounds.x);
                 }
                 Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
                     self.state.cursor_location = self.state.hovered_position as u32;

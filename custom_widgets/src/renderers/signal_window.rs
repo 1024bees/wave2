@@ -33,7 +33,7 @@ where
         scrollbar_margin: u16,
         scroller_width: u16,
     ) -> Option<signal_window::Scrollbar> {
-        let ratio = bounds.width / ((state.end_time - state.start_time) as f32 * state.ns_per_unit); //content_bounds.width;
+        let ratio = bounds.width / ((state.end_time - state.start_time) as f32 * state.ns_per_pixel); //content_bounds.width;
 
         if ratio < 1.0 {
             let outer_width = scrollbar_width.max(scroller_width) + 2 * scrollbar_margin;

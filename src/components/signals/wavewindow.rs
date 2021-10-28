@@ -1,6 +1,5 @@
 use iced::{Color, Column, Command, Container, Element, Length, Row};
 
-use super::state;
 use super::Message;
 use wave2_custom_widgets::widget::signal_window;
 use wave2_wavedb::storage::display_wave::DisplayedWave;
