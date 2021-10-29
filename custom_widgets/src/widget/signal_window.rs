@@ -66,9 +66,15 @@ impl State {
         State::default()
     }
 
-    pub fn set_bounds(&mut self, bounds: (u32, u32)) {
+    pub fn init_bounds(&mut self, bounds: (u32, u32)) {
         self.start_time = bounds.0;
         self.end_time = bounds.1;
+    }
+
+    pub fn set_bounds(&mut self, maybe_bounds: [Option<u32>; 2]) {
+        for (idx, val) in maybe_bounds.iter().enumerate() {
+            if val.is_some() {}
+        }
     }
 
     /// Apply a scrolling offset to the current [`State`], given the bounds of
@@ -91,10 +97,10 @@ impl State {
 
     /// Calculates the zoom factor of the [`SignalWindow`]. This logic is mirrored from GtkWave's
     /// calczoom function
-    pub fn calczoom(&mut self, zoom_factor: i32 ) {
+    pub fn calczoom(&mut self, zoom_factor: i32) {
         self.zoom += zoom_factor;
         self.zoom = self.zoom.clamp(0, 63);
-        log::info!("zoomfactor is {}",self.zoom);
+        log::info!("zoomfactor is {}", self.zoom);
         let lnspf: usize = 1 << self.zoom;
         if self.zoom <= 3 {
             self.ppf = 200.0;
@@ -103,10 +109,9 @@ impl State {
             let nspf = lnspf as f64;
             let pow_base10 = nspf.log10().round() as i32;
 
-
             let nsperframe2 = 10.0_f64.powi(pow_base10);
             self.ppf = 200.0 * nsperframe2 / nspf;
-            log::info!("scale is {}",nsperframe2 / nspf);
+            log::info!("scale is {}", nsperframe2 / nspf);
             self.ns_per_frame = nsperframe2;
         }
         self.ns_per_pixel = (self.ns_per_frame / self.ppf) as f32;

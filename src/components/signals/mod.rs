@@ -20,7 +20,8 @@ pub enum Message {
 
     ///Messages that are only used by wavewindow
     UpdateCursor(u32),
-    UpdateBounds((u32, u32)),
+    InitBounds((u32, u32)),
+    UpdateBounds((Option<u32>, Option<u32>)),
 
     ///Messages that are only used by sigviewer
     CellListPlaceholder,

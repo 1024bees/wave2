@@ -286,7 +286,7 @@ impl Application for Wave2 {
                     Message::IBMessage(ib_message) => match ib_message {
                         signals::Message::IconBarMessage(icon_bar_message) => {
                             state.icon_bar.update(icon_bar_message).map(|message| {
-                                Message::IBMessage(signals::Message::IconBarMessage(message))
+                                Message::SignalsMessage(message)
                             })
                         }
                         _ => update_signals_logic(state, ib_message),
@@ -321,7 +321,7 @@ impl Application for Wave2 {
                                 )),
                             );
                             Command::perform(WdbApi::bounds(state.get_api()), move |bounds| {
-                                Message::SignalsMessage(signals::Message::UpdateBounds(bounds))
+                                Message::SignalsMessage(signals::Message::InitBounds(bounds))
                             })
                         }
                         Err(waverr) => {

@@ -66,14 +66,28 @@ pub struct IconBar {
 }
 
 impl IconBar {
-    pub fn update(&mut self, message: IconBarMessage) -> Command<IconBarMessage> {
+    pub fn update(&mut self, message: IconBarMessage) -> Command<Message> {
         match message {
             IconBarMessage::TIUpdate(bound, val) => match bound {
                 Bound::Left => self.bounds_str.0 = val,
                 Bound::Right => self.bounds_str.1 = val,
             },
+            IconBarMessage::BoundsUpdate(bound) => {
+                let str_ref = if matches!(bound, Bound::Left) {
+                    std::mem::replace(&mut self.bounds_str.0, String::new())
+                } else {
+                    std::mem::replace(&mut self.bounds_str.1, String::new())
+                };
+                if let Ok(value) = str_ref.parse::<u32>() {
+
+                }
+            }
+
             _ => {
-                panic!("Message: {:?} is being sent to the Icon Bar when it shouldnt be.. we die!")
+                panic!(
+                    "Message: {:?} is being sent to the Icon Bar when it shouldnt be.. we die!",
+                    message
+                )
             }
         }
         Command::none()

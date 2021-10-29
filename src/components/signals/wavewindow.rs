@@ -32,8 +32,8 @@ impl WaveWindowState {
 
     pub fn update(&mut self, message: Message) -> Command<Message> {
         match message {
-            Message::UpdateBounds(bounds) => {
-                self.widget_state.set_bounds(bounds);
+            Message::InitBounds(bounds) => {
+                self.widget_state.init_bounds(bounds);
             }
             //Message::AddWave(imw) => match imw {
             //    Ok(wave) => {

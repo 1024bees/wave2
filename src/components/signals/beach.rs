@@ -128,7 +128,7 @@ impl Beach {
             }
 
             //Messages that are only handled by the sigwindow
-            Message::UpdateBounds(_) | Message::UpdateCursor(_) | Message::ZoomIn | Message::ZoomOut => {
+            Message::UpdateBounds(_) | Message::UpdateCursor(_) | Message::ZoomIn | Message::ZoomOut | Message::InitBounds(_) => {
                 update_wavewindow(self, message.clone());
                 if let Message::UpdateCursor(time) = message {
                     let cv: Vec<Command<Message>> = self
