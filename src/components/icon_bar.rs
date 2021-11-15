@@ -134,8 +134,8 @@ impl IconBar {
                 .push(left_bounds)
                 .push(right_bounds)
                 //push barrier
-                .push(time_to_text(5))
-                .push(time_to_text(6))
+                //.push(time_to_text(5))
+                //.push(time_to_text(6))
                 .push(Space::with_width(Length::Fill))
                 .height(Length::Shrink)
                 .width(Length::Fill)

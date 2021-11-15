@@ -73,7 +73,7 @@ impl<O> Default for State<O> {
     }
 }
 
-impl<'a,  O: 'a, Message, Renderer: self::Renderer> Cell<'a, O, Message, Renderer>
+impl<'a, O: 'a, Message, Renderer: self::Renderer> Cell<'a, O, Message, Renderer>
 where
     O: CellOption<Message = Message>,
 {
@@ -184,8 +184,7 @@ where
     }
 }
 
-impl<'a,  O: 'a, Message, Renderer> Widget<Message, Renderer>
-    for Cell<'a,  O, Message, Renderer>
+impl<'a, O: 'a, Message, Renderer> Widget<Message, Renderer> for Cell<'a, O, Message, Renderer>
 where
     O: CellOption<Message = Message>,
     Message: 'static,

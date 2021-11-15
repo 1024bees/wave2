@@ -266,6 +266,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "cell2_widget_test"
+version = "0.1.0"
+dependencies = [
+ "env_logger 0.7.1",
+ "iced",
+ "log",
+ "tokio 0.2.25",
+ "wave2_custom_widgets",
+]
+
+[[package]]
 name = "cfg-if"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3133,6 +3144,7 @@ name = "wave2_custom_widgets"
 version = "0.1.0"
 dependencies = [
  "iced",
+ "iced_aw",
  "iced_core",
  "iced_graphics",
  "iced_native",

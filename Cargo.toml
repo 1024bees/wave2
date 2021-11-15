@@ -33,6 +33,7 @@ tempfile = "3"
 
 [workspace]
 members = [ "widget_test/cell",
+            "widget_test/cell2",
             "widget_test/hscroll",
             "widget_test/menu_bar",
             "custom_widgets/widget_derives",

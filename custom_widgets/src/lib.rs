@@ -4,5 +4,3 @@ pub mod widget;
 pub mod traits;
 pub mod core;
 pub mod utils;
-
-

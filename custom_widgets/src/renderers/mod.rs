@@ -3,3 +3,4 @@ pub mod cell;
 pub mod hscroll;
 pub mod menu_bar;
 pub mod signal_window;
+pub mod cell2;

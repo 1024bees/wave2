@@ -1,0 +1,14 @@
+[package]
+name = "cell2_widget_test"
+version = "0.1.0"
+authors = ["James Connolly <jimmy@1024bees.com>"]
+edition = "2018"
+publish = false
+
+[dependencies]
+wave2_custom_widgets = { path = "../../custom_widgets"}
+tokio = "0.2.18"
+iced = { version="0.3.0", features = ["tokio"] }
+
+env_logger = "*"
+log = "*"
