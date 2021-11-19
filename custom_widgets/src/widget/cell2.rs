@@ -144,11 +144,12 @@ where
         let bounds = layout.bounds();
         let children = layout.children();
 
-        if self.state.stack.is_empty() {
+        if !self.state.menu_open {
             let no_entries = self.overlay_entries.is_empty();
             let status = match event {
                 Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right)) => {
                     if layout.bounds().contains(cursor_position) && !no_entries {
+                        log::info!("wassup we are right clicking");
                         event::Status::Captured
                     } else {
                         event::Status::Ignored
@@ -158,25 +159,30 @@ where
             };
 
             if status == event::Status::Captured {
-                self.state.stack.push(0);
+                self.state.menu_open = true;
             }
-
             status
         } else {
-            if bounds.contains(cursor_position) {
-                let element = self.overlay_entries.iter().zip(children).enumerate().find(
-                    |(_, (section, layout))| {
-                        layout.bounds().contains(cursor_position) //&& !section.entries.is_empty()
-                    },
-                );
-
-                if let Some((i, _)) = element {
-                    self.state.stack.clear();
-                    self.state.stack.push(i);
-                }
-            }
-
             event::Status::Ignored
+            //if let Some((i, _)) = self.overlay_entries.iter().zip(children).enumerate().find(
+            //    |(i, (section, layout))| {
+
+            //        log::info!("for idx {} child is {:?}",i,layout.bounds());
+            //        layout.bounds().contains(cursor_position) //&& !section.entries.is_empty()
+            //    },
+            //) {
+            //    self.state.stack.clear();
+            //    self.state.stack.push(i);
+
+            //    event::Status::Captured
+            //} else {
+            //    if let Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) = event {
+            //        self.state.menu_open = false;
+            //        event::Status::Captured
+            //    } else {
+            //        event::Status::Ignored
+            //    }
+            //}
         }
     }
 
@@ -208,7 +214,7 @@ where
     }
 
     fn overlay(&mut self, layout: Layout<'_>) -> Option<overlay::Element<'_, Message, Renderer>> {
-        if self.state.stack.is_empty() {
+        if !self.state.menu_open {
             return None;
         }
 
@@ -252,7 +258,8 @@ impl Renderer for iced_native::renderer::Null {
 pub struct State {
     /// The stack containing the indices that build a path to the opened [`Entry`](Entry).
     pub(crate) stack: Vec<usize>,
-    selected: bool,
+    pub(crate) selected: bool,
+    pub(crate) menu_open: bool,
 }
 
 impl State {
@@ -262,6 +269,7 @@ impl State {
         Self {
             stack: Vec::new(),
             selected: false,
+            menu_open: false,
         }
     }
 }

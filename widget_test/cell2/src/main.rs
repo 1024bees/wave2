@@ -57,6 +57,7 @@ enum Message {
     LanguageSelected(Language),
     Test1,
     Test2,
+    Test3,
 }
 
 impl Sandbox for Example {
@@ -76,7 +77,7 @@ impl Sandbox for Example {
                 self.selected_language = language;
             }
             _ => {
-                println!("Test!");
+                println!("{:?}", message);
             }
         }
     }
@@ -85,10 +86,14 @@ impl Sandbox for Example {
         let cell = Cell2::with_entries(
             Text::new("Wassup").into(),
             &mut self.pick_list,
-            vec![Entry::Item(
-                Text::new("Test1").into(),
-                Some(Message::Test1),
-            )],
+            vec![
+                Entry::Item(Text::new("Test1").into(), Some(Message::Test1)),
+                Entry::Group(Text::new("submenu").into(), vec![
+                    Entry::Item(Text::new("Test2").into(), Some(Message::Test2)),
+                    Entry::Item(Text::new("Test3").into(), Some(Message::Test3)),
+
+                ]),
+            ],
         );
 
         let container = Container::new(cell).width(Length::Units(400));

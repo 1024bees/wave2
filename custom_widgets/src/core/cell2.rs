@@ -12,6 +12,10 @@ pub fn stack_to_path_list(stack: &[usize]) -> Vec<&[usize]> {
         list.push(&stack[0..=i])
     }
 
+    if list.is_empty() {
+        list.push(stack);
+    }
+
     list
 }
 
@@ -42,7 +46,8 @@ fn get_entry_internal<'a, Message, Renderer>(
     } else {
         match &entries[path[0]] {
             Entry::Group(_, entries) => get_entry_internal(entries, &path[1..]),
-            _ => unreachable!("Entry is not a group"),
+            Entry::Separator => unreachable!("Illegal to get a seperator!"),
+            _ => &entries[path[0]]
         }
     }
 }
@@ -61,7 +66,7 @@ pub fn get_entry_list<'a, Message, Renderer>(
 ) -> Vec<&'a Vec<Entry<'a, Message, Renderer>>> {
     let mut entries = Vec::new();
     entries.push(all_entries);
-    get_entry_list_internal(&all_entries, &path[1..], &mut entries);
+    get_entry_list_internal(&all_entries, &path[..], &mut entries);
 
     entries
 }
