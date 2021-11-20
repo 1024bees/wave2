@@ -8,14 +8,11 @@ use crate::widget::cell2::Entry;
 pub fn stack_to_path_list(stack: &[usize]) -> Vec<&[usize]> {
     let mut list = Vec::new();
 
-    for i in 0..stack.len() {
-        list.push(&stack[0..=i])
+    for i in 0..stack.len() + 1 {
+        list.push(&stack[0..i])
     }
 
-    if list.is_empty() {
-        list.push(stack);
-    }
-
+    
     list
 }
 

@@ -140,13 +140,13 @@ where
         let path_list = stack_to_path_list(&self.state.stack);
 
         let mut new_path = None;
+        let mut message_pushed = false;
         //log::info!("path list is {:?}",path_list);
         children.zip(path_list).for_each(|(layout, path)| {
             layout.children().enumerate().for_each(|(index, layout)| {
                 if layout.bounds().contains(cursor_position) {
                     // TODO: clean up
                     let mut path = path.to_vec();
-                    log::info!("we are iN!");
                     let mut entry_path = path.to_vec();
                     entry_path.push(index);
                     let entry = get_entry(self.entries, &entry_path);
@@ -157,6 +157,7 @@ where
                             | Event::Touch(touch::Event::FingerPressed { .. }) => {
                                 if let Some(message) = message {
                                     messages.push(message.to_owned());
+                                    message_pushed = true;
                                     path = Vec::new();
                                 }
                             }
@@ -167,6 +168,7 @@ where
                             | Event::Touch(touch::Event::FingerPressed { .. }) => {
                                 if let Some(message) = message {
                                     messages.push((message)(!*b));
+                                    message_pushed = true;
                                     path = Vec::new();
                                 }
                             }
@@ -175,7 +177,7 @@ where
                         Entry::Group(_, entries) => {
                             if !entries.is_empty() {
                                 path = entry_path;
-                                log::info!("path is {:?}", path);
+                                
                             }
                         }
                         Entry::Separator => {}
@@ -187,9 +189,10 @@ where
 
         if let Some(new_path) = new_path {
             self.state.stack = new_path;
-            if self.state.stack.is_empty() {
+            if message_pushed {
                 self.state.menu_open = false;
             }
+
         }
 
         event::Status::Ignored

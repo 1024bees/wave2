@@ -126,7 +126,7 @@ where
         let mut mouse_interaction = mouse::Interaction::default();
 
         let mut selected_childs: Vec<Option<usize>> =
-            state.stack.iter().skip(1).map(|i| Some(*i)).fold(
+            state.stack.iter().map(|i| Some(*i)).fold(
                 Vec::with_capacity(state.stack.len()),
                 |mut v, i| {
                     v.push(i);

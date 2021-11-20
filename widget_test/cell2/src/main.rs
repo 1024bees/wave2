@@ -49,12 +49,10 @@ impl std::fmt::Display for Menu {
 struct Example {
     scroll: scrollable::State,
     pick_list: cell2::State,
-    selected_language: Language,
 }
 
 #[derive(Debug, Clone, Copy)]
 enum Message {
-    LanguageSelected(Language),
     Test1,
     Test2,
     Test3,
@@ -73,9 +71,6 @@ impl Sandbox for Example {
 
     fn update(&mut self, message: Message) {
         match message {
-            Message::LanguageSelected(language) => {
-                self.selected_language = language;
-            }
             _ => {
                 println!("{:?}", message);
             }
@@ -84,15 +79,24 @@ impl Sandbox for Example {
 
     fn view(&mut self) -> Element<Message> {
         let cell = Cell2::with_entries(
-            Text::new("Wassup").into(),
+            Text::new("Wassup").width(Length::Fill).into(),
             &mut self.pick_list,
             vec![
                 Entry::Item(Text::new("Test1").into(), Some(Message::Test1)),
-                Entry::Group(Text::new("submenu").into(), vec![
-                    Entry::Item(Text::new("Test2").into(), Some(Message::Test2)),
-                    Entry::Item(Text::new("Test3").into(), Some(Message::Test3)),
-
-                ]),
+                Entry::Group(
+                    Text::new("submenu").into(),
+                    vec![
+                        Entry::Item(Text::new("Test2").into(), Some(Message::Test2)),
+                        Entry::Item(Text::new("Test3").into(), Some(Message::Test3)),
+                        Entry::Group(
+                            Text::new("submenu").into(),
+                            vec![
+                                Entry::Item(Text::new("Test2").into(), Some(Message::Test2)),
+                                Entry::Item(Text::new("Test3").into(), Some(Message::Test3)),
+                            ],
+                        ),
+                    ],
+                ),
             ],
         );
 
@@ -114,52 +118,5 @@ impl Sandbox for Example {
             .center_x()
             .center_y()
             .into()
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Language {
-    Rust,
-    Elm,
-    Ruby,
-    Haskell,
-    C,
-    Javascript,
-    Other,
-}
-
-impl Language {
-    const ALL: [Language; 7] = [
-        Language::C,
-        Language::Elm,
-        Language::Ruby,
-        Language::Haskell,
-        Language::Rust,
-        Language::Javascript,
-        Language::Other,
-    ];
-}
-
-impl Default for Language {
-    fn default() -> Language {
-        Language::Rust
-    }
-}
-
-impl std::fmt::Display for Language {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Language::Rust => "Rust",
-                Language::Elm => "Elm",
-                Language::Ruby => "Ruby",
-                Language::Haskell => "Haskell",
-                Language::C => "C",
-                Language::Javascript => "Javascript",
-                Language::Other => "Some other language",
-            }
-        )
     }
 }
