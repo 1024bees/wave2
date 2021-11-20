@@ -1,6 +1,5 @@
-//! A menu bar.
+//! overlay for a cell, heavily based off the menu from iced_aw
 //!
-//! *This API requires the following crate features to be activated: `menu`*
 use std::hash::Hash;
 
 use iced_graphics::{Point, Size};
@@ -24,14 +23,14 @@ pub const TOGGLE_ICON_SIZE: f32 = 16.0;
 /// The vertical padding of a group of entries.
 pub const VERTICAL_PADDING: f32 = 8.0;
 
-/// The overlay of the [`Menu`](crate::native::Menu).
+/// The overlay of the [`Cell2`](crate::native::Cell2).
 #[allow(missing_debug_implementations)]
 pub struct Cell2Overlay<'a, Message, Renderer>
 where
     Message: Clone,
     Renderer: self::Renderer,
 {
-    /// The state of the [`Menu`](crate::native::Menu).
+    /// The state of the [`Cell2`](crate::native::Cell2).
     state: &'a mut State,
     /// The [`Section`](crate::native::menu::Section) that is displayed on this overlay.
     entries: &'a Vec<Entry<'a, Message, Renderer>>,
@@ -39,7 +38,7 @@ where
     padding: f32,
     /// The position of the [`Section`](crate::native::menu::Section).
     position: Point,
-    /// The style of the [`Menu`](crate::native::Menu)/[`MenuOverlay`](MenuOverlay).
+    /// The style of the [`Cell2`](crate::native::Cell2)/[`MenuOverlay`](MenuOverlay).
     style: Renderer::Style,
 }
 
@@ -48,7 +47,7 @@ where
     Message: Clone,
     Renderer: self::Renderer,
 {
-    /// Creates a new [`MenuOverlay`](MenuOverlay) on the given position, displaying
+    /// Creates a new [`Cell2Overlay`](Cell2Overlay) on the given position, displaying
     /// the specified section.
     pub fn new(
         state: &'a mut State,
@@ -64,7 +63,7 @@ where
         }
     }
 
-    /// Turn this [`MenuOverlay`](MenuOverlay) into an overlay [`Element`](overlay::Element).
+    /// Turn this [`Cell2Overlay`](Cell2Overlay) into an overlay [`Element`](overlay::Element).
     #[must_use]
     pub fn overlay(self) -> overlay::Element<'a, Message, Renderer> {
         overlay::Element::new(self.position, Box::new(self))
@@ -231,15 +230,15 @@ where
     }
 }
 
-/// The renderer of a [`MenuOverlay`](MenuOverlay).
+/// The renderer of a [`Cell2Overlay`](Cell2Overlay).
 ///
 /// Your renderer will need to implement this trait before being
-/// able to use a [`MenuOverlay`](MenuOverlay) in your user interface.
+/// able to use a [`Cell2Overlay`](Cell2Overlay) in your user interface.
 pub trait Renderer: iced_native::Renderer {
     /// The style supported by this renderer.
     type Style: Default;
 
-    /// Draws a [`MenuOverlay`](MenuOverlay).
+    /// Draws a [`Cell2Overlay`](Cell2Overlay).
     fn draw<Message>(
         &mut self,
         env: DrawEnvironment<'_, Self::Defaults, Self::Style, ()>,

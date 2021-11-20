@@ -24,7 +24,7 @@ use crate::widget::overlay::cell_overlay::{GROUP_ICON_SIZE, TOGGLE_ICON_SIZE};
 use iced_aw::core::renderer::DrawEnvironment;
 use iced_aw::graphics::icons::{Icon, ICON_FONT};
 
-/// A menu bar.
+/// A cell with nested menu
 ///
 /// This is an alias of the `iced_native` `Menu` with an `iced_wgpu::Renderer`.
 pub type Cell2<'a, Message, Backend> = cell2::Cell2<'a, Message, Renderer<Backend>>;
@@ -41,7 +41,7 @@ where
         item: &Element<'_,Message,Self>,
     ) -> Self::Output {
         let bounds = env.layout.bounds();
-        let children = env.layout.children();
+        
 
         let mut style: HashMap<StyleState, Style> = HashMap::new();
         let _ = style.insert(StyleState::Active, env.style_sheet.active());
@@ -96,7 +96,7 @@ where
 
         mouse_interaction = mouse_interaction.max(new_mouse_interaction);
 
-        let mut primitives = vec![shadow, background, text_label];
+        let primitives = vec![shadow, background, text_label];
 
         (Primitive::Group { primitives }, mouse_interaction)
     }
