@@ -1,22 +1,19 @@
-//! A menu bar.
+//! Renderer for a cell
 //!
-//! *This API requires the following crate features to be activated: `menu`*
 use std::collections::HashMap;
 
-use iced_native::Element;
 use iced_graphics::{
     backend, defaults, Backend, Background, Color, Defaults, Primitive, Rectangle, Renderer, Vector,
 };
 use iced_native::mouse;
+use iced_native::Element;
 
 use crate::{
-    core::cell2::{get_entry, stack_to_path_list, get_entry_list, },
+    core::cell2::{get_entry, get_entry_list, stack_to_path_list},
     widget::cell2::{Entry, State},
 };
-use iced_aw::style::{
-    menu::{Style, StyleSheet},
-    style_state::StyleState,
-};
+
+use crate::styles::cell2::{Style, StyleSheet, StyleState};
 
 use crate::widget::cell2;
 
@@ -37,11 +34,11 @@ where
 
     fn draw<Message>(
         &mut self,
+        state: &State,
         env: DrawEnvironment<'_, Self::Defaults, Self::Style, ()>,
-        item: &Element<'_,Message,Self>,
+        item: &Element<'_, Message, Self>,
     ) -> Self::Output {
         let bounds = env.layout.bounds();
-        
 
         let mut style: HashMap<StyleState, Style> = HashMap::new();
         let _ = style.insert(StyleState::Active, env.style_sheet.active());
@@ -55,6 +52,10 @@ where
         let mut style_state = StyleState::Active;
         if bounds.contains(env.cursor_position) {
             style_state = style_state.max(StyleState::Hovered);
+        }
+
+        if state.selected {
+            style_state = StyleState::Selected;
         }
 
         // TODO: Implement proper shadow support
@@ -125,14 +126,13 @@ where
 
         let mut mouse_interaction = mouse::Interaction::default();
 
-        let mut selected_childs: Vec<Option<usize>> =
-            state.stack.iter().map(|i| Some(*i)).fold(
-                Vec::with_capacity(state.stack.len()),
-                |mut v, i| {
-                    v.push(i);
-                    v
-                },
-            );
+        let mut selected_childs: Vec<Option<usize>> = state.stack.iter().map(|i| Some(*i)).fold(
+            Vec::with_capacity(state.stack.len()),
+            |mut v, i| {
+                v.push(i);
+                v
+            },
+        );
         selected_childs.push(None);
 
         let primitives = children

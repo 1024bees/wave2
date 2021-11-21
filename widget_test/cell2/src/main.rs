@@ -48,7 +48,7 @@ impl std::fmt::Display for Menu {
 #[derive(Default)]
 struct Example {
     scroll: scrollable::State,
-    pick_list: cell2::State,
+    cell_state: cell2::State,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -56,6 +56,7 @@ enum Message {
     Test1,
     Test2,
     Test3,
+    Toggle,
 }
 
 impl Sandbox for Example {
@@ -71,6 +72,11 @@ impl Sandbox for Example {
 
     fn update(&mut self, message: Message) {
         match message {
+            Message::Toggle => {
+                self.cell_state.selected = !self.cell_state.selected;
+                log::info!("selected is {:?}", self.cell_state.selected);
+
+            }
             _ => {
                 println!("{:?}", message);
             }
@@ -80,7 +86,7 @@ impl Sandbox for Example {
     fn view(&mut self) -> Element<Message> {
         let cell = Cell2::with_entries(
             Text::new("Wassup").width(Length::Fill).into(),
-            &mut self.pick_list,
+            &mut self.cell_state,
             vec![
                 Entry::Item(Text::new("Test1").into(), Some(Message::Test1)),
                 Entry::Group(
@@ -98,7 +104,8 @@ impl Sandbox for Example {
                     ],
                 ),
             ],
-        );
+        )
+        .set_single_click(|| Message::Toggle);
 
         let container = Container::new(cell).width(Length::Units(400));
 
