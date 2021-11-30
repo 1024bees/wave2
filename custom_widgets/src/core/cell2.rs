@@ -1,5 +1,6 @@
 use crate::widget::cell2::Entry;
-
+use iced::Element;
+use iced_native::Text;
 /// Return an expanded list of paths based on the given stack of indices.
 ///
 /// For example: If the stack contains [4, 5, 2] the result would be
@@ -8,12 +9,22 @@ use crate::widget::cell2::Entry;
 pub fn stack_to_path_list(stack: &[usize]) -> Vec<&[usize]> {
     let mut list = Vec::new();
 
-    for i in 0..stack.len() + 1 {
+    for i in 0..stack.len() {
         list.push(&stack[0..i])
     }
 
-    
     list
+}
+
+pub const DEFAULT_TEXT_SIZE: u16 = 14;
+pub fn default_cell_text<'a, Message: 'static>(string: String) -> Element<'a, Message> {
+    Text::new(string).size(DEFAULT_TEXT_SIZE).into()
+}
+
+pub fn text_generator<'a, Message: 'static>(
+    text_size: u16,
+) -> Box<dyn Fn(String) -> Element<'a, Message>> {
+    Box::new(move |string: String| Text::new(string).size(text_size).into())
 }
 
 /// Returns the entry specified by the given path.
@@ -44,11 +55,10 @@ fn get_entry_internal<'a, Message, Renderer>(
         match &entries[path[0]] {
             Entry::Group(_, entries) => get_entry_internal(entries, &path[1..]),
             Entry::Separator => unreachable!("Illegal to get a seperator!"),
-            _ => &entries[path[0]]
+            _ => &entries[path[0]],
         }
     }
 }
-
 
 /// Returns a list of all entries in the given section grouped together by its
 /// `Entry::Group` based on the given path.
@@ -91,4 +101,3 @@ fn get_entry_list_internal<'a, Message, Renderer>(
         _ => unreachable!("Entry is not a group"),
     }
 }
-

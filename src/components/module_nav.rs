@@ -7,28 +7,28 @@ use wave2_custom_widgets::traits::CellOption;
 use crate::components::shared::cell_list::{CellList, ListNodeState};
 use wave2_wavedb::hier_map::SignalItem;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, strum_macros::Display)]
-pub enum SigOptions {
-    Add,
-}
-
-impl SigOptions {
-    const ALL: [SigOptions; 1] = [SigOptions::Add];
-}
-
-impl CellOption for SigOptions {
-    type Message = Message;
-
-    fn all() -> &'static [Self] {
-        &SigOptions::ALL
-    }
-
-    fn to_message(&self) -> Self::Message {
-        match self {
-            SigOptions::Add => Message::AddSelected,
-        }
-    }
-}
+//#[derive(Debug, Clone, Copy, PartialEq, Eq, strum_macros::Display)]
+//pub enum SigOptions {
+//    Add,
+//}
+//
+//impl SigOptions {
+//    const ALL: [SigOptions; 1] = [SigOptions::Add];
+//}
+//
+//impl CellOption for SigOptions {
+//    type Message = Message;
+//
+//    fn all() -> &'static [Self] {
+//        &SigOptions::ALL
+//    }
+//
+//    fn to_message(&self) -> Self::Message {
+//        match self {
+//            SigOptions::Add => Message::AddSelected,
+//        }
+//    }
+//}
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -44,7 +44,7 @@ pub enum Message {
 #[derive(Default)]
 pub struct ModNavigator {
     signal_vec: Vec<SignalItem>,
-    signals: CellList<SigOptions>,
+    signals: CellList,
     selected_offset: Option<usize>,
     scroll_x: scrollable::State,
 }

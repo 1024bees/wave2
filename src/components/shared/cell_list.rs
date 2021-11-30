@@ -1,12 +1,14 @@
+use iced::Text;
 use iced::{Column, Element};
 use log::error;
-use wave2_custom_widgets::widget::cell;
-use wave2_custom_widgets::widget::cell::Cell as VizCell;
+use wave2_custom_widgets::core::cell2::DEFAULT_TEXT_SIZE;
+use wave2_custom_widgets::widget::cell2;
+use wave2_custom_widgets::widget::cell2::Cell2 as VizCell;
 
 use wave2_custom_widgets::traits::CellOption;
 
-pub struct ListNode<O> {
-    ui_state: cell::State<O>,
+pub struct ListNode {
+    ui_state: cell2::State,
     node_state: ListNodeState,
 }
 
@@ -19,55 +21,52 @@ pub struct ListNodeState {
     pub selected: bool,
 }
 
-impl<O> ListNode<O>
-where
-    O: CellOption,
-{
+impl ListNode {
     fn new(offset: usize) -> Self {
         ListNode {
-            ui_state: cell::State::default(),
+            ui_state: cell2::State::default(),
             node_state: ListNodeState {
                 offset,
                 ..ListNodeState::default()
             },
         }
     }
-    fn view(
+    fn view<Message: Clone + 'static>(
         &mut self,
         payload: String,
-        on_click: impl Fn(ListNodeState) -> Box<dyn Fn() -> O::Message + 'static>,
-        on_double_click: impl Fn(ListNodeState) -> Box<dyn Fn() -> O::Message + 'static>,
+        on_click: impl Fn(ListNodeState) -> Box<dyn Fn() -> Message + 'static>,
+        on_double_click: impl Fn(ListNodeState) -> Box<dyn Fn() -> Message + 'static>,
         text_size: Option<u16>,
         cell_padding: Option<u16>,
-    ) -> Element<O::Message> {
+    ) -> Element<Message> {
         let ListNode {
             ui_state,
             node_state,
             ..
         } = self;
         let click = on_click(node_state.clone());
-        let sig_cell = VizCell::new(ui_state, payload)
-            .on_click(click)
-            .on_double_click(on_double_click(node_state.clone()))
-            .override_selected(node_state.selected.clone())
-            .text_size(text_size)
-            .padding(cell_padding);
+        let sig_cell = VizCell::new(
+            Text::new(payload).size(text_size.unwrap_or(DEFAULT_TEXT_SIZE)).into(),
+            ui_state,
+        )
+        .set_single_click(click)
+        .set_double_click(on_double_click(node_state.clone()))
+        .override_selected(node_state.selected.clone());
+        //.text_size(text_size)
+        //.padding(cell_padding);
 
         sig_cell.into()
     }
 }
 
-pub struct CellList<O> {
-    pub nodes: Vec<ListNode<O>>,
+pub struct CellList {
+    pub nodes: Vec<ListNode>,
     text_size: Option<u16>,
     cell_padding: Option<u16>,
     spacing: u16,
 }
 
-impl<O> CellList<O>
-where
-    O: CellOption,
-{
+impl CellList {
     pub fn new(size: usize) -> Self {
         let nodes = (0..size).map(|idx| ListNode::new(idx)).collect();
 
@@ -89,12 +88,12 @@ where
             .for_each(|(idx, payload)| payload.node_state.offset = idx);
     }
 
-    pub fn view<'a, T: ToString + 'a>(
+    pub fn view<'a, T: ToString + 'a, Message: Clone + 'static >(
         &mut self,
         strings: impl IntoIterator<Item = &'a T>,
-        on_click: impl Fn(ListNodeState) -> Box<dyn Fn() -> O::Message + 'static> + Copy,
-        on_double_click: impl Fn(ListNodeState) -> Box<dyn Fn() -> O::Message + 'static> + Copy,
-    ) -> Element<O::Message> {
+        on_click: impl Fn(ListNodeState) -> Box<dyn Fn() -> Message + 'static> + Copy,
+        on_double_click: impl Fn(ListNodeState) -> Box<dyn Fn() -> Message + 'static> + Copy,
+    ) -> Element<Message> {
         // To hack around the borrow checker being a little baby. Waa Waa
         let text_size = self.text_size;
         let cell_padding = self.cell_padding;
@@ -146,7 +145,7 @@ where
     }
 }
 
-impl<O> Default for CellList<O> {
+impl Default for CellList {
     fn default() -> Self {
         Self {
             nodes: vec![],

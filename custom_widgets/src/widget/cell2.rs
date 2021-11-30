@@ -120,6 +120,14 @@ where
         self.on_double_click = Some(Box::new(callback));
         self
     }
+    /// Switch to allow the select logic to be overriden at the application level
+    ///
+    /// Useful when you have a collection of [`Cell2`](Cell2), where select logic should be mutually exclusive
+
+    pub fn override_selected(mut self, override_select: bool) -> Self {
+        self.state.selected = override_select;
+        self
+    }
 }
 
 impl<'a, Message, Renderer> Widget<Message, Renderer> for Cell2<'a, Message, Renderer>
@@ -260,7 +268,7 @@ impl Renderer for iced_native::renderer::Null {
 }
 
 /// The state of the [`Cell2`](Cell2).
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct State {
     /// The stack containing the indices that build a path to the opened [`Entry`](Entry).
     pub(crate) stack: Vec<usize>,

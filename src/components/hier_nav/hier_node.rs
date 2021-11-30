@@ -1,24 +1,20 @@
 use crate::components::hier_nav::hier_nav::{HierOptions, Message};
 use iced::{button, Button, Column, Element, Length, Row, Text};
-use log::warn;
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use wave2_custom_widgets::widget::cell;
-use wave2_custom_widgets::widget::cell::Cell as VizCell;
+use wave2_custom_widgets::core::cell2::default_cell_text as dct;
+use wave2_custom_widgets::widget::cell2;
+use wave2_custom_widgets::widget::cell2::Cell2 as VizCell;
 use wave2_wavedb::hier_map::{HierMap, ModuleItem};
 
-
-
-const PADDING : u16 = 1;
+const PADDING: u16 = 1;
 
 #[derive(Debug, Clone, Default)]
 struct ModuleWrapper {
     hier_idx: usize,
     name: String,
 }
-
-
 
 impl ToString for ModuleWrapper {
     fn to_string(&self) -> String {
@@ -30,9 +26,6 @@ impl AsRef<str> for ModuleWrapper {
         self.name.as_ref()
     }
 }
-
-
-
 
 impl From<&ModuleItem> for ModuleWrapper {
     fn from(module: &ModuleItem) -> ModuleWrapper {
@@ -46,7 +39,7 @@ impl From<&ModuleItem> for ModuleWrapper {
 #[derive(Debug, Clone, Default)]
 pub struct HierNode {
     children: Vec<HierNode>,
-    ui_state: cell::State<HierOptions>,
+    ui_state: cell2::State,
     expanded_button: button::State,
     shared_state: SharedNodeState,
     payload: ModuleWrapper,
@@ -71,7 +64,7 @@ impl HierRoot {
             let state = real_expander.expanded.get();
             real_expander.expanded.set(!state);
         } else {
-            warn!(
+            log::warn!(
                 "Trying to expand {}; this index should not have children",
                 module_idx
             );
@@ -84,7 +77,7 @@ impl HierRoot {
             let state = real_selector.selected.get();
             real_selector.selected.set(!state);
         } else {
-            warn!(
+            log::warn!(
                 "Trying to select {}; this index should not exist",
                 module_idx
             );
@@ -101,8 +94,7 @@ impl HierRoot {
 
 impl From<&HierMap> for HierRoot {
     fn from(map: &HierMap) -> HierRoot {
-        let mut flat_expander_map: HashMap<usize, SharedNodeState> =
-            HashMap::new();
+        let mut flat_expander_map: HashMap<usize, SharedNodeState> = HashMap::new();
         let rootlist: Vec<HierNode> = map
             .get_roots()
             .iter()
@@ -171,11 +163,13 @@ impl HierNode {
         .padding(PADDING)
         .on_press(Message::Toggle(payload.hier_idx));
 
-        //TODO: fixme, placeholder message closure
         let idx = payload.hier_idx.clone();
-        let root_cell = VizCell::new(ui_state, self.payload.to_string())
-            .on_click(Box::new(move || Message::SendModule(idx)))
-            .override_selected(shared_state.selected.get());
+        //FIXME: DO WE REALLY NEED THIS LMAO?  THE WHOE SHARED STATE AND FLATMAP IS A LITTLE
+        //CONVOLUTED I MADE SOME MISTAKES LOL!
+        ui_state.selected = shared_state.selected.get();
+        let root_cell = VizCell::new(dct(self.payload.to_string()), ui_state)
+            .set_single_click(Box::new(move || Message::SendModule(idx)));
+            
 
         let top_row = if !children.is_empty() {
             Row::new()
