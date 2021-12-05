@@ -87,7 +87,7 @@ impl Sandbox for Example {
         let cell = Cell2::with_entries(
             Text::new("Wassup").width(Length::Fill).into(),
             &mut self.cell_state,
-            vec![
+            &vec![
                 Entry::Item(Text::new("Test1").into(), Some(Message::Test1)),
                 Entry::Group(
                     Text::new("submenu").into(),

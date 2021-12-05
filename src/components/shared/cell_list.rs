@@ -46,14 +46,17 @@ impl ListNode {
         } = self;
         let click = on_click(node_state.clone());
         let sig_cell = VizCell::new(
-            Text::new(payload).size(text_size.unwrap_or(DEFAULT_TEXT_SIZE)).into(),
+            Text::new(payload)
+                .size(text_size.unwrap_or(DEFAULT_TEXT_SIZE))
+                .width(iced::Length::Fill)
+                .into(),
             ui_state,
         )
+        .set_width(iced::Length::Fill)
         .set_single_click(click)
         .set_double_click(on_double_click(node_state.clone()))
         .override_selected(node_state.selected.clone());
         //.text_size(text_size)
-        //.padding(cell_padding);
 
         sig_cell.into()
     }
@@ -88,7 +91,7 @@ impl CellList {
             .for_each(|(idx, payload)| payload.node_state.offset = idx);
     }
 
-    pub fn view<'a, T: ToString + 'a, Message: Clone + 'static >(
+    pub fn view<'a, T: ToString + 'a, Message: Clone + 'static>(
         &mut self,
         strings: impl IntoIterator<Item = &'a T>,
         on_click: impl Fn(ListNodeState) -> Box<dyn Fn() -> Message + 'static> + Copy,
@@ -113,7 +116,11 @@ impl CellList {
             })
             .collect();
 
-        Column::with_children(vecs).spacing(self.spacing).into()
+        Column::with_children(vecs)
+            .spacing(self.spacing)
+            .padding(10)
+            .width(iced::Length::Fill)
+            .into()
     }
 
     pub fn toggle_selected(&mut self, offset: usize, selected: bool) {
@@ -136,6 +143,10 @@ impl CellList {
         self
     }
 
+    pub fn column_padding(mut self, padding: u16) -> Self {
+        self.spacing = padding;
+        self
+    }
     pub fn set_spacing(mut self, padding: u16) -> Self {
         self.spacing = padding;
         self

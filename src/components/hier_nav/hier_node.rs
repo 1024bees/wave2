@@ -3,7 +3,8 @@ use iced::{button, Button, Column, Element, Length, Row, Text};
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use wave2_custom_widgets::core::cell2::default_cell_text as dct;
+use wave2_custom_widgets::core::cell2::{default_cell_text as dct, DEFAULT_TEXT_SIZE};
+
 use wave2_custom_widgets::widget::cell2;
 use wave2_custom_widgets::widget::cell2::Cell2 as VizCell;
 use wave2_wavedb::hier_map::{HierMap, ModuleItem};
@@ -158,7 +159,7 @@ impl HierNode {
 
         let expander = Button::new(
             expanded_button,
-            Text::new(if expanded_val { "-" } else { "+" }),
+            Text::new(if expanded_val { "-" } else { "+" }).size(DEFAULT_TEXT_SIZE),
         )
         .padding(PADDING)
         .on_press(Message::Toggle(payload.hier_idx));
@@ -169,7 +170,6 @@ impl HierNode {
         ui_state.selected = shared_state.selected.get();
         let root_cell = VizCell::new(dct(self.payload.to_string()), ui_state)
             .set_single_click(Box::new(move || Message::SendModule(idx)));
-            
 
         let top_row = if !children.is_empty() {
             Row::new()

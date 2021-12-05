@@ -12,6 +12,8 @@ use iced_aw::core::renderer::DrawEnvironment;
 
 use super::overlay::cell_overlay::Cell2Overlay;
 
+
+
 /// A cell with a nested menu
 ///
 /// # Example
@@ -52,7 +54,7 @@ where
     /// The state of the [`Cell2`](Cell2).
     state: &'a mut State,
     /// A vector containing the [`Section`](Section)s of the [`Cell2`](Cell2).
-    overlay_entries: Vec<Entry<'a, Message, Renderer>>,
+    overlay_entries: Option<&'a Vec<Entry<'a, Message, Renderer>>>,
     /// The width of the [`Cell2`](Cell2).
     width: Length,
     /// The height of the [`Cell2`](Cell2).
@@ -79,7 +81,7 @@ where
     /// It expects:
     ///     * a mutable reference to the [`Cell2`](Cell2)'s [`State`](State).
     pub fn new(item: Element<'a, Message, Renderer>, state: &'a mut State) -> Self {
-        Cell2::with_entries(item, state, Vec::new())
+        Cell2::with_entries(item, state, None)
     }
 
     /// Creates a new [`Cell2`](Cell2) with the given list of sections.
@@ -90,7 +92,7 @@ where
     pub fn with_entries(
         item: Element<'a, Message, Renderer>,
         state: &'a mut State,
-        sections: Vec<Entry<'a, Message, Renderer>>,
+        sections: Option<&'a Vec<Entry<'a, Message, Renderer>>>,
     ) -> Self {
         Self {
             state,
@@ -128,6 +130,11 @@ where
         self.state.selected = override_select;
         self
     }
+
+    pub fn set_width(mut self, width: Length) -> Self {
+        self.width = width;
+        self
+    }
 }
 
 impl<'a, Message, Renderer> Widget<Message, Renderer> for Cell2<'a, Message, Renderer>
@@ -163,11 +170,10 @@ where
         let children = layout.children();
 
         if !self.state.menu_open && layout.bounds().contains(cursor_position) {
-            let no_entries = self.overlay_entries.is_empty();
+            let no_entries = self.overlay_entries.is_none();
             let status = match event {
                 Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right)) => {
                     if !no_entries {
-                        log::info!("wassup we are right clicking");
                         self.state.menu_open = true;
                         event::Status::Captured
                     } else {
@@ -175,9 +181,20 @@ where
                     }
                 }
                 Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
-                    if let Some(ref callback) = self.on_click {
-                        messages.push(callback());
+                    let click = mouse::Click::new(cursor_position, self.state.last_click);
+                    match click.kind() {
+                        mouse::click::Kind::Single => {
+                            if let Some(ref single_click_cb) = self.on_click {
+                                messages.push(single_click_cb());
+                            }
+                        }
+                        mouse::click::Kind::Double | mouse::click::Kind::Triple => {
+                            if let Some(ref dbl_click_cb) = self.on_double_click {
+                                messages.push(dbl_click_cb());
+                            }
+                        }
                     }
+                    self.state.last_click = Some(click);
 
                     event::Status::Captured
                 }
@@ -230,11 +247,15 @@ where
             return None;
         }
 
+        if let Some(overlay_entries) = self.overlay_entries {
         let bounds = layout.bounds();
 
         let position = Point::new(bounds.x, bounds.y + bounds.height);
 
-        Some(Cell2Overlay::new(&mut self.state, &self.overlay_entries, position).overlay())
+        Some(Cell2Overlay::new(&mut self.state, overlay_entries, position).overlay())
+        } else {
+            None
+        }
     }
 }
 
@@ -274,6 +295,7 @@ pub struct State {
     pub(crate) stack: Vec<usize>,
     pub selected: bool,
     pub(crate) menu_open: bool,
+    last_click: Option<mouse::Click>,
 }
 
 impl State {
@@ -284,6 +306,7 @@ impl State {
             stack: Vec::new(),
             selected: false,
             menu_open: false,
+            last_click: None,
         }
     }
 }

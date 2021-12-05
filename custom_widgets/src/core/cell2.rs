@@ -18,8 +18,9 @@ pub fn stack_to_path_list(stack: &[usize]) -> Vec<&[usize]> {
 
 pub const DEFAULT_TEXT_SIZE: u16 = 14;
 pub fn default_cell_text<'a, Message: 'static>(string: String) -> Element<'a, Message> {
-    Text::new(string).size(DEFAULT_TEXT_SIZE).into()
+    Text::new(string).size(DEFAULT_TEXT_SIZE).width(iced::Length::Fill).into()
 }
+
 
 pub fn text_generator<'a, Message: 'static>(
     text_size: u16,
