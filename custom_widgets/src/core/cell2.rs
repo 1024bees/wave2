@@ -9,7 +9,7 @@ use iced_native::Text;
 pub fn stack_to_path_list(stack: &[usize]) -> Vec<&[usize]> {
     let mut list = Vec::new();
 
-    for i in 0..stack.len() {
+    for i in 0..stack.len() + 1 {
         list.push(&stack[0..i])
     }
 
