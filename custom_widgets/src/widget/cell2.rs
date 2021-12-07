@@ -12,8 +12,6 @@ use iced_aw::core::renderer::DrawEnvironment;
 
 use super::overlay::cell_overlay::Cell2Overlay;
 
-
-
 /// A cell with a nested menu
 ///
 /// # Example
@@ -54,7 +52,7 @@ where
     /// The state of the [`Cell2`](Cell2).
     state: &'a mut State,
     /// A vector containing the [`Section`](Section)s of the [`Cell2`](Cell2).
-    overlay_entries: Option<&'a Vec<Entry<'a, Message, Renderer>>>,
+    overlay_entries: Vec<Entry<'a, Message, Renderer>>,
     /// The width of the [`Cell2`](Cell2).
     width: Length,
     /// The height of the [`Cell2`](Cell2).
@@ -81,7 +79,7 @@ where
     /// It expects:
     ///     * a mutable reference to the [`Cell2`](Cell2)'s [`State`](State).
     pub fn new(item: Element<'a, Message, Renderer>, state: &'a mut State) -> Self {
-        Cell2::with_entries(item, state, None)
+        Cell2::with_entries(item, state, Vec::new())
     }
 
     /// Creates a new [`Cell2`](Cell2) with the given list of sections.
@@ -92,7 +90,7 @@ where
     pub fn with_entries(
         item: Element<'a, Message, Renderer>,
         state: &'a mut State,
-        sections: Option<&'a Vec<Entry<'a, Message, Renderer>>>,
+        sections: Vec<Entry<'a, Message, Renderer>>,
     ) -> Self {
         Self {
             state,
@@ -170,7 +168,7 @@ where
         let children = layout.children();
 
         if !self.state.menu_open && layout.bounds().contains(cursor_position) {
-            let no_entries = self.overlay_entries.is_none();
+            let no_entries = self.overlay_entries.is_empty();
             let status = match event {
                 Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right)) => {
                     if !no_entries {
@@ -247,15 +245,15 @@ where
             return None;
         }
 
-        if let Some(overlay_entries) = self.overlay_entries {
-        let bounds = layout.bounds();
+        //if let Some(overlay_entries) = self.overlay_entries {
+            let bounds = layout.bounds();
 
-        let position = Point::new(bounds.x, bounds.y + bounds.height);
+            let position = Point::new(bounds.x, bounds.y + bounds.height);
 
-        Some(Cell2Overlay::new(&mut self.state, overlay_entries, position).overlay())
-        } else {
-            None
-        }
+            Some(Cell2Overlay::new(&mut self.state, &self.overlay_entries, position).overlay())
+        //} else {
+        //    None
+        //}
     }
 }
 
