@@ -5,7 +5,7 @@ use std::hash::Hash;
 use iced_graphics::{Point, Size};
 use iced_native::{
     event, layout, mouse, overlay, row, touch, Clipboard, Element, Event, Layout, Length, Row,
-    Widget,
+    Text, Widget,
 };
 
 use iced_aw::core::renderer::DrawEnvironment;
@@ -52,7 +52,7 @@ where
     /// The state of the [`Cell2`](Cell2).
     state: &'a mut State,
     /// A vector containing the [`Section`](Section)s of the [`Cell2`](Cell2).
-    overlay_entries: Vec<Entry<'a, Message, Renderer>>,
+    overlay_entries: Option<&'a Vec<LazyEntry<Message>>>,
     /// The width of the [`Cell2`](Cell2).
     width: Length,
     /// The height of the [`Cell2`](Cell2).
@@ -79,7 +79,7 @@ where
     /// It expects:
     ///     * a mutable reference to the [`Cell2`](Cell2)'s [`State`](State).
     pub fn new(item: Element<'a, Message, Renderer>, state: &'a mut State) -> Self {
-        Cell2::with_entries(item, state, Vec::new())
+        Cell2::with_entries(item, state, None)
     }
 
     /// Creates a new [`Cell2`](Cell2) with the given list of sections.
@@ -90,7 +90,7 @@ where
     pub fn with_entries(
         item: Element<'a, Message, Renderer>,
         state: &'a mut State,
-        sections: Vec<Entry<'a, Message, Renderer>>,
+        sections: Option<&'a Vec<LazyEntry<Message>>>,
     ) -> Self {
         Self {
             state,
@@ -168,7 +168,7 @@ where
         let children = layout.children();
 
         if !self.state.menu_open && layout.bounds().contains(cursor_position) {
-            let no_entries = self.overlay_entries.is_empty();
+            let no_entries = self.overlay_entries.is_none();
             let status = match event {
                 Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right)) => {
                     if !no_entries {
@@ -245,15 +245,18 @@ where
             return None;
         }
 
-        //if let Some(overlay_entries) = self.overlay_entries {
+        if let Some(overlay_entries) = self.overlay_entries {
             let bounds = layout.bounds();
 
             let position = Point::new(bounds.x, bounds.y + bounds.height);
-
-            Some(Cell2Overlay::new(&mut self.state, &self.overlay_entries, position).overlay())
-        //} else {
-        //    None
-        //}
+            let entries = overlay_entries
+                .iter()
+                .map(|lazy_entry| lazy_entry.into())
+                .collect();
+            Some(Cell2Overlay::new(&mut self.state, entries, position).overlay())
+        } else {
+            None
+        }
     }
 }
 
@@ -317,11 +320,7 @@ pub enum Entry<'a, Message, Renderer> {
     /// If the message is none the item will be disabled.
     Item(Element<'a, Message, Renderer>, Option<Message>),
     /// An [`Entry`] item that can be toggled.
-    Toggle(
-        Element<'a, Message, Renderer>,
-        bool,
-        Option<Box<dyn Fn(bool) -> Message + 'static>>,
-    ),
+    Toggle(Element<'a, Message, Renderer>, bool, Option<Message>),
     /// A group of [`Entry`](Entry)s holding an [`Element`](iced_native::Element) for
     /// it's label.
     /// If the vector is empty the group will be disabled.
@@ -333,33 +332,75 @@ pub enum Entry<'a, Message, Renderer> {
     Separator,
 }
 
-impl<'a, Message, Renderer: iced_native::Renderer> Entry<'a, Message, Renderer> {
-    /// Applies a transformation to the produced message of the [`Element`](Element).
-    ///
-    /// Take a look into the [`Element`](iced_native::Element) documentation for
-    /// more information.
-    pub fn map<F, B>(self, f: F) -> Entry<'a, B, Renderer>
-    where
-        Message: 'static,
-        Renderer: 'a,
-        B: 'static,
-        F: 'static + Copy + Fn(Message) -> B,
-    {
-        match self {
-            Entry::Item(label, message) => Entry::Item(label.map(f), message.map(f)),
-            Entry::Toggle(label, toggled, message) => Entry::Toggle(
-                label.map(f),
-                toggled,
-                message.map(|m| {
-                    // TODO: I can't believe that this actually works...
-                    Box::new(move |b: bool| f(m(b))) as Box<dyn Fn(bool) -> B>
-                }),
+#[allow(missing_debug_implementations)]
+pub enum LazyEntry<Message> {
+    /// An [`Entry`] item holding an [`Element`](iced_native::Element) for it's label
+    /// and a message that is send when the item is pressed.
+    /// If the message is none the item will be disabled.
+    Item(String, Option<Message>),
+    /// An [`Entry`] item that can be toggled.
+    Toggle(String, bool, Option<Message>),
+    /// A group of [`Entry`](Entry)s holding an [`Element`](iced_native::Element) for
+    /// it's label.
+    /// If the vector is empty the group will be disabled.
+    Group(String, Vec<LazyEntry<Message>>),
+    /// A separator.
+    Separator,
+}
+
+//impl<'a, Message, Renderer: iced_native::Renderer> Entry<'a, Message, Renderer> {
+//    /// Applies a transformation to the produced message of the [`Element`](Element).
+//    ///
+//    /// Take a look into the [`Element`](iced_native::Element) documentation for
+//    /// more information.
+//    pub fn map<F, B>(self, f: F) -> Entry<'a, B, Renderer>
+//    where
+//        Message: 'static,
+//        Renderer: 'a,
+//        B: 'static,
+//        F: 'static + Copy + Fn(Message) -> B,
+//    {
+//        match self {
+//            Entry::Item(label, message) => Entry::Item(label.map(f), message.map(f)),
+//            Entry::Toggle(label, toggled, message) => Entry::Toggle(
+//                label.map(f),
+//                toggled,
+//                message.map(|m| {
+//                    // TODO: I can't believe that this actually works...
+//                    Box::new(move |b: bool| f(m(b))) as Box<dyn Fn(bool) -> B>
+//                }),
+//            ),
+//            Entry::Group(label, entries) => Entry::Group(
+//                label.map(f),
+//                entries.into_iter().map(|entry| entry.map(f)).collect(),
+//            ),
+//            Entry::Separator => Entry::Separator,
+//        }
+//    }
+//}
+
+impl<'a, Message, Renderer> From<&LazyEntry<Message>> for Entry<'a, Message, Renderer>
+where
+    Message: 'a + Clone,
+    Renderer: 'a
+        + self::Renderer
+        + row::Renderer
+        + iced_native::text::Renderer
+        + crate::widget::overlay::cell_overlay::Renderer,
+{
+    fn from(lazy_entry: &LazyEntry<Message>) -> Self {
+        match lazy_entry {
+            LazyEntry::Item(payload, message) => {
+                Entry::Item(Text::new(payload).into(), message.clone())
+            }
+            LazyEntry::Group(payload, children) => Entry::Group(
+                Text::new(payload).into(),
+                children.into_iter().map(|child| child.into()).collect(),
             ),
-            Entry::Group(label, entries) => Entry::Group(
-                label.map(f),
-                entries.into_iter().map(|entry| entry.map(f)).collect(),
-            ),
-            Entry::Separator => Entry::Separator,
+            LazyEntry::Separator => Entry::Separator,
+            LazyEntry::Toggle(payload, flag, message) => {
+                Entry::Toggle(Text::new(payload).into(), flag.clone(), message.clone())
+            }
         }
     }
 }

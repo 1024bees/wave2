@@ -5,7 +5,7 @@ use iced::{
 use env_logger;
 use log::info;
 use wave2_custom_widgets::traits::CellOption;
-use wave2_custom_widgets::widget::cell2::{self, Cell2, Entry};
+use wave2_custom_widgets::widget::cell2::{self, Cell2, LazyEntry};
 pub fn main() -> Result<(), iced::Error> {
     env_logger::init();
     info!("TEST");
@@ -45,10 +45,48 @@ impl std::fmt::Display for Menu {
     }
 }
 
-#[derive(Default)]
 struct Example {
     scroll: scrollable::State,
     cell_state: cell2::State,
+    entries: Vec<LazyEntry<Message>>,
+
+}
+
+impl Default for Example {
+    fn default() -> Self {
+
+        Example {
+            scroll: scrollable::State::default(),
+            cell_state: cell2::State::default(),
+            entries: vec![
+                LazyEntry::Item("Test1".into(), Some(Message::Test1)),
+                LazyEntry::Group(
+                    "submenu".into(),
+                    vec![
+                        LazyEntry::Item("Test2".into(), Some(Message::Test2)),
+                        LazyEntry::Item("Test3".into(), Some(Message::Test3)),
+                        LazyEntry::Group(
+                            "submenu".into(),
+                            vec![
+                                LazyEntry::Item("Test2".into(), Some(Message::Test2)),
+                                LazyEntry::Item("Test3".into(), Some(Message::Test3)),
+                            ],
+                        ),
+                    ],
+                ),
+            ]
+
+
+
+
+
+        }
+
+
+
+    }
+
+
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -84,26 +122,9 @@ impl Sandbox for Example {
     }
 
     fn view(&mut self) -> Element<Message> {
-        let cell = Cell2::with_entries(
-            Text::new("Wassup").width(Length::Fill).into(),
+        let cell = Cell2::with_entries( Text::new("Wassup").width(Length::Fill).into(),
             &mut self.cell_state,
-            vec![
-                Entry::Item(Text::new("Test1").into(), Some(Message::Test1)),
-                Entry::Group(
-                    Text::new("submenu").into(),
-                    vec![
-                        Entry::Item(Text::new("Test2").into(), Some(Message::Test2)),
-                        Entry::Item(Text::new("Test3").into(), Some(Message::Test3)),
-                        Entry::Group(
-                            Text::new("submenu").into(),
-                            vec![
-                                Entry::Item(Text::new("Test2").into(), Some(Message::Test2)),
-                                Entry::Item(Text::new("Test3").into(), Some(Message::Test3)),
-                            ],
-                        ),
-                    ],
-                ),
-            ],
+            Some(&self.entries),
         )
         .set_single_click(|| Message::Toggle);
 

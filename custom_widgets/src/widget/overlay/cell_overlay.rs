@@ -33,7 +33,7 @@ where
     /// The state of the [`Cell2`](crate::native::Cell2).
     state: &'a mut State,
     /// The [`Section`](crate::native::menu::Section) that is displayed on this overlay.
-    entries: &'a Vec<Entry<'a, Message, Renderer>>,
+    entries: Vec<Entry<'a, Message, Renderer>>,
     /// The padding around each entry.
     padding: f32,
     /// The position of the [`Section`](crate::native::menu::Section).
@@ -44,14 +44,14 @@ where
 
 impl<'a, Message, Renderer> Cell2Overlay<'a, Message, Renderer>
 where
-    Message: Clone,
-    Renderer: self::Renderer,
+    Message: Clone + 'a,
+    Renderer: self::Renderer + 'a,
 {
     /// Creates a new [`Cell2Overlay`](Cell2Overlay) on the given position, displaying
     /// the specified section.
     pub fn new(
         state: &'a mut State,
-        entries: &'a Vec<Entry<'a, Message, Renderer>>,
+        entries: Vec<Entry<'a, Message, Renderer>>,
         position: Point,
     ) -> Self {
         Self {
@@ -148,7 +148,7 @@ where
                     let mut path = path.to_vec();
                     let mut entry_path = path.to_vec();
                     entry_path.push(index);
-                    let entry = get_entry(self.entries, &entry_path);
+                    let entry = get_entry(&self.entries, &entry_path);
 
                     match entry {
                         Entry::Item(_, message) => match event {
@@ -166,7 +166,7 @@ where
                             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
                             | Event::Touch(touch::Event::FingerPressed { .. }) => {
                                 if let Some(message) = message {
-                                    messages.push((message)(!*b));
+                                    messages.push(message.to_owned());
                                     message_pushed = true;
                                     path = Vec::new();
                                 }
@@ -176,13 +176,12 @@ where
                         Entry::Group(_, entries) => {
                             if !entries.is_empty() {
                                 path = entry_path;
-                                
                             }
                         }
                         Entry::Separator => {}
                     }
                     new_path = Some(path);
-                } 
+                }
             })
         });
 
@@ -191,7 +190,6 @@ where
             if message_pushed {
                 self.state.menu_open = false;
             }
-
         }
 
         event::Status::Ignored
@@ -215,7 +213,7 @@ where
                 focus: (),
             },
             self.state,
-            self.entries,
+            &self.entries,
         )
     }
 
