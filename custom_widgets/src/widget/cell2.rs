@@ -12,6 +12,8 @@ use iced_aw::core::renderer::DrawEnvironment;
 
 use super::overlay::cell_overlay::Cell2Overlay;
 
+const DEFAULT_OVERLAY_TEXT_SIZE: u16 = 10;
+
 /// A cell with a nested menu
 ///
 /// # Example
@@ -67,6 +69,8 @@ where
     on_double_click: Option<Box<dyn Fn() -> Message>>,
     /// The [`Style`](crate::style::menu::Style) of the [`Cell2`](Cell2).
     style: Renderer::Style,
+    ///Text size of each [`LazyEntry](LazyEntry) that renders for this [`Cell2`](Cell2).
+    entry_text_size: u16,
 }
 
 impl<'a, Message, Renderer> Cell2<'a, Message, Renderer>
@@ -79,7 +83,17 @@ where
     /// It expects:
     ///     * a mutable reference to the [`Cell2`](Cell2)'s [`State`](State).
     pub fn new(item: Element<'a, Message, Renderer>, state: &'a mut State) -> Self {
-        Cell2::with_entries(item, state, None)
+        Self {
+            state,
+            overlay_entries: None,
+            width: Length::Fill,
+            height: Length::Shrink,
+            item,
+            style: Renderer::Style::default(),
+            on_click: None,
+            on_double_click: None,
+            entry_text_size: DEFAULT_OVERLAY_TEXT_SIZE,
+        }
     }
 
     /// Creates a new [`Cell2`](Cell2) with the given list of sections.
@@ -90,17 +104,18 @@ where
     pub fn with_entries(
         item: Element<'a, Message, Renderer>,
         state: &'a mut State,
-        sections: Option<&'a Vec<LazyEntry<Message>>>,
+        sections: &'a Vec<LazyEntry<Message>>,
     ) -> Self {
         Self {
             state,
-            overlay_entries: sections,
+            overlay_entries: Some(sections),
             width: Length::Fill,
             height: Length::Shrink,
             item,
             style: Renderer::Style::default(),
             on_click: None,
             on_double_click: None,
+            entry_text_size: DEFAULT_OVERLAY_TEXT_SIZE,
         }
     }
 
@@ -131,6 +146,11 @@ where
 
     pub fn set_width(mut self, width: Length) -> Self {
         self.width = width;
+        self
+    }
+
+    pub fn set_overlay_text_size(mut self, text_size: u16) -> Self {
+        self.entry_text_size = text_size;
         self
     }
 }
@@ -251,7 +271,7 @@ where
             let position = Point::new(bounds.x, bounds.y + bounds.height);
             let entries = overlay_entries
                 .iter()
-                .map(|lazy_entry| lazy_entry.into())
+                .map(|lazy_entry| lazy_entry.into2(self.entry_text_size))
                 .collect();
             Some(Cell2Overlay::new(&mut self.state, entries, position).overlay())
         } else {
@@ -378,6 +398,39 @@ pub enum LazyEntry<Message> {
 //        }
 //    }
 //}
+
+impl<'a, Message> LazyEntry<Message>
+where
+    Message: 'a + Clone,
+{
+    fn into2<Renderer>(&'a self, text_size: u16) -> Entry<Message, Renderer>
+    where
+        Renderer: 'a
+            + self::Renderer
+            + row::Renderer
+            + iced_native::text::Renderer
+            + crate::widget::overlay::cell_overlay::Renderer,
+    {
+        let text_gen = |title: &String| -> Element<'a, Message, Renderer> {
+            Text::new(title.clone()).size(text_size).into()
+        };
+
+        match self {
+            LazyEntry::Item(payload, message) => Entry::Item(text_gen(payload), message.clone()),
+            LazyEntry::Group(payload, children) => Entry::Group(
+                text_gen(payload),
+                children
+                    .into_iter()
+                    .map(|child| child.into2(text_size))
+                    .collect(),
+            ),
+            LazyEntry::Separator => Entry::Separator,
+            LazyEntry::Toggle(payload, flag, message) => {
+                Entry::Toggle(text_gen(payload), flag.clone(), message.clone())
+            }
+        }
+    }
+}
 
 impl<'a, Message, Renderer> From<&LazyEntry<Message>> for Entry<'a, Message, Renderer>
 where

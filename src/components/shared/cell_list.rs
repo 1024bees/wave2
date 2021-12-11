@@ -4,12 +4,13 @@ use log::error;
 use wave2_custom_widgets::core::cell2::DEFAULT_TEXT_SIZE;
 use wave2_custom_widgets::widget::cell2;
 use wave2_custom_widgets::widget::cell2::Cell2 as VizCell;
+pub use wave2_custom_widgets::widget::cell2::LazyEntry;
 
-use wave2_custom_widgets::traits::CellOption;
-
-pub struct ListNode {
+//TODO use a cow maybe for entries???
+pub struct ListNode<Message: Clone + 'static> {
     ui_state: cell2::State,
     node_state: ListNodeState,
+    entries: Vec<LazyEntry<Message>>,
 }
 
 #[derive(Copy, Clone, Default)]
@@ -21,7 +22,7 @@ pub struct ListNodeState {
     pub selected: bool,
 }
 
-impl ListNode {
+impl<Message: Clone + 'static> ListNode<Message> {
     fn new(offset: usize) -> Self {
         ListNode {
             ui_state: cell2::State::default(),
@@ -29,15 +30,22 @@ impl ListNode {
                 offset,
                 ..ListNodeState::default()
             },
+            entries: vec![],
         }
     }
-    fn view<Message: Clone + 'static>(
+
+    fn set_entries(mut self, entries: Vec<LazyEntry<Message>>) -> Self {
+        self.entries = entries;
+        self
+    }
+
+    fn view(
         &mut self,
         payload: String,
         on_click: impl Fn(ListNodeState) -> Box<dyn Fn() -> Message + 'static>,
         on_double_click: impl Fn(ListNodeState) -> Box<dyn Fn() -> Message + 'static>,
         text_size: Option<u16>,
-        cell_padding: Option<u16>,
+        _cell_padding: Option<u16>,
     ) -> Element<Message> {
         let ListNode {
             ui_state,
@@ -45,12 +53,13 @@ impl ListNode {
             ..
         } = self;
         let click = on_click(node_state.clone());
-        let sig_cell = VizCell::new(
+        let sig_cell = VizCell::with_entries(
             Text::new(payload)
                 .size(text_size.unwrap_or(DEFAULT_TEXT_SIZE))
                 .width(iced::Length::Fill)
                 .into(),
             ui_state,
+            &self.entries,
         )
         .set_width(iced::Length::Fill)
         .set_single_click(click)
@@ -62,14 +71,14 @@ impl ListNode {
     }
 }
 
-pub struct CellList {
-    pub nodes: Vec<ListNode>,
+pub struct CellList<Message: Clone + 'static> {
+    pub nodes: Vec<ListNode<Message>>,
     text_size: Option<u16>,
     cell_padding: Option<u16>,
     spacing: u16,
 }
 
-impl CellList {
+impl<Message: Clone + 'static> CellList<Message> {
     pub fn new(size: usize) -> Self {
         let nodes = (0..size).map(|idx| ListNode::new(idx)).collect();
 
@@ -77,6 +86,11 @@ impl CellList {
             nodes,
             ..CellList::default()
         }
+    }
+
+    pub fn push_with_entries(&mut self, entries: Vec<LazyEntry<Message>>) {
+        self.nodes
+            .push(ListNode::new(self.nodes.len()).set_entries(entries));
     }
 
     pub fn push(&mut self) {
@@ -91,7 +105,11 @@ impl CellList {
             .for_each(|(idx, payload)| payload.node_state.offset = idx);
     }
 
-    pub fn view<'a, T: ToString + 'a, Message: Clone + 'static>(
+    pub fn len(&self) -> usize {
+        self.nodes.len()
+    }
+
+    pub fn view<'a, T: ToString + 'a>(
         &mut self,
         strings: impl IntoIterator<Item = &'a T>,
         on_click: impl Fn(ListNodeState) -> Box<dyn Fn() -> Message + 'static> + Copy,
@@ -156,7 +174,7 @@ impl CellList {
     }
 }
 
-impl Default for CellList {
+impl<Message: Clone> Default for CellList<Message> {
     fn default() -> Self {
         Self {
             nodes: vec![],

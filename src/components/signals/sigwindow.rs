@@ -1,37 +1,18 @@
 use super::Message;
-use crate::components::shared::cell_list::{CellList, ListNodeState};
+use crate::components::shared::cell_list::{CellList, LazyEntry, ListNodeState};
 use iced::{Column, Command, Container, Element, Row};
-use strum_macros;
-use wave2_custom_widgets::traits::CellOption;
 
 use wave2_wavedb::storage::display_wave::DisplayedWave;
 
-//#[derive(Debug, Clone, Copy, PartialEq, Eq, strum_macros::Display)]
-////TODO: add options, move to its own module?
-//pub enum WaveOptions {
-//    Delete,
-//}
-//
-//impl WaveOptions {
-//    const ALL: [WaveOptions; 1] = [WaveOptions::Delete];
-//}
-//
-//impl CellOption for WaveOptions {
-//    type Message = Message;
-//
-//    fn all() -> &'static [Self] {
-//        &WaveOptions::ALL
-//    }
-//
-//    fn to_message(&self) -> Self::Message {
-//        match self {
-//            WaveOptions::Delete => Message::RemoveSelected,
-//        }
-//    }
-//}
+fn default_menu(_index: usize) -> Vec<LazyEntry<Message>> {
+    vec![LazyEntry::Item(
+        "Remove selected".into(),
+        Some(Message::RemoveSelected),
+    )]
+}
 
 pub struct SigViewer {
-    waves_state: CellList,
+    waves_state: CellList<Message>,
     pub selected: Option<Vec<usize>>,
 }
 
@@ -47,14 +28,16 @@ impl Default for SigViewer {
 
 impl SigViewer {
     pub fn add_wave(&mut self) {
-        self.waves_state.push();
+        let entries = default_menu(self.waves_state.len());
+        self.waves_state.push_with_entries(entries);
     }
 
     pub fn update(&mut self, message: Message) -> Command<Message> {
         match message {
             Message::AddWave(imw_res) => match imw_res {
                 Ok(_) => {
-                    self.waves_state.push();
+                    let entries = default_menu(self.waves_state.len());
+                    self.waves_state.push_with_entries(entries);
                 }
                 Err(err) => {
                     log::info!("Cannot create InMemWave, err is {:#?}", err);

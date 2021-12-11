@@ -49,12 +49,10 @@ struct Example {
     scroll: scrollable::State,
     cell_state: cell2::State,
     entries: Vec<LazyEntry<Message>>,
-
 }
 
 impl Default for Example {
     fn default() -> Self {
-
         Example {
             scroll: scrollable::State::default(),
             cell_state: cell2::State::default(),
@@ -74,19 +72,9 @@ impl Default for Example {
                         ),
                     ],
                 ),
-            ]
-
-
-
-
-
+            ],
         }
-
-
-
     }
-
-
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -113,7 +101,6 @@ impl Sandbox for Example {
             Message::Toggle => {
                 self.cell_state.selected = !self.cell_state.selected;
                 log::info!("selected is {:?}", self.cell_state.selected);
-
             }
             _ => {
                 println!("{:?}", message);
@@ -122,9 +109,10 @@ impl Sandbox for Example {
     }
 
     fn view(&mut self) -> Element<Message> {
-        let cell = Cell2::with_entries( Text::new("Wassup").width(Length::Fill).into(),
+        let cell = Cell2::with_entries(
+            Text::new("Wassup").width(Length::Fill).into(),
             &mut self.cell_state,
-            Some(&self.entries),
+            &self.entries,
         )
         .set_single_click(|| Message::Toggle);
 

@@ -44,7 +44,7 @@ pub enum Message {
 #[derive(Default)]
 pub struct ModNavigator {
     signal_vec: Vec<SignalItem>,
-    signals: CellList,
+    signals: CellList<Message>,
     selected_offset: Option<usize>,
     scroll_x: scrollable::State,
 }

@@ -17,6 +17,7 @@ pub enum Message {
     SelectedWave(usize),
     ClearWaves,
     RemoveSelected,
+    RemoveWave(usize),
 
     ///Messages that are only used by wavewindow
     UpdateCursor(u32),

@@ -211,6 +211,7 @@ impl Beach {
                     } else {
                         vec![]
                     };
+                    debug_assert!(vec.len() == 1, "Only support single vector removal");
                     vec.into_iter().for_each(|i| {
                         self.waves.remove(i);
                     });
