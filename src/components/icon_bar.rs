@@ -78,7 +78,7 @@ impl IconBar {
                 } else {
                     std::mem::replace(&mut self.bounds_str.1, String::new())
                 };
-                if let Ok(value) = str_ref.parse::<u32>() {
+                if let Ok(_value) = str_ref.parse::<u32>() {
 
                 }
             }

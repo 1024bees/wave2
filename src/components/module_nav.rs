@@ -1,8 +1,8 @@
 use iced::{scrollable, Command, Container, Element, Length, Scrollable};
 use log::error;
 use std::sync::Arc;
-use strum_macros;
-use wave2_custom_widgets::traits::CellOption;
+
+
 
 use crate::components::shared::cell_list::{CellList, ListNodeState};
 use wave2_wavedb::hier_map::SignalItem;

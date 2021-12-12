@@ -1,4 +1,4 @@
-use crate::components::hier_nav::hier_nav::{HierOptions, Message};
+use crate::components::hier_nav::hier_nav::{Message};
 use iced::{button, Button, Column, Element, Length, Row, Text};
 use std::cell::Cell;
 use std::collections::HashMap;

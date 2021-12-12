@@ -1,4 +1,4 @@
-use iced::{Color, Column, Command, Container, Element, Length, Row};
+use iced::{Command, Container, Element, Length};
 
 use super::Message;
 use wave2_custom_widgets::widget::signal_window;
