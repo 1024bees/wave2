@@ -49,6 +49,9 @@ impl DisplayedWave {
     pub fn get_wave(&self) -> &Arc<InMemWave> {
         &self.wave_content
     }
+    pub fn get_color(&self) -> WaveColors {
+        self.display_conf.unwrap_or_default().color
+    }
 }
 
 impl From<Arc<InMemWave>> for DisplayedWave {
@@ -89,7 +92,7 @@ impl std::fmt::Display for WaveColors {
 }
 
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 /// Wave state for single bit signals
 ///
 /// Used when iterating across an in memory wave to decide coloring state

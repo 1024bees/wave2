@@ -1,11 +1,9 @@
 use crate::widget::signal_window::State;
 use iced::Color;
-use std::sync::Arc;
-use wave2_wavedb::formatting::{format_payload, WaveFormat};
+use wave2_wavedb::formatting::format_payload;
 pub use wave2_wavedb::storage::display_wave::{
     DisplayedWave, SBWaveState, WaveColors, WaveDisplayOptions,
 };
-use wave2_wavedb::storage::in_memory::InMemWave;
 
 use iced_graphics::{triangle, Primitive};
 
@@ -25,7 +23,7 @@ pub(crate) const TS_FONT_SIZE: f32 = 10.0;
 pub(crate) const TEXT_PADDING: f32 = TEXT_SIZE / 2.0;
 /// Mininum x_delta between two "value" changes that must occur before we consider writing the
 /// wave's value on the line
-const TEXT_THRESHOLD: f32 = 12.0;
+//const TEXT_THRESHOLD: f32 = 12.0;
 
 const TEXT_SIZE: f32 = 12.0;
 
@@ -48,6 +46,9 @@ const ORANGE: Color = Color::from_rgba(
     0.4,
 );
 
+const Z_COLOR: Color = ORANGE;
+const X_COLOR: Color = ORANGE;
+
 pub const fn to_color(opts: &WaveDisplayOptions) -> Color {
     match opts.color {
         WaveColors::Green => Color::from_rgba(0.0, 1.0, 0.0, 1.0),
@@ -56,7 +57,36 @@ pub const fn to_color(opts: &WaveDisplayOptions) -> Color {
     }
 }
 
-struct StrokeVertex([f32; 4]);
+impl StrokeVertex {
+    fn new(color: [f32; 4]) -> Self {
+        Self {
+            primary: color.clone(),
+            working_color: color,
+            changes: vec![],
+            working_idx: 0,
+        }
+    }
+}
+
+struct StrokeVertex {
+    primary: [f32; 4],
+    working_color: [f32; 4],
+    changes: Vec<(SBWaveState, lyon::math::Point)>,
+    working_idx: usize,
+}
+
+impl StrokeVertex {
+    fn maybe_push_change(&mut self, wave_state: SBWaveState, point: lyon::math::Point) {
+        let (state, _) = self
+            .changes
+            .first()
+            .cloned()
+            .unwrap_or_else(|| (SBWaveState::Beginning, point.clone()));
+        if state != wave_state {
+            self.changes.push((wave_state, point));
+        }
+    }
+}
 
 impl lyon::tessellation::StrokeVertexConstructor<triangle::Vertex2D> for StrokeVertex {
     fn new_vertex(
@@ -64,9 +94,25 @@ impl lyon::tessellation::StrokeVertexConstructor<triangle::Vertex2D> for StrokeV
         position: lyon::math::Point,
         _attributes: lyon::tessellation::StrokeAttributes<'_, '_>,
     ) -> triangle::Vertex2D {
+        log::info!("len of changes is {}", self.changes.len());
+        if let Some((state_change, point)) = self.changes.get(self.working_idx) {
+            if position.x >= point.x {
+                self.working_idx += 1;
+                log::info!("pushing to changes with {:#?}", state_change);
+                match state_change {
+                    SBWaveState::High | SBWaveState::Low => {
+                        self.working_color = self.primary.clone()
+                    }
+                    SBWaveState::X => self.working_color = X_COLOR.into_linear(),
+                    SBWaveState::Z => self.working_color = Z_COLOR.into_linear(),
+                    _ => {}
+                }
+            }
+        }
+
         triangle::Vertex2D {
             position: [position.x, position.y],
-            color: self.0,
+            color: self.working_color,
         }
     }
 }
@@ -121,7 +167,7 @@ pub fn render_cursor(state: &State, bounds: Rectangle) -> Option<Primitive> {
             .tessellate_path(
                 &top_line,
                 &StrokeOptions::default(),
-                &mut BuffersBuilder::new(&mut geometry, StrokeVertex(ORANGE.into_linear())),
+                &mut BuffersBuilder::new(&mut geometry, StrokeVertex::new(ORANGE.into_linear())),
             )
             .expect("Tesselator failed");
 
@@ -165,14 +211,15 @@ pub fn render_header(state: &State, bounds: Rectangle, font: iced::Font) -> Prim
         .tessellate_path(
             &top_line,
             &StrokeOptions::default(),
-            &mut BuffersBuilder::new(&mut geometry, StrokeVertex(ORANGE.into_linear())),
+            &mut BuffersBuilder::new(&mut geometry, StrokeVertex::new(ORANGE.into_linear())),
         )
         .expect("Tesselator failed");
-    
-    let next_bounds = state.start_time(bounds) + (state.ns_per_frame as u32 - (state.start_time(bounds) % state.ns_per_frame as u32));
+
+    let next_bounds = state.start_time(bounds)
+        + (state.ns_per_frame as u32 - (state.start_time(bounds) % state.ns_per_frame as u32));
     //log::info!("next bounds is {}, last bounds is {}, ppf is {}, ns_per_pixel {}", next_bounds, state.end_time(bounds), state.ppf, state.ns_per_pixel);
     for ts in (next_bounds..state.end_time(bounds)).step_by(ts_width as usize) {
-        xpos +=  xdelt_from_prev(state, ts, prev_ts);
+        xpos += xdelt_from_prev(state, ts, prev_ts);
         if xpos > TS_CLIP_RANGE {
             prim_vec.push(Primitive::Text {
                 content: format!("{}ns", ts),
@@ -200,7 +247,7 @@ pub fn render_header(state: &State, bounds: Rectangle, font: iced::Font) -> Prim
             .tessellate_path(
                 &line,
                 &StrokeOptions::default(),
-                &mut BuffersBuilder::new(&mut geometry, StrokeVertex(BLUE.into_linear())),
+                &mut BuffersBuilder::new(&mut geometry, StrokeVertex::new(BLUE.into_linear())),
             )
             .expect("Tesselator failed");
 
@@ -237,6 +284,7 @@ pub fn render_wave(
     let mut prev_xcoord = state.offset as u32;
     let display_options = dwave.display_conf.unwrap_or_default();
     let mut prim_vec = Vec::new();
+    let mut stroke_tracker = StrokeVertex::new(GREEN.into_linear());
     match width {
         1 => {
             let mut sb_state = SBWaveState::Beginning;
@@ -331,6 +379,13 @@ pub fn render_wave(
 
                 if let Some(sig_payload) = wave.get_prev_droplet(state.offset.ceil() as u32) {
                     let text_space = xdelt_from_prev(state, next_time, prev_xcoord);
+                    let wave_state = if sig_payload.is_zx() {
+                        SBWaveState::X
+                    } else {
+                        SBWaveState::High
+                    };
+                    stroke_tracker
+                        .maybe_push_change(wave_state, working_pts.first().unwrap().clone());
 
                     let value_text =
                         generate_canvas_text(sig_payload, display_options, width, text_space)
@@ -355,7 +410,12 @@ pub fn render_wave(
                 );
 
                 let text_space = xdelt_from_prev(state, next_time, prev_xcoord);
-
+                let wave_state = if sig_payload.is_zx() {
+                    SBWaveState::X
+                } else {
+                    SBWaveState::High
+                };
+                stroke_tracker.maybe_push_change(wave_state, working_pts.first().unwrap().clone());
                 for (point, direction) in working_pts.iter_mut().zip([1.0, -1.0].iter()) {
                     p.move_to(*point);
                     point.x += x_delt - VEC_SHIFT_WIDTH / 2.0;
@@ -392,13 +452,12 @@ pub fn render_wave(
     }
     let wave_path = p.build();
     let mut tessellator = StrokeTessellator::new();
-
     let mut geometry: VertexBuffers<triangle::Vertex2D, u32> = VertexBuffers::new();
     tessellator
         .tessellate_path(
             &wave_path,
             &StrokeOptions::default(),
-            &mut BuffersBuilder::new(&mut geometry, StrokeVertex(GREEN.into_linear())),
+            &mut BuffersBuilder::new(&mut geometry, stroke_tracker),
         )
         .expect("Tesselator failed");
 
