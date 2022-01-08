@@ -135,7 +135,7 @@ impl Beach {
                         .waves
                         .iter()
                         .map(|wave| {
-                            let format = wave.display_conf.unwrap_or_default().format;
+                            let format = wave.display_conf.format;
                             let imw = wave.get_wave().clone();
                             Command::perform(async move {get_data(imw, time, format) }, Message::UpdateWaveValues)
                         })

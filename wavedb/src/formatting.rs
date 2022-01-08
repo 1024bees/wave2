@@ -14,7 +14,6 @@ impl Default for WaveFormat {
     fn default() -> Self {
         WaveFormat::Hex
     }
-
 }
 
 fn split_zx_and_payload(drop: Droplet<'_>, bitwidth: usize) -> (&'_ [u8], &'_ [u8]) {
@@ -49,7 +48,7 @@ pub fn format_payload(
                         }
                         i if (i & 0xf0) != 0 && (i & 0x0f) == 0 => {
                             let zorx = if (zx & chunk) != 0 { "x" } else { "z" };
-                            format!("{:x?}{}", chunk & 0xf, zorx)
+                            format!("{}{:x?}", zorx, (chunk & 0x0f))
                         }
                         _ => {
                             let zorx1 = if (zx & chunk & 0xf) != 0 { "x" } else { "z" };
@@ -122,7 +121,6 @@ pub fn format_payload(
 }
 
 #[cfg(test)]
-#[allow(dead_code, unused_macros, unused_imports, unused_variables)]
 mod tests {
     use super::{format_payload, WaveFormat};
     use crate::puddle::testing_utils::test_droplet;

@@ -53,7 +53,7 @@ impl InMemWave {
             .position(|puddle| puddle.puddle_base() == time & !(Puddle::max_puddle_length() - 1))
     }
 
-    pub fn get_prev_droplet(&self, time: Toffset) -> Option<Droplet<'_>> {
+    pub fn get_prev_droplet(&self, time: Toffset) -> Option<(Toffset, Droplet<'_>)> {
         let idx = self.get_idx(time)?;
         let sigid = self.signal_id;
         self.puddles[0..idx + 1]
@@ -66,14 +66,16 @@ impl InMemWave {
                     .map(|cursor| (cursor, puddle.puddle_base()))
             })
             .flat_map(|(cursor, base)| cursor.into_iter().rev().zip(std::iter::repeat(base)))
+            .inspect(|(droplet, base)| {
+                println!("AYO wtime is {}", base + droplet.get_timestamp() as Toffset)
+            })
             .filter(|(droplet, base)| ((base + droplet.get_timestamp() as Toffset) < time))
-            .map(|(droplet, _base)| droplet)
+            .map(|(droplet, base)| (base, droplet))
             .next()
     }
 
-
-    pub fn get_droplet_at(&self, time: Toffset) -> Option<Droplet<'_>>{
-        self.get_prev_droplet(time+1)
+    pub fn get_droplet_at(&self, time: Toffset) -> Option<Droplet<'_>> {
+        self.get_prev_droplet(time + 1).map(|both| both.1)
     }
 
     pub fn get_prev_time(&self, time: Toffset) -> Option<(Toffset, &'_ [u8])> {
@@ -121,7 +123,7 @@ impl InMemWave {
             .next()
     }
 
-    //fixme; could probably template and
+    
     pub fn droplets_in_range(
         &self,
         begin: Toffset,
@@ -141,6 +143,30 @@ impl InMemWave {
             .map(|(droplet, base)| (base + droplet.get_timestamp() as Toffset, droplet))
             .filter(move |(time, _)| *time >= begin && *time < end)
     }
+
+
+    pub fn droplets_in_range_rev(
+        &self,
+        begin: Toffset,
+        end: Toffset,
+    ) -> impl Iterator<Item = (Toffset, Droplet<'_>)> + '_ {
+        let sigid = self.signal_id;
+        self.puddles
+            .iter()
+            .rev()
+            .filter(move |puddle| begin < puddle.puddle_end() && end > puddle.puddle_base())
+            .filter_map(move |puddle| {
+                puddle
+                    .get_cursor(sigid)
+                    .ok()
+                    .map(|cursor| (cursor, puddle.puddle_base()))
+            })
+            .flat_map(|(cursor, base)| cursor.into_iter().rev().zip(std::iter::repeat(base)))
+            .map(|(droplet, base)| (base + droplet.get_timestamp() as Toffset, droplet))
+            .filter(move |(time, _)| *time >= begin && *time < end)
+    }
+
+
 
     pub fn get_width(&self) -> usize {
         self.width as usize
@@ -180,6 +206,7 @@ impl std::fmt::Display for InMemWave {
 #[allow(dead_code, unused_macros, unused_imports, unused_variables)]
 mod tests {
     use super::*;
+    use crate::formatting::format_payload;
     use crate::puddle::builder::tests::build_dummy_puddles;
     use crate::puddle::Droplet;
     use crate::wavedb::WaveDb;
@@ -197,6 +224,15 @@ mod tests {
     fn create_vga_wdb() -> WaveDb {
         let mut path_to_wikivcd = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path_to_wikivcd.push("test_vcds/vga.vcd");
+        let db = tempfile::TempDir::new().expect("Temp file could not be created! Shucks");
+
+        WaveDb::from_vcd(path_to_wikivcd, db.path()).expect("could not create wavedb")
+    }
+
+    /// Utility to create vga wavedb object
+    fn create_wiki_wdb() -> WaveDb {
+        let mut path_to_wikivcd = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        path_to_wikivcd.push("test_vcds/wikipedia.vcd");
         let db = tempfile::TempDir::new().expect("Temp file could not be created! Shucks");
 
         WaveDb::from_vcd(path_to_wikivcd, db.path()).expect("could not create wavedb")
@@ -279,6 +315,48 @@ mod tests {
 
         assert_eq!(toffset, 19250);
         assert_eq!(val, 0x1);
+    }
+
+    #[test]
+    fn wikipedia_underrun_get_next_and_prev_time() {
+        let wiki = create_wiki_wdb();
+
+        let clock_wave = wiki
+            .get_imw("logic.underrun".into())
+            .expect("signal isn't here!");
+        let (toffset, payload) = clock_wave.get_prev_time(4).expect("prev failed");
+        assert_eq!(toffset, 0);
+        let val: u8 = u8::from_le_bytes(
+            payload
+                .try_into()
+                .expect("should be a 9bit val, convertible into u16"),
+        );
+        assert_eq!(val, 0);
+    }
+
+    #[test]
+    fn wikipedia_data_get_next_and_prev_time() {
+        let wiki = create_wiki_wdb();
+
+        let data = wiki
+            .get_imw("logic.data".into())
+            .expect("signal isn't here!");
+        let (time, val) = data.get_prev_droplet(374).expect("bad");
+
+
+        let val_str = format_payload(val, crate::formatting::WaveFormat::Hex, data.get_width(), 8);
+
+        for val in data.droplets_in_range_rev(0, 1000) {
+            let t_val_str = format_payload(
+                val.1,
+                crate::formatting::WaveFormat::Hex,
+                data.get_width(),
+                8,
+            );
+            println!("offset is {}, val is {}", val.0, t_val_str);
+        }
+
+        assert_eq!(val_str, "81");
     }
 
     #[test]

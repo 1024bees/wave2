@@ -140,9 +140,8 @@ impl<'a> Iterator for PCursor<'a> {
         if self.pidx >= self.pidx_back {
             None
         } else {
-            let drop = self.set_front_index(self.pidx);
-            self.poffset += self.get_sigwidth();
-            self.pidx += 1;
+            let drop = self.fetch_and_increment_front_index();
+
             drop
         }
     }
@@ -153,8 +152,9 @@ impl<'a> DoubleEndedIterator for PCursor<'a> {
         if self.pidx_back <= self.pidx {
             None
         } else {
-            self.pidx_back -= 1;
-            self.set_back_index(self.pidx_back)
+            let drop = self.decrement_and_fetch_back_index();
+
+            drop
         }
     }
 }
@@ -237,6 +237,7 @@ so in the case alluded above we have 00, 01, 00 and 10, which maps to 010z
 
 
 */
+#[derive(Clone)]
 pub struct Droplet<'a> {
     content: &'a [u8],
 }
@@ -290,56 +291,50 @@ impl<'a> PCursor<'a> {
         }
     }
 
-    fn get_droplet(&self, sig_width: usize) -> Option<Droplet<'a>> {
+    fn get_droplet(&self) -> Option<Droplet<'a>> {
+        let sig_width = self.get_sigwidth();
         Some(Droplet {
             content: &self.payload_handle[self.poffset..self.poffset + sig_width],
         })
     }
 
-    fn set_index(&mut self, pidx: u16, starting_pidx: u16) -> Option<Droplet<'a>> {
-        let mut starting_pidx = starting_pidx;
+    fn set_poffset(&mut self, target_pidx: u16) {
         if self.meta_handle.var_len {
-            if pidx < self.pidx {
-                starting_pidx = 0;
-                self.poffset = self.meta_handle.offset;
-            }
-            while pidx != starting_pidx {
+            let mut starting_pidx = 0;
+            self.poffset = self.meta_handle.offset;
+            while target_pidx != starting_pidx {
                 self.poffset += self.get_sigwidth();
                 starting_pidx += 1;
             }
-            let sig_width = self.get_sigwidth();
-            self.get_droplet(sig_width)
         } else {
             let sig_width = self.get_sigwidth();
-            self.poffset = self.meta_handle.offset + (pidx as usize * sig_width);
-            self.get_droplet(sig_width)
+            self.poffset = self.meta_handle.offset + (target_pidx as usize * sig_width);
         }
     }
 
     /// Set the back index of cursor, get droplet at that index
     /// used by next_back of double ended iterator
-    pub fn set_back_index(&mut self, pidx: u16) -> Option<Droplet<'a>> {
-        if pidx >= self.plen || pidx < self.pidx {
-            self.pidx_back = pidx;
+    pub fn decrement_and_fetch_back_index(&mut self) -> Option<Droplet<'a>> {
+        let pidx = self.pidx_back;
+        if pidx > self.plen || pidx < self.pidx || pidx == 0 {
             return None;
         }
-        let starting_index = self.pidx_back;
-        let drop = self.set_index(pidx, starting_index);
-        self.pidx_back = pidx;
-        drop
+        self.pidx_back -= 1;
+        self.set_poffset(self.pidx_back);
+        println!("after setting index, poffset is {}", self.poffset);
+
+        self.get_droplet()
     }
 
     /// Set the back index of cursor, get droplet at that index
     /// used by next_back of double ended iterator
-    pub fn set_front_index(&mut self, pidx: u16) -> Option<Droplet<'a>> {
-        if pidx >= self.plen || pidx > self.pidx_back {
-            self.pidx = pidx;
+    pub fn fetch_and_increment_front_index(&mut self) -> Option<Droplet<'a>> {
+        if self.pidx >= self.plen || self.pidx > self.pidx_back {
             return None;
         }
-        let starting_index = self.pidx;
-        let drop = self.set_index(pidx, starting_index);
-        self.pidx = pidx;
-        drop
+        self.set_poffset(self.pidx);
+        self.pidx += 1;
+        self.get_droplet()
     }
 
     /// Move the cursor to point to the next droplet
@@ -359,7 +354,7 @@ impl<'a> PCursor<'a> {
             Err(*self.puddle_handle.next_sig_map.get(&self.sig_id).unwrap())
         }
     }
-    fn get_sigwidth(&mut self) -> usize {
+    fn get_sigwidth(&self) -> usize {
         if Droplet::is_var_from_bytes(self.payload_handle) {
             unimplemented!()
         } else if Droplet::is_zx_from_bytes(

@@ -94,11 +94,9 @@ impl lyon::tessellation::StrokeVertexConstructor<triangle::Vertex2D> for StrokeV
         position: lyon::math::Point,
         _attributes: lyon::tessellation::StrokeAttributes<'_, '_>,
     ) -> triangle::Vertex2D {
-        log::info!("len of changes is {}", self.changes.len());
         if let Some((state_change, point)) = self.changes.get(self.working_idx) {
             if position.x >= point.x {
                 self.working_idx += 1;
-                log::info!("pushing to changes with {:#?}", state_change);
                 match state_change {
                     SBWaveState::High | SBWaveState::Low => {
                         self.working_color = self.primary.clone()
@@ -282,16 +280,16 @@ pub fn render_wave(
     let width = wave.get_width();
     let mut working_pt = lpoint(0.0, 0.0);
     let mut prev_xcoord = state.offset as u32;
-    let display_options = dwave.display_conf.unwrap_or_default();
+    let display_options = dwave.display_conf;
     let mut prim_vec = Vec::new();
+
     let mut stroke_tracker = StrokeVertex::new(GREEN.into_linear());
+    let (start_time, end_time) = (state.start_time(bounds), state.end_time(bounds));
     match width {
         1 => {
             let mut sb_state = SBWaveState::Beginning;
 
-            for (time, sig_payload) in
-                wave.data_in_range(state.start_time(bounds), state.end_time(bounds))
-            {
+            for (time, sig_payload) in wave.data_in_range(start_time, end_time) {
                 if out_of_range(time, state, bounds) {
                     break;
                 }
@@ -330,10 +328,13 @@ pub fn render_wave(
         _ => {
             let working_pt_bot = lpoint(working_pt.x, working_pt.y + WAVEHEIGHT);
             let mut working_pts = [working_pt, working_pt_bot];
-            let mut wave_iter = wave
-                .droplets_in_range(state.start_time(bounds), state.end_time(bounds))
-                .peekable();
+            let mut wave_iter = wave.droplets_in_range(start_time, end_time).peekable();
 
+            log::info!(
+                "begin is : {}, end is : {}",
+                state.start_time(bounds),
+                state.end_time(bounds)
+            );
             let beautify_text = |working_pts: [lyon::math::Point; 2], value| {
                 let value = match value {
                     Primitive::Text {
@@ -377,7 +378,9 @@ pub fn render_wave(
                     |(time, _)| time.clone(),
                 );
 
-                if let Some(sig_payload) = wave.get_prev_droplet(state.offset.ceil() as u32) {
+                if let Some((_time, sig_payload)) =
+                    wave.get_prev_droplet(start_time as u32)
+                {
                     let text_space = xdelt_from_prev(state, next_time, prev_xcoord);
                     let wave_state = if sig_payload.is_zx() {
                         SBWaveState::X
@@ -386,6 +389,11 @@ pub fn render_wave(
                     };
                     stroke_tracker
                         .maybe_push_change(wave_state, working_pts.first().unwrap().clone());
+
+                    let data2 =
+                        format_payload(sig_payload.clone(), display_options.format, width, 40);
+
+                    log::info!("First item is {} at {}", data2,start_time);
 
                     let value_text =
                         generate_canvas_text(sig_payload, display_options, width, text_space)
@@ -399,6 +407,9 @@ pub fn render_wave(
 
             while let Some((time, sig_payload)) = wave_iter.next() {
                 let x_delt = xdelt_from_prev(state, time, prev_xcoord);
+                let data2 = format_payload(sig_payload.clone(), display_options.format, width, 40);
+
+                log::info!("nth item is {} at time {}", data2, time);
 
                 if out_of_range(time, state, bounds) {
                     break;

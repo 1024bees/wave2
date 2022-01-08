@@ -1,14 +1,13 @@
-use std::sync::Arc;
 use crate::formatting::{format_payload, WaveFormat};
+use crate::puddle::Toffset;
 use crate::storage::in_memory::InMemWave;
-
-use crate::puddle::Droplet;
+use std::sync::Arc;
 
 /// Mininum x_delta between two "value" changes that must occur before we consider writing the
 /// wave's value on the line
-const TEXT_THRESHOLD: f32 = 12.0;
-
-const TEXT_SIZE: f32 = 12.0;
+//const TEXT_THRESHOLD: f32 = 12.0;
+//
+//const TEXT_SIZE: f32 = 12.0;
 
 #[derive(Clone, Copy, Debug)]
 pub struct WaveDisplayOptions {
@@ -25,13 +24,11 @@ impl Default for WaveDisplayOptions {
     }
 }
 
-
-
 #[derive(Clone, Debug)]
 pub struct DisplayedWave {
     wave_content: Arc<InMemWave>,
     pub val_under_cursor: Option<String>,
-    pub display_conf: Option<WaveDisplayOptions>,
+    pub display_conf: WaveDisplayOptions,
 }
 
 //FIXME: for testing only; this should be removed once sigwindow is stable
@@ -40,7 +37,7 @@ impl Default for DisplayedWave {
         DisplayedWave {
             wave_content: Arc::new(InMemWave::default()),
             val_under_cursor: None,
-            display_conf: Option::default(),
+            display_conf: WaveDisplayOptions::default(),
         }
     }
 }
@@ -50,7 +47,23 @@ impl DisplayedWave {
         &self.wave_content
     }
     pub fn get_color(&self) -> WaveColors {
-        self.display_conf.unwrap_or_default().color
+        self.display_conf.color
+    }
+
+    /// Formats string into the [`WaveFormat`](WaveFormat) at the time provided
+    /// by the Toffset argument
+    pub fn value_at_time(&self, time: Toffset) -> String {
+        let droplet = self
+            .wave_content
+            .get_droplet_at(time)
+            .expect("Value is not defined yet");
+
+        format_payload(
+            droplet,
+            self.display_conf.format,
+            self.wave_content.get_width(),
+            500,
+        )
     }
 }
 
@@ -59,7 +72,7 @@ impl From<Arc<InMemWave>> for DisplayedWave {
         DisplayedWave {
             wave_content: imw,
             val_under_cursor: None,
-            display_conf: Option::default(),
+            display_conf: WaveDisplayOptions::default(),
         }
     }
 }
@@ -67,10 +80,8 @@ impl From<Arc<InMemWave>> for DisplayedWave {
 impl std::fmt::Display for DisplayedWave {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.wave_content.fmt(f)?;
-        let value = self.val_under_cursor.as_deref().unwrap_or("0XHEADBEEF");
-        write!(f, " = {} ", value)?;
         Ok(())
-   }
+    }
 }
 
 impl WaveColors {
@@ -90,7 +101,6 @@ impl std::fmt::Display for WaveColors {
         )
     }
 }
-
 
 #[derive(Clone, Debug, PartialEq)]
 /// Wave state for single bit signals
