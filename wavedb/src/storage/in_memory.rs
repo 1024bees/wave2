@@ -66,9 +66,6 @@ impl InMemWave {
                     .map(|cursor| (cursor, puddle.puddle_base()))
             })
             .flat_map(|(cursor, base)| cursor.into_iter().rev().zip(std::iter::repeat(base)))
-            .inspect(|(droplet, base)| {
-                println!("AYO wtime is {}", base + droplet.get_timestamp() as Toffset)
-            })
             .filter(|(droplet, base)| ((base + droplet.get_timestamp() as Toffset) < time))
             .map(|(droplet, base)| (base, droplet))
             .next()
@@ -123,7 +120,6 @@ impl InMemWave {
             .next()
     }
 
-    
     pub fn droplets_in_range(
         &self,
         begin: Toffset,
@@ -143,7 +139,6 @@ impl InMemWave {
             .map(|(droplet, base)| (base + droplet.get_timestamp() as Toffset, droplet))
             .filter(move |(time, _)| *time >= begin && *time < end)
     }
-
 
     pub fn droplets_in_range_rev(
         &self,
@@ -165,8 +160,6 @@ impl InMemWave {
             .map(|(droplet, base)| (base + droplet.get_timestamp() as Toffset, droplet))
             .filter(move |(time, _)| *time >= begin && *time < end)
     }
-
-
 
     pub fn get_width(&self) -> usize {
         self.width as usize
@@ -343,7 +336,6 @@ mod tests {
             .expect("signal isn't here!");
         let (time, val) = data.get_prev_droplet(374).expect("bad");
 
-
         let val_str = format_payload(val, crate::formatting::WaveFormat::Hex, data.get_width(), 8);
 
         for val in data.droplets_in_range_rev(0, 1000) {
@@ -353,7 +345,6 @@ mod tests {
                 data.get_width(),
                 8,
             );
-            println!("offset is {}, val is {}", val.0, t_val_str);
         }
 
         assert_eq!(val_str, "81");

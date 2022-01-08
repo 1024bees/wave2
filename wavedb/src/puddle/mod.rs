@@ -321,7 +321,6 @@ impl<'a> PCursor<'a> {
         }
         self.pidx_back -= 1;
         self.set_poffset(self.pidx_back);
-        println!("after setting index, poffset is {}", self.poffset);
 
         self.get_droplet()
     }

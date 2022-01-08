@@ -330,12 +330,7 @@ pub fn render_wave(
             let mut working_pts = [working_pt, working_pt_bot];
             let mut wave_iter = wave.droplets_in_range(start_time, end_time).peekable();
 
-            log::info!(
-                "begin is : {}, end is : {}",
-                state.start_time(bounds),
-                state.end_time(bounds)
-            );
-            let beautify_text = |working_pts: [lyon::math::Point; 2], value| {
+                        let beautify_text = |working_pts: [lyon::math::Point; 2], value| {
                 let value = match value {
                     Primitive::Text {
                         content,
@@ -407,9 +402,6 @@ pub fn render_wave(
 
             while let Some((time, sig_payload)) = wave_iter.next() {
                 let x_delt = xdelt_from_prev(state, time, prev_xcoord);
-                let data2 = format_payload(sig_payload.clone(), display_options.format, width, 40);
-
-                log::info!("nth item is {} at time {}", data2, time);
 
                 if out_of_range(time, state, bounds) {
                     break;
