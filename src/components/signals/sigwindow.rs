@@ -1,7 +1,9 @@
 use super::Message;
 use crate::components::shared::cell_list::{CellList, LazyEntry, ListNodeState};
 use iced::{Column, Command, Container, Element, Row};
+use wave2_custom_widgets::core::signal_window::{BUFFER_PX, HEADER_START, WAVEHEIGHT};
 
+use std::convert::TryInto;
 use wave2_wavedb::storage::display_wave::DisplayedWave;
 
 fn default_menu(_index: usize) -> Vec<LazyEntry<Message>> {
@@ -19,7 +21,9 @@ pub struct SigViewer {
 impl Default for SigViewer {
     fn default() -> Self {
         SigViewer {
-            waves_state: CellList::default().set_cell_padding(4).set_text_size(11),
+            waves_state: CellList::default()
+                .set_spacing(BUFFER_PX as u16)
+                .set_text_size(WAVEHEIGHT as u16),
             //.set_spacing(wavewindow::BUFFER_PX as u16),
             selected: Option::default(),
         }
@@ -107,18 +111,12 @@ impl SigViewer {
         let cl = waves_state.view(iter, click_func, double_click);
 
         let pick_list = Column::new()
-            //.push(
-            //    Text::new("Active signals")
-            //        .height(iced::Length::Units(
-            //            (wavewindow::TS_FONT_SIZE + wavewindow::BUFFER_PX) as u16,
-            //        ))
-            //        .size(wavewindow::TS_FONT_SIZE as u16),
-            //)
             .push(cl)
             .width(iced::Length::Fill)
             .height(iced::Length::Fill)
             .max_width(400)
-            .padding(20);
+            .padding(HEADER_START.ceil() as u16);
+
         //.spacing(20);
 
         Container::new(Row::new().push(pick_list).height(iced::Length::Fill)).into()

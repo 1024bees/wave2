@@ -33,7 +33,10 @@ where
         scrollbar_margin: u16,
         scroller_width: u16,
     ) -> Option<signal_window::Scrollbar> {
-        let ratio = bounds.width / ((state.end_time - state.start_time) as f32 * state.ns_per_pixel); //content_bounds.width;
+        //ratio is the ratio of screens per total "canvas" there is to be displayed. e.g. what the
+        //ender user can see is ratio percent of the entire map
+        let canvas_size = (state.end_time - state.start_time) as f32 / state.ns_per_pixel;
+        let ratio = bounds.width / canvas_size; //content_bounds.width;
 
         if ratio < 1.0 {
             let outer_width = scrollbar_width.max(scroller_width) + 2 * scrollbar_margin;
@@ -53,12 +56,13 @@ where
             };
 
             let scroller_width_offset = bounds.width * ratio;
-            let x_offset = state.offset as f32 * ratio;
+            let x_offset_percentage = state.offset as f32 * ratio;
+            let pixel_offsets = bounds.width * (state.offset / state.ns_per_pixel) / canvas_size;
 
             let scroller_bounds = Rectangle {
-                x: bounds.x + x_offset,
+                x: bounds.x + pixel_offsets,
                 y: bounds.y + bounds.height - f32::from(outer_width / 2 + scroller_width / 2),
-                width: scroller_width_offset,
+                width: scroller_width_offset.max(2.0),
                 height: scroller_width as f32,
             };
 

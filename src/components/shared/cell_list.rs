@@ -136,7 +136,6 @@ impl<Message: Clone + 'static> CellList<Message> {
 
         Column::with_children(vecs)
             .spacing(self.spacing)
-            .padding(10)
             .width(iced::Length::Fill)
             .into()
     }
@@ -161,10 +160,6 @@ impl<Message: Clone + 'static> CellList<Message> {
         self
     }
 
-    pub fn column_padding(mut self, padding: u16) -> Self {
-        self.spacing = padding;
-        self
-    }
     pub fn set_spacing(mut self, padding: u16) -> Self {
         self.spacing = padding;
         self

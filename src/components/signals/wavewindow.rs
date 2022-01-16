@@ -1,6 +1,7 @@
 use iced::{Command, Container, Element, Length};
 
 use super::Message;
+use super::beach::BEACH_PADDING;
 use wave2_custom_widgets::widget::signal_window;
 use wave2_wavedb::storage::display_wave::DisplayedWave;
 
@@ -26,7 +27,7 @@ impl WaveWindowState {
         )
         .width(Length::Shrink)
         .height(Length::Fill)
-        .padding(10)
+        .padding(BEACH_PADDING)
         .into()
     }
 

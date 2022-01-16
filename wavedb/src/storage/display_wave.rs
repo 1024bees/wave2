@@ -80,6 +80,9 @@ impl From<Arc<InMemWave>> for DisplayedWave {
 impl std::fmt::Display for DisplayedWave {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.wave_content.fmt(f)?;
+        if let Some(ref value) = self.val_under_cursor {
+            write!(f, " = {}", value)?;
+        }
         Ok(())
     }
 }

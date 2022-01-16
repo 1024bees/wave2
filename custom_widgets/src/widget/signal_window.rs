@@ -47,20 +47,25 @@ impl Default for State {
     fn default() -> State {
         State {
             start_time: 0,
-            end_time: 1000,
-            ns_per_pixel: 1.0,
+            end_time: 4,
+            ns_per_pixel: 0.005,
             cursor_location: 0,
             offset: 0.0,
             hovered_position: 0.0,
             scroller_grabbed_at: None,
             zoom: 0,
             ppf: 200.0,
-            ns_per_frame: 200.0,
+            ns_per_frame: 1.0,
         }
     }
 }
 
 impl State {
+    /// Display
+    fn ns_per_screen(&self, bounds: Rectangle) -> f32 {
+        self.ns_per_pixel * bounds.width
+    }
+
     /// Creates a new [`State`] with the scrollbar located at the left.
     pub fn new() -> Self {
         State::default()
@@ -82,8 +87,7 @@ impl State {
     pub fn scroll(&mut self, delta_x: f32, bounds: Rectangle) {
         self.offset = (self.offset - delta_x * self.ns_per_pixel)
             .max(0.0)
-            .min((self.end_time) as f32);
-        log::info!("new offset is {}", self.offset);
+            .min((self.end_time as f32) - self.ns_per_screen(bounds));
     }
 
     /// Moves the scroll position to a relative amount, given the bounds of
@@ -91,8 +95,10 @@ impl State {
     ///
     /// `0` represents scrollbar at the top, while `1` represents scrollbar at
     /// the bottom.
-    pub fn scroll_to(&mut self, percentage: f32) {
-        self.offset = ((self.end_time - self.start_time) as f32 * percentage).max(0.0);
+    pub fn scroll_to(&mut self, percentage: f32, bounds: Rectangle) {
+        self.offset = ((self.end_time - self.start_time) as f32 * percentage)
+            .max(0.0)
+            .min((self.end_time as f32) - self.ns_per_screen(bounds));
     }
 
     /// Calculates the zoom factor of the [`SignalWindow`]. This logic is mirrored from GtkWave's
@@ -105,6 +111,7 @@ impl State {
         if self.zoom <= 3 {
             self.ppf = 200.0;
             self.ns_per_frame = lnspf as f64;
+            log::info!("state is {:#?}", self);
         } else {
             let nspf = lnspf as f64;
             let pow_base10 = nspf.log10().round() as i32;
@@ -113,6 +120,7 @@ impl State {
             self.ppf = 200.0 * nsperframe2 / nspf;
             log::info!("scale is {}", nsperframe2 / nspf);
             self.ns_per_frame = nsperframe2;
+            log::info!("nsperframe is {}", self.ns_per_frame);
         }
         self.ns_per_pixel = (self.ns_per_frame / self.ppf) as f32;
     }
@@ -315,6 +323,7 @@ where
                     {
                         self.state.scroll_to(
                             scrollbar.scroll_percentage(scroller_grabbed_at, cursor_position),
+                            bounds,
                         );
 
                         return event::Status::Captured;
@@ -330,6 +339,7 @@ where
                         {
                             self.state.scroll_to(
                                 scrollbar.scroll_percentage(scroller_grabbed_at, cursor_position),
+                                bounds,
                             );
 
                             self.state.scroller_grabbed_at = Some(scroller_grabbed_at);
@@ -415,8 +425,12 @@ impl Scrollbar {
     }
 
     fn scroll_percentage(&self, grabbed_at: f32, cursor_position: Point) -> f32 {
-        (cursor_position.x - self.bounds.x - self.scroller.bounds.width * grabbed_at)
-            / (self.bounds.width - self.scroller.bounds.width)
+        let percentage =
+            (cursor_position.x - self.bounds.x - self.scroller.bounds.width * grabbed_at)
+                / (self.bounds.width - self.scroller.bounds.width);
+        let percentage = percentage.clamp(0.0, 1.0);
+        log::info!("scroll percentage {}", percentage);
+        percentage
     }
 }
 

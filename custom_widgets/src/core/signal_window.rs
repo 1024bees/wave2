@@ -15,16 +15,25 @@ use lyon::math::point as lpoint;
 use lyon::path::Path;
 use lyon::tessellation::*;
 
-pub(crate) const BUFFER_PX: f32 = 1.5;
-pub(crate) const WAVEHEIGHT: f32 = 16.0;
+/// The buffer pixels between each rendered [`DisplayedWave`]
+pub const BUFFER_PX: f32 = 2.0;
+/// The height (in pixels) of each rendered [`DisplayedWave`]
+pub const WAVEHEIGHT: f32 = 16.0;
+/// The distance (in x pixels) required to make the "crossing" pattern when rendering a
+/// [`DisplayedWave`] that represents a vector of signals
 pub(crate) const VEC_SHIFT_WIDTH: f32 = 6.0;
-pub(crate) const TS_FONT_SIZE: f32 = 10.0;
+/// The size of the text that is rendered on the top of the signal window 
+pub(crate) const TS_FONT_SIZE: f32 = 10.5;
 
 pub(crate) const TEXT_PADDING: f32 = TEXT_SIZE / 2.0;
 /// Mininum x_delta between two "value" changes that must occur before we consider writing the
 /// wave's value on the line
 //const TEXT_THRESHOLD: f32 = 12.0;
 
+pub const HEADER_START : f32 = TS_FONT_SIZE + BUFFER_PX;
+
+
+/// Size of the text [`DisplayedWave`] rendered for each [`Droplet`] value
 const TEXT_SIZE: f32 = 12.0;
 
 /// If we try to put a timestamp too close to the start of the wave window
@@ -182,8 +191,8 @@ pub fn render_cursor(state: &State, bounds: Rectangle) -> Option<Primitive> {
 }
 
 pub fn render_header(state: &State, bounds: Rectangle, font: iced::Font) -> Primitive {
-    //FIXME: need to think of way to generate uniform timestamp delimiters
-    //       probably something probably something like 1,2,5
+    
+    
     let ts_width: u32 = (state.ns_per_frame) as u32;
 
     let mut prev_ts = state.start_time(bounds);

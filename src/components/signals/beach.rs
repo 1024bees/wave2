@@ -7,12 +7,19 @@ use wave2_wavedb::formatting::WaveFormat;
 use wave2_wavedb::storage::display_wave::DisplayedWave;
 use wave2_wavedb::storage::in_memory::InMemWave;
 
+/// Padding across all widgets contained within the [`Beach`]
+pub const BEACH_PADDING: u16 = 10;
+
+
+/// The beach is its _own_ [`PaneGrid`]. Beach content represents each [`pane_grid::Pane`] that can
+/// exist 
 pub enum BeachContent {
     Waves(wavewindow::WaveWindowState),
     Signals(sigwindow::SigViewer),
 }
 
 #[derive(Debug, Clone)]
+///Message type that is specific to [`PaneGrid`] logic
 pub enum BeachPane {
     Resize(pane_grid::ResizeEvent),
 }
@@ -32,6 +39,15 @@ impl BeachContent {
     }
 }
 
+/// The Beach is where the waves are.. Grab a drink!
+///
+/// There is a _lot_ of shared state across the [`sigwindow::SigViewer`] and the
+/// [`wavewindow::WaveWindowState`]. So we created the beach as a an area all this wave state can
+/// exist, and can be shared across the. 
+///
+/// By definition, the beach does all the "heavy lifting" in wave2. It handles the visualization of
+/// signals, fetching values from [`InMemWave`] and displaying them to the screen between the
+/// [`sigwindow::SigViewer`] and the [`wavewindow::WaveWindowState`] 
 pub struct Beach {
     pub waves: Vec<DisplayedWave>,
     beach_panes: pane_grid::State<BeachContent>,
@@ -60,6 +76,7 @@ impl Default for Beach {
 }
 
 impl Beach {
+    /// helper for getting a mutable handle to a [`sigwindow::SigViewer`]
     fn get_sigwindow(&mut self) -> &mut sigwindow::SigViewer {
         let pane_val = self.beach_panes.get_mut(&self.sig_pane).unwrap();
         match pane_val {
