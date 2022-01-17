@@ -111,6 +111,7 @@ impl std::fmt::Display for WaveColors {
 /// Used when iterating across an in memory wave to decide coloring state
 pub enum SBWaveState {
     Beginning,
+    EndSentinel,
     Low,
     High,
     X,

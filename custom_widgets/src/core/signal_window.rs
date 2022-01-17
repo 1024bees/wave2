@@ -22,7 +22,7 @@ pub const WAVEHEIGHT: f32 = 16.0;
 /// The distance (in x pixels) required to make the "crossing" pattern when rendering a
 /// [`DisplayedWave`] that represents a vector of signals
 pub(crate) const VEC_SHIFT_WIDTH: f32 = 6.0;
-/// The size of the text that is rendered on the top of the signal window 
+/// The size of the text that is rendered on the top of the signal window
 pub(crate) const TS_FONT_SIZE: f32 = 10.5;
 
 pub(crate) const TEXT_PADDING: f32 = TEXT_SIZE / 2.0;
@@ -30,8 +30,7 @@ pub(crate) const TEXT_PADDING: f32 = TEXT_SIZE / 2.0;
 /// wave's value on the line
 //const TEXT_THRESHOLD: f32 = 12.0;
 
-pub const HEADER_START : f32 = TS_FONT_SIZE + BUFFER_PX;
-
+pub const HEADER_START: f32 = TS_FONT_SIZE + BUFFER_PX;
 
 /// Size of the text [`DisplayedWave`] rendered for each [`Droplet`] value
 const TEXT_SIZE: f32 = 12.0;
@@ -56,7 +55,7 @@ const ORANGE: Color = Color::from_rgba(
 );
 
 const Z_COLOR: Color = ORANGE;
-const X_COLOR: Color = ORANGE;
+const X_COLOR: Color = Color::from_rgba(1.0, 0.0, 0.0, 0.8);
 
 pub const fn to_color(opts: &WaveDisplayOptions) -> Color {
     match opts.color {
@@ -72,7 +71,6 @@ impl StrokeVertex {
             primary: color.clone(),
             working_color: color,
             changes: vec![],
-            working_idx: 0,
         }
     }
 }
@@ -80,18 +78,17 @@ impl StrokeVertex {
 struct StrokeVertex {
     primary: [f32; 4],
     working_color: [f32; 4],
-    changes: Vec<(SBWaveState, lyon::math::Point)>,
-    working_idx: usize,
+    pub changes: Vec<(SBWaveState, lyon::math::Point)>,
 }
 
 impl StrokeVertex {
     fn maybe_push_change(&mut self, wave_state: SBWaveState, point: lyon::math::Point) {
-        let (state, _) = self
+        let (state, prev_pt) = self
             .changes
             .first()
             .cloned()
-            .unwrap_or_else(|| (SBWaveState::Beginning, point.clone()));
-        if state != wave_state {
+            .unwrap_or((SBWaveState::Beginning, point.clone()));
+        if state != wave_state && point.x >= prev_pt.x {
             self.changes.push((wave_state, point));
         }
     }
@@ -103,17 +100,18 @@ impl lyon::tessellation::StrokeVertexConstructor<triangle::Vertex2D> for StrokeV
         position: lyon::math::Point,
         _attributes: lyon::tessellation::StrokeAttributes<'_, '_>,
     ) -> triangle::Vertex2D {
-        if let Some((state_change, point)) = self.changes.get(self.working_idx) {
-            if position.x >= point.x {
-                self.working_idx += 1;
-                match state_change {
-                    SBWaveState::High | SBWaveState::Low => {
-                        self.working_color = self.primary.clone()
-                    }
-                    SBWaveState::X => self.working_color = X_COLOR.into_linear(),
-                    SBWaveState::Z => self.working_color = Z_COLOR.into_linear(),
-                    _ => {}
-                }
+        if let Some((state_change, _point)) = self
+            .changes
+            .iter()
+            .position(|(_, pt)| position.x < pt.x)
+            .map(|idx| self.changes.get(if idx != 0 { idx - 1 } else { idx }))
+            .flatten()
+        {
+            match state_change {
+                SBWaveState::High | SBWaveState::Low => self.working_color = self.primary.clone(),
+                SBWaveState::X => self.working_color = X_COLOR.into_linear(),
+                SBWaveState::Z => self.working_color = Z_COLOR.into_linear(),
+                _ => {}
             }
         }
 
@@ -191,8 +189,6 @@ pub fn render_cursor(state: &State, bounds: Rectangle) -> Option<Primitive> {
 }
 
 pub fn render_header(state: &State, bounds: Rectangle, font: iced::Font) -> Primitive {
-    
-    
     let ts_width: u32 = (state.ns_per_frame) as u32;
 
     let mut prev_ts = state.start_time(bounds);
@@ -339,7 +335,7 @@ pub fn render_wave(
             let mut working_pts = [working_pt, working_pt_bot];
             let mut wave_iter = wave.droplets_in_range(start_time, end_time).peekable();
 
-                        let beautify_text = |working_pts: [lyon::math::Point; 2], value| {
+            let beautify_text = |working_pts: [lyon::math::Point; 2], value| {
                 let value = match value {
                     Primitive::Text {
                         content,
@@ -382,9 +378,7 @@ pub fn render_wave(
                     |(time, _)| time.clone(),
                 );
 
-                if let Some((_time, sig_payload)) =
-                    wave.get_prev_droplet(start_time as u32)
-                {
+                if let Some((_time, sig_payload)) = wave.get_prev_droplet(start_time as u32) {
                     let text_space = xdelt_from_prev(state, next_time, prev_xcoord);
                     let wave_state = if sig_payload.is_zx() {
                         SBWaveState::X
@@ -394,8 +388,8 @@ pub fn render_wave(
                     stroke_tracker
                         .maybe_push_change(wave_state, working_pts.first().unwrap().clone());
 
-                    let data2 =
-                        format_payload(sig_payload.clone(), display_options.format, width, 40);
+                    //let data2 =
+                    //    format_payload(sig_payload.clone(), display_options.format, width, 40);
 
                     //log::info!("First item is {} at {}", data2,start_time);
 
@@ -427,7 +421,7 @@ pub fn render_wave(
                 } else {
                     SBWaveState::High
                 };
-                stroke_tracker.maybe_push_change(wave_state, working_pts.first().unwrap().clone());
+
                 for (point, direction) in working_pts.iter_mut().zip([1.0, -1.0].iter()) {
                     p.move_to(*point);
                     point.x += x_delt - VEC_SHIFT_WIDTH / 2.0;
@@ -440,6 +434,7 @@ pub fn render_wave(
                     p.line_to(*point);
                     point.y -= WAVEHEIGHT * direction;
                 }
+                stroke_tracker.maybe_push_change(wave_state, working_pts.first().unwrap().clone());
 
                 let value_text =
                     generate_canvas_text(sig_payload, display_options, width, text_space)
@@ -460,11 +455,17 @@ pub fn render_wave(
                 point.x += fin_x_delt;
                 p.line_to(*point);
             }
+            stroke_tracker.maybe_push_change(
+                SBWaveState::EndSentinel,
+                working_pts.first().unwrap().clone(),
+            );
         }
     }
+
     let wave_path = p.build();
     let mut tessellator = StrokeTessellator::new();
     let mut geometry: VertexBuffers<triangle::Vertex2D, u32> = VertexBuffers::new();
+
     tessellator
         .tessellate_path(
             &wave_path,
