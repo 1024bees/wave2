@@ -96,9 +96,10 @@ impl State {
     /// `0` represents scrollbar at the top, while `1` represents scrollbar at
     /// the bottom.
     pub fn scroll_to(&mut self, percentage: f32, bounds: Rectangle) {
-        self.offset = ((self.end_time - self.start_time) as f32 * percentage)
+        self.offset = ((((self.end_time as f32) - self.ns_per_screen(bounds))
+            - self.start_time as f32) as f32
+            * percentage)
             .max(0.0)
-            .min((self.end_time as f32) - self.ns_per_screen(bounds));
     }
 
     /// Calculates the zoom factor of the [`SignalWindow`]. This logic is mirrored from GtkWave's

@@ -397,7 +397,7 @@ pub fn render_wave(
                     let data2 =
                         format_payload(sig_payload.clone(), display_options.format, width, 40);
 
-                    log::info!("First item is {} at {}", data2,start_time);
+                    //log::info!("First item is {} at {}", data2,start_time);
 
                     let value_text =
                         generate_canvas_text(sig_payload, display_options, width, text_space)
