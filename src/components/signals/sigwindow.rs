@@ -3,7 +3,7 @@ use crate::components::shared::cell_list::{CellList, LazyEntry, ListNodeState};
 use iced::{Column, Command, Container, Element, Row};
 use wave2_custom_widgets::core::signal_window::{BUFFER_PX, HEADER_START, WAVEHEIGHT};
 
-use std::convert::TryInto;
+use super::beach::BEACH_PADDING;
 use wave2_wavedb::storage::display_wave::DisplayedWave;
 
 fn default_menu(_index: usize) -> Vec<LazyEntry<Message>> {
@@ -24,7 +24,7 @@ impl Default for SigViewer {
             waves_state: CellList::default()
                 .set_spacing(BUFFER_PX as u16)
                 .set_text_size(WAVEHEIGHT as u16),
-            //.set_spacing(wavewindow::BUFFER_PX as u16),
+
             selected: Option::default(),
         }
     }
@@ -115,7 +115,7 @@ impl SigViewer {
             .width(iced::Length::Fill)
             .height(iced::Length::Fill)
             .max_width(400)
-            .padding(HEADER_START.ceil() as u16);
+            .padding(BEACH_PADDING + HEADER_START.ceil() as u16);
 
         //.spacing(20);
 

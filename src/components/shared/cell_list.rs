@@ -160,6 +160,7 @@ impl<Message: Clone + 'static> CellList<Message> {
         self
     }
 
+    /// Sets spacing between each cell in the [`CellList`]
     pub fn set_spacing(mut self, padding: u16) -> Self {
         self.spacing = padding;
         self

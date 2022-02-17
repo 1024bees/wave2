@@ -1,18 +1,9 @@
 use iced::{Command, Container, Element, Length};
 
-use super::Message;
 use super::beach::BEACH_PADDING;
+use super::Message;
 use wave2_custom_widgets::widget::signal_window;
 use wave2_wavedb::storage::display_wave::DisplayedWave;
-
-pub const BUFFER_PX: f32 = 1.5;
-pub const WAVEHEIGHT: f32 = 16.0;
-pub const VEC_SHIFT_WIDTH: f32 = 4.0;
-pub const TS_FONT_SIZE: f32 = 12.0;
-
-/// If we try to put a timestamp too close to the start of the wave window
-/// it clips the black bounding box of the wave window and looks bad
-const TS_CLIP_RANGE: f32 = 5.0;
 
 #[derive(Default)]
 pub struct WaveWindowState {

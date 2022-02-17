@@ -184,8 +184,8 @@ where
         _clipboard: &mut dyn Clipboard,
         messages: &mut Vec<Message>,
     ) -> event::Status {
-        let bounds = layout.bounds();
-        let children = layout.children();
+        let _bounds = layout.bounds();
+        let _children = layout.children();
 
         if !self.state.menu_open && layout.bounds().contains(cursor_position) {
             let no_entries = self.overlay_entries.is_none();
@@ -302,21 +302,36 @@ impl Renderer for iced_native::renderer::Null {
 
     fn draw<Message>(
         &mut self,
-        state: &State,
+        _state: &State,
         _env: DrawEnvironment<'_, Self::Defaults, Self::Style, ()>,
-        item: &Element<'_, Message, Self>,
+        _item: &Element<'_, Message, Self>,
     ) -> Self::Output {
     }
 }
 
 /// The state of the [`Cell2`](Cell2).
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct State {
     /// The stack containing the indices that build a path to the opened [`Entry`](Entry).
     pub(crate) stack: Vec<usize>,
     pub selected: bool,
     pub(crate) menu_open: bool,
     last_click: Option<mouse::Click>,
+    height: Length,
+    width: Length,
+}
+
+impl Default for State {
+    fn default() -> Self {
+        Self {
+            stack: Vec::new(),
+            selected: false,
+            menu_open: false,
+            last_click: None,
+            width: Length::Fill,
+            height: Length::Shrink,
+        }
+    }
 }
 
 impl State {
@@ -328,6 +343,8 @@ impl State {
             selected: false,
             menu_open: false,
             last_click: None,
+            width: Length::Fill,
+            height: Length::Shrink,
         }
     }
 }
